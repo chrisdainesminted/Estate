@@ -1,40 +1,23 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Columns3, Gauge, LayoutDashboard, Moon, Plus, RotateCcw, Sun } from 'lucide-react';
+import { Columns3, Gauge, LayoutDashboard, Moon, Plus, RotateCcw, Sun } from 'lucide-react';
 import { useDeals } from './hooks/useDeals.js';
 import { useTheme } from './hooks/useTheme.js';
 import { analyzeDeal, applyAdjustments, isNeutralAdjustment, projectDeal } from './lib/finance.js';
 import { chartTheme } from './lib/chartTheme.js';
-import { money, ratio } from './lib/format.js';
+import { ratio } from './lib/format.js';
 import { MAX_DEALS } from './lib/presets.js';
-import SummaryCards from './components/SummaryCards.jsx';
+import HeroSummary from './components/HeroSummary.jsx';
 import DscrGauge from './components/DscrGauge.jsx';
 import InputsPanel from './components/InputsPanel.jsx';
 import LenderVsReality from './components/LenderVsReality.jsx';
 import SensitivitySliders from './components/SensitivitySliders.jsx';
 import ComparisonMatrix from './components/ComparisonMatrix.jsx';
 import ProjectionChart from './components/ProjectionChart.jsx';
-import Logo from './components/Logo.jsx';
+import Logo, { LogoMark } from './components/Logo.jsx';
 import { Button, Card, CardHeader, Segmented } from './components/ui.jsx';
 
 const NO_ADJ = { rateDelta: 0, downPct: null, rentPct: 0 };
 const YEARS = 10;
-
-function TrapBanner({ a }) {
-  if (!a.lenderApprovedButNegative) return null;
-  return (
-    <div role="alert" className="flex gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
-      <AlertTriangle className="mt-0.5 size-5 shrink-0 text-red-600 dark:text-red-400" aria-hidden />
-      <div>
-        <p className="font-semibold">Lender-approved, but cash-flow negative.</p>
-        <p className="mt-0.5">
-          A DSCR of {ratio(a.dscr)} qualifies with the lender, but after management, maintenance, vacancy and CapEx this deal loses{' '}
-          <strong>{money(-a.netCashFlow)}/month</strong> ({money(-a.annualCashFlow)}/year). Rent needs to reach{' '}
-          <strong>{money(a.breakevenRent / a.units)}/unit</strong> just to break even.
-        </p>
-      </div>
-    </div>
-  );
-}
 
 export default function App() {
   const { deals, active, activeId, updateDeal, updateAll, addDeal, duplicateDeal, removeDeal, setActive, resetAll } = useDeals();
@@ -87,14 +70,19 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/85 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/85">
-        <div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3 sm:px-6">
+    <div className="relative min-h-screen">
+      <div aria-hidden className="app-backdrop">
+        <div className="app-grid" />
+        <div className="app-grain" />
+      </div>
+
+      <header className="relative z-30 px-3 pt-3 sm:px-6 md:sticky md:top-0">
+        <div className="glass mx-auto flex max-w-[1500px] flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl px-3 py-2.5 sm:px-4">
           <h1>
             <Logo />
           </h1>
 
-          <nav aria-label="Deals" className="order-3 flex w-full items-center gap-1.5 overflow-x-auto md:order-none md:w-auto md:flex-1 md:justify-center">
+          <nav aria-label="Deals" className="thin-scroll order-3 -mx-1 flex w-full items-center gap-1.5 overflow-x-auto px-1 py-0.5 md:order-none md:mx-0 md:w-auto md:flex-1 md:justify-center">
             {deals.map((d) => {
               const x = items.find((i) => i.deal.id === d.id);
               const selected = d.id === activeId;
@@ -104,15 +92,15 @@ export default function App() {
                   type="button"
                   onClick={() => setActive(d.id)}
                   aria-current={selected ? 'true' : undefined}
-                  className={`flex shrink-0 items-center gap-2 rounded-full px-3 py-1.5 text-sm transition-colors ${
+                  className={`flex shrink-0 items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
                     selected
-                      ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
-                      : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'
+                      ? 'bg-zinc-950 text-white shadow-[0_8px_20px_-8px_rgb(0_0_0/0.5)] dark:bg-white dark:text-zinc-950'
+                      : 'bg-white/50 text-zinc-700 ring-1 ring-zinc-950/5 ring-inset hover:bg-white/80 dark:bg-white/[0.05] dark:text-zinc-300 dark:ring-white/10 dark:hover:bg-white/10'
                   }`}
                 >
-                  <span className="size-2 rounded-full" style={{ background: theme.series[d.slot] }} aria-hidden />
+                  <span className="size-2 rounded-full ring-2 ring-white/40" style={{ background: theme.series[d.slot] }} aria-hidden />
                   <span className="max-w-40 truncate">{d.name}</span>
-                  <span className={`tabular text-xs ${selected ? 'opacity-70' : 'text-zinc-500 dark:text-zinc-400'}`}>{ratio(x.a.dscr)}</span>
+                  <span className={`tabular text-xs ${selected ? 'opacity-60' : 'text-zinc-500 dark:text-zinc-400'}`}>{ratio(x.a.dscr)}</span>
                 </button>
               );
             })}
@@ -120,7 +108,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={addDeal}
-                className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-sm text-zinc-500 ring-1 ring-zinc-300 ring-inset hover:bg-zinc-100 dark:text-zinc-400 dark:ring-zinc-700 dark:hover:bg-zinc-800"
+                className="flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium text-zinc-500 ring-1 ring-zinc-950/10 ring-inset hover:bg-white/60 hover:text-zinc-800 dark:text-zinc-400 dark:ring-white/10 dark:hover:bg-white/10 dark:hover:text-white"
                 aria-label="Add deal"
               >
                 <Plus className="size-4" aria-hidden /> Add
@@ -128,7 +116,7 @@ export default function App() {
             )}
           </nav>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-1.5">
             <Segmented
               label="View"
               value={view}
@@ -140,6 +128,7 @@ export default function App() {
             />
             <Button
               variant="ghost"
+              className="px-2.5"
               onClick={() => {
                 if (window.confirm('Replace all deals with the three starter examples?')) {
                   resetAll();
@@ -151,31 +140,30 @@ export default function App() {
             >
               <RotateCcw className="size-4" aria-hidden />
             </Button>
-            <Button variant="ghost" onClick={toggle} aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'} title="Toggle theme">
+            <Button variant="ghost" className="px-2.5" onClick={toggle} aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'} title="Toggle theme">
               {dark ? <Sun className="size-4" aria-hidden /> : <Moon className="size-4" aria-hidden />}
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1500px] space-y-6 px-4 py-6 sm:px-6">
+      <main className="mx-auto max-w-[1500px] space-y-6 px-3 py-6 sm:px-6 sm:py-8">
         {view === 'analyze' ? (
           <>
-            <SummaryCards a={a} base={neutral ? null : baseA} />
-            <TrapBanner a={a} />
+            <HeroSummary deal={current.deal} a={a} base={neutral ? null : baseA} />
 
             <div className="grid gap-6 lg:grid-cols-12">
               <aside className="lg:col-span-4 xl:col-span-3">
-                <div className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:rounded-2xl">
+                <div className="thin-scroll lg:sticky lg:top-28 lg:max-h-[calc(100vh-8.5rem)] lg:overflow-y-auto lg:rounded-3xl">
                   <InputsPanel deal={active} a={baseA} onChange={(patch) => updateDeal(active.id, patch)} />
                 </div>
               </aside>
 
               <div className="min-w-0 space-y-6 lg:col-span-8 xl:col-span-9">
                 <div className="grid gap-6 xl:grid-cols-3">
-                  <Card className="xl:col-span-1">
+                  <Card className="flex flex-col xl:col-span-1">
                     <CardHeader icon={Gauge} title="Lender DSCR" subtitle="Gross rent ÷ PITIA" />
-                    <div className="p-5">
+                    <div className="grid flex-1 place-items-center p-6">
                       <DscrGauge a={a} />
                     </div>
                   </Card>
@@ -188,6 +176,13 @@ export default function App() {
           </>
         ) : (
           <>
+            <div className="px-1 pt-2">
+              <p className="eyebrow">Compare</p>
+              <h2 className="mt-1.5 text-3xl font-semibold tracking-tight text-zinc-950 sm:text-4xl dark:text-white">Which door pays you?</h2>
+              <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
+                Up to three deals underwritten side by side: what the lender approves, what actually lands in your account, and what each one builds over ten years.
+              </p>
+            </div>
             {sliders}
             <ComparisonMatrix
               items={items}
@@ -206,10 +201,16 @@ export default function App() {
           </>
         )}
 
-        <footer className="pt-2 pb-8 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-          <span className="font-semibold text-zinc-700 dark:text-zinc-300">Bedrock</span> · DSCR = gross monthly rent ÷ PITIA (principal, interest, taxes, insurance, HOA). Real net cash flow also subtracts management,
-          maintenance, vacancy and CapEx reserves. Cash out of pocket = down payment + closing costs. Projections assume a fixed-rate loan;
-          figures are estimates for personal analysis, not lending or investment advice. Deals are saved in this browser only.
+        <footer className="mt-4 flex flex-col gap-4 border-t border-hairline pt-6 pb-10 text-xs leading-relaxed text-zinc-500 sm:flex-row sm:items-start dark:text-zinc-400">
+          <div className="flex shrink-0 items-center gap-2">
+            <LogoMark className="size-6" />
+            <span className="font-semibold text-zinc-800 dark:text-zinc-200">Bedrock</span>
+          </div>
+          <p className="max-w-4xl">
+            DSCR = gross monthly rent ÷ PITIA (principal, interest, taxes, insurance, HOA). Real net cash flow also subtracts management, maintenance,
+            vacancy and CapEx reserves. Cash out of pocket = down payment + closing costs. Projections assume a fixed-rate loan; figures are estimates
+            for personal analysis, not lending or investment advice. Deals are saved in this browser only.
+          </p>
         </footer>
       </main>
     </div>

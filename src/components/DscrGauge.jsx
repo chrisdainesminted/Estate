@@ -59,7 +59,8 @@ export default function DscrGauge({ a }) {
             strokeWidth={16}
             fill="none"
             strokeLinecap="butt"
-            opacity={b.key === a.status.key ? 1 : 0.35}
+            opacity={b.key === a.status.key ? 1 : 0.22}
+            style={b.key === a.status.key ? { filter: `drop-shadow(0 0 6px ${b.color}99)` } : undefined}
           />
         ))}
         {labels.map((l) => {
@@ -81,16 +82,19 @@ export default function DscrGauge({ a }) {
             </text>
           );
         })}
-        <line x1={CX} y1={CY} x2={nx} y2={ny} strokeWidth={3} strokeLinecap="round" className="stroke-zinc-800 dark:stroke-zinc-100" />
-        <circle cx={CX} cy={CY} r={6} className="fill-zinc-800 stroke-white dark:fill-zinc-100 dark:stroke-zinc-900" strokeWidth={2} />
+        <line x1={CX} y1={CY} x2={nx} y2={ny} strokeWidth={3} strokeLinecap="round" className="stroke-zinc-900 dark:stroke-white" />
+        <circle cx={CX} cy={CY} r={7} className="fill-zinc-900 stroke-white/80 dark:fill-white dark:stroke-zinc-900" strokeWidth={2.5} />
       </svg>
-      <div className="-mt-1 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{ratio(a.dscr)}</div>
+      <div className="-mt-1 text-4xl font-semibold tracking-tight text-zinc-950 dark:text-white">{ratio(a.dscr)}</div>
       <div className="mt-1.5">
         <DscrChip status={a.status} />
       </div>
-      <dl className="mt-4 grid w-full max-w-xs grid-cols-1 gap-y-1.5 text-xs">
+      <dl className="mt-5 grid w-full max-w-xs grid-cols-1 gap-y-0.5 rounded-2xl bg-well p-2 text-xs">
         {DSCR_BANDS.map((b) => (
-          <div key={b.key} className={`flex items-center gap-1.5 ${b.key === a.status.key ? 'font-semibold text-zinc-900 dark:text-zinc-100' : 'text-zinc-500 dark:text-zinc-400'}`}>
+          <div
+            key={b.key}
+            className={`flex items-center gap-2 rounded-lg px-2 py-1.5 ${b.key === a.status.key ? 'bg-white/70 font-semibold text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white' : 'text-zinc-500 dark:text-zinc-400'}`}
+          >
             <span className="size-2.5 shrink-0 rounded-sm" style={{ background: b.color }} aria-hidden />
             <dt className="tabular w-20 shrink-0">{b.short}</dt>
             <dd className="truncate">{b.label}</dd>

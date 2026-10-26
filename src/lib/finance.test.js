@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { amortize, analyzeDeal, applyAdjustments, isNeutralAdjustment, monthlyPI, projectDeal } from './finance.js';
-import { dscrStatus } from './dscr.js';
+import { dscrStatus, verdict } from './dscr.js';
 import { PRESET_DEALS } from './presets.js';
+import { niceScale } from './chartTheme.js';
 
 // Independent closed-form remaining balance, used to cross-check the month loop.
 function balanceAfter(P, ratePct, years, k) {
@@ -178,5 +179,27 @@ describe('applyAdjustments', () => {
 
   it('never produces a negative rate', () => {
     expect(applyAdjustments({ ...deal, rate: 1 }, { rateDelta: -2 }).rate).toBe(0);
+  });
+});
+
+describe('verdict', () => {
+  it('flags the lender-approved, cash-negative trap first', () => {
+    expect(verdict(analyzeDeal(PRESET_DEALS[0])).key).toBe('trap');
+    expect(verdict(analyzeDeal(PRESET_DEALS[2])).key).toBe('good');
+    expect(verdict(analyzeDeal({ ...PRESET_DEALS[0], rentPerUnit: 1500 })).key).toBe('negative');
+  });
+});
+
+describe('niceScale', () => {
+  it('skips a negative tick when the negative part is tiny', () => {
+    const s = niceScale(-650, 112000);
+    expect(s.ticks).toEqual([0, 25000, 50000, 75000, 100000, 125000]);
+    expect(s.domain).toEqual([-650, 125000]);
+  });
+  it('keeps real negative ranges on clean ticks', () => {
+    const s = niceScale(-30000, 90000);
+    expect(s.ticks[0]).toBeLessThan(0);
+    expect(s.ticks).toContain(0);
+    expect(s.domain).toEqual([s.ticks[0], s.ticks[s.ticks.length - 1]]);
   });
 });

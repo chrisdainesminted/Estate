@@ -1,6 +1,6 @@
-import { AlertTriangle, Copy, Columns3, Pencil, Plus, Trophy, Trash2 } from 'lucide-react';
+import { AlertTriangle, Copy, Columns3, Pencil, Plus, TrendingUp, Trophy, Trash2 } from 'lucide-react';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { chartTheme } from '../lib/chartTheme.js';
+import { chartTheme, niceScale } from '../lib/chartTheme.js';
 import { compactMoney, money, percent } from '../lib/format.js';
 import { MAX_DEALS } from '../lib/presets.js';
 import { Button, Card, CardHeader, DscrChip, signedClass } from './ui.jsx';
@@ -56,7 +56,7 @@ function CompareTooltip({ active, payload, label, items, theme }) {
   if (!active || !payload?.length) return null;
   const row = payload[0].payload;
   return (
-    <div className="min-w-48 rounded-xl border border-zinc-200 bg-white p-3 text-xs shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+    <div className="glass-strong min-w-52 rounded-2xl p-3.5 text-xs">
       <div className="mb-1.5 font-semibold text-zinc-900 dark:text-zinc-100">Year {label} total return</div>
       {items.map((x) => (
         <div key={x.deal.id} className="flex items-center justify-between gap-4 py-0.5">
@@ -81,6 +81,9 @@ function CompareChart({ items, dark }) {
     });
     return point;
   });
+
+  const all = items.flatMap((x) => x.rows.map((r) => r.totalReturn));
+  const scale = niceScale(Math.min(0, ...all), Math.max(0, ...all));
 
   // Direct end labels only when they won't collide; otherwise legend + tooltip carry identity.
   const ends = items.map((x) => x.rows[years - 1].totalReturn);
@@ -113,7 +116,16 @@ function CompareChart({ items, dark }) {
           <LineChart data={data} margin={{ top: 8, right: labelsFit ? 48 : 12, bottom: 0, left: 0 }}>
             <CartesianGrid vertical={false} stroke={theme.grid} />
             <XAxis dataKey="year" tickLine={false} axisLine={{ stroke: theme.axis }} tick={{ fill: theme.tick, fontSize: 11 }} tickFormatter={(y) => `Y${y}`} />
-            <YAxis tickLine={false} axisLine={false} tick={{ fill: theme.tick, fontSize: 11 }} tickFormatter={compactMoney} width={56} />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tick={{ fill: theme.tick, fontSize: 11 }}
+              tickFormatter={compactMoney}
+              width={56}
+              domain={scale.domain}
+              ticks={scale.ticks}
+              allowDataOverflow
+            />
             <Tooltip content={<CompareTooltip items={items} theme={theme} />} cursor={{ stroke: theme.axis }} />
             {items.map((x) => (
               <Line
@@ -159,7 +171,7 @@ export default function ComparisonMatrix({ items, activeId, onEdit, onDuplicate,
           <table className="w-full min-w-[560px] text-sm">
             <thead>
               <tr>
-                <th className="sticky left-0 z-10 w-44 bg-white px-5 py-3 text-left text-[11px] font-medium tracking-wide text-zinc-500 uppercase dark:bg-zinc-900 dark:text-zinc-400">
+                <th className="eyebrow w-48 px-6 py-4 text-left font-medium max-lg:sticky max-lg:left-0 max-lg:z-10 max-lg:bg-(--glass-strong) max-lg:backdrop-blur-xl">
                   Metric
                 </th>
                 {items.map((x) => (
@@ -211,10 +223,10 @@ export default function ComparisonMatrix({ items, activeId, onEdit, onDuplicate,
               {ROWS.map((row) => {
                 if (row.group) {
                   return (
-                    <tr key={row.group} className="bg-zinc-50 dark:bg-zinc-800/40">
+                    <tr key={row.group} className="bg-well ">
                       <th
                         colSpan={items.length + 1}
-                        className="sticky left-0 px-5 py-1.5 text-left text-[11px] font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400"
+                        className="sticky left-0 px-5 py-1.5 text-left eyebrow"
                       >
                         {row.group}
                       </th>
@@ -223,8 +235,8 @@ export default function ComparisonMatrix({ items, activeId, onEdit, onDuplicate,
                 }
                 const best = bestIndexes(row, items);
                 return (
-                  <tr key={row.label} className="border-t border-zinc-100 dark:border-zinc-800">
-                    <th scope="row" className="sticky left-0 z-10 bg-white px-5 py-2 text-left font-normal text-zinc-600 dark:bg-zinc-900 dark:text-zinc-300" title={row.hint}>
+                  <tr key={row.label} className="border-t border-hairline">
+                    <th scope="row" className="px-6 py-2.5 text-left font-normal text-zinc-600 dark:text-zinc-300 max-lg:sticky max-lg:left-0 max-lg:z-10 max-lg:bg-(--glass-strong) max-lg:backdrop-blur-xl" title={row.hint}>
                       {row.label}
                     </th>
                     {items.map((x, i) => {
@@ -244,8 +256,8 @@ export default function ComparisonMatrix({ items, activeId, onEdit, onDuplicate,
                   </tr>
                 );
               })}
-              <tr className="border-t border-zinc-100 dark:border-zinc-800">
-                <th scope="row" className="sticky left-0 z-10 bg-white px-5 py-2 text-left font-normal text-zinc-600 dark:bg-zinc-900 dark:text-zinc-300">
+              <tr className="border-t border-hairline">
+                <th scope="row" className="px-6 py-2.5 text-left font-normal text-zinc-600 dark:text-zinc-300 max-lg:sticky max-lg:left-0 max-lg:z-10 max-lg:bg-(--glass-strong) max-lg:backdrop-blur-xl">
                   Verdict
                 </th>
                 {items.map((x) => (
@@ -270,7 +282,7 @@ export default function ComparisonMatrix({ items, activeId, onEdit, onDuplicate,
       </Card>
 
       <Card>
-        <CardHeader icon={Columns3} title="10-year total return by deal" subtitle="Cumulative cash flow + principal paydown + appreciation." />
+        <CardHeader icon={TrendingUp} title="10-year total return by deal" subtitle="Cumulative cash flow + principal paydown + appreciation." />
         <div className="p-5">
           <CompareChart items={items} dark={dark} />
         </div>

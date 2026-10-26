@@ -37,7 +37,7 @@ Additional figures: cap rate (NOI ÷ price), breakeven rent per unit, rent neede
 
 ## Features
 
-- **Analyze view**: summary cards, DSCR gauge, a lender-vs-reality breakdown, and a warning banner when DSCR ≥ 1.00 but real cash flow is negative.
+- **Analyze view**: hero summary with a one-line verdict, DSCR gauge, a lender-vs-reality breakdown, and a warning banner when DSCR ≥ 1.00 but real cash flow is negative.
 - **What-if sliders**: rate ±2%, down payment 15–35%, rent −15% to +25%. They apply to the active deal or all deals without changing saved inputs. Use "Apply" to commit them.
 - **Compare view**: 2–3 deals side by side, with a trophy on the best value per row (ties share it) and a 10-year total-return chart.
 - **10-year projection**: stacked chart or table, with optional rent growth and tax/insurance/HOA growth (both 0% by default).
@@ -58,6 +58,7 @@ src/components/*          UI sections
 
 - Name: Bedrock. Tagline: "Cash flow you can build on."
 - Accent: emerald (`emerald-700` #047857 light, `emerald-500/600` dark) on zinc "ink" neutrals.
-- Type: Inter.
+- Type: Geist.
+- Surfaces: frosted glass cards (`.glass` in `src/index.css`) over a fixed emerald/teal aurora with a faint grid and grain. Users who turn on "reduce transparency" in their OS get solid cards instead.
 
 Estimates for personal analysis only. Not lending or investment advice.

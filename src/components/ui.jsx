@@ -5,26 +5,29 @@ import { ratio } from '../lib/format.js';
 
 export function Card({ className = '', children, ...rest }) {
   return (
-    <section
-      className={`rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 ${className}`}
-      {...rest}
-    >
+    <section className={`glass rounded-3xl ${className}`} {...rest}>
       {children}
     </section>
   );
 }
 
-export function CardHeader({ icon: Icon, title, subtitle, actions }) {
+export function IconTile({ icon: Icon, className = '' }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
-      <div className="flex min-w-0 items-start gap-3">
-        {Icon && (
-          <div className="mt-0.5 rounded-lg bg-emerald-50 p-1.5 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
-            <Icon className="size-4" aria-hidden />
-          </div>
-        )}
+    <div
+      className={`grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-b from-emerald-400/25 to-emerald-600/10 text-emerald-700 ring-1 ring-emerald-600/20 ring-inset dark:from-emerald-300/20 dark:to-emerald-500/5 dark:text-emerald-300 dark:ring-emerald-300/20 ${className}`}
+    >
+      <Icon className="size-[18px]" aria-hidden />
+    </div>
+  );
+}
+
+export function CardHeader({ icon, title, subtitle, actions }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-hairline px-6 py-4">
+      <div className="flex min-w-0 items-center gap-3">
+        {icon && <IconTile icon={icon} />}
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{title}</h2>
+          <h2 className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white">{title}</h2>
           {subtitle && <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{subtitle}</p>}
         </div>
       </div>
@@ -40,7 +43,7 @@ export function DscrChip({ status, dscr, size = 'md' }) {
   const Icon = BAND_ICONS[status.key] ?? TrendingUp;
   const sz = size === 'sm' ? 'px-2 py-0.5 text-[11px] gap-1' : 'px-2.5 py-1 text-xs gap-1.5';
   return (
-    <span className={`inline-flex items-center whitespace-nowrap rounded-full font-medium ring-1 ring-inset ${sz} ${BAND_CLASSES[status.key].chip}`}>
+    <span className={`inline-flex items-center rounded-full font-medium whitespace-nowrap ring-1 ring-inset ${sz} ${BAND_CLASSES[status.key].chip}`}>
       <Icon className={size === 'sm' ? 'size-3' : 'size-3.5'} aria-hidden />
       {dscr !== undefined && <span className="tabular font-semibold">{ratio(dscr)}</span>}
       {status.label}
@@ -50,15 +53,16 @@ export function DscrChip({ status, dscr, size = 'md' }) {
 
 export function Button({ variant = 'secondary', className = '', children, ...rest }) {
   const styles = {
-    primary: 'bg-emerald-700 text-white hover:bg-emerald-600 dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400',
+    primary:
+      'bg-gradient-to-b from-emerald-600 to-emerald-700 text-white font-semibold shadow-[0_10px_24px_-10px_rgb(5_150_105/0.8),inset_0_1px_0_rgb(255_255_255/0.25)] ring-1 ring-emerald-800/40 ring-inset hover:from-emerald-500 hover:to-emerald-700 disabled:shadow-none',
     secondary:
-      'bg-white text-zinc-700 ring-1 ring-inset ring-zinc-300 hover:bg-zinc-50 dark:bg-zinc-800 dark:text-zinc-200 dark:ring-zinc-700 dark:hover:bg-zinc-700',
-    ghost: 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800',
+      'bg-white/60 text-zinc-800 ring-1 ring-zinc-950/10 ring-inset hover:bg-white/90 dark:bg-white/[0.06] dark:text-zinc-100 dark:ring-white/10 dark:hover:bg-white/[0.1]',
+    ghost: 'text-zinc-600 hover:bg-zinc-950/5 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white',
   };
   return (
     <button
       type="button"
-      className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 ${styles[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-40 ${styles[variant]} ${className}`}
       {...rest}
     >
       {children}
@@ -69,7 +73,7 @@ export function Button({ variant = 'secondary', className = '', children, ...res
 /** Two-or-more option segmented control. */
 export function Segmented({ options, value, onChange, label, size = 'md' }) {
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-800">
+    <div role="radiogroup" aria-label={label} className="inline-flex rounded-xl bg-zinc-950/5 p-1 ring-1 ring-zinc-950/5 ring-inset dark:bg-white/[0.05] dark:ring-white/10">
       {options.map((o) => {
         const selected = o.value === value;
         return (
@@ -79,15 +83,15 @@ export function Segmented({ options, value, onChange, label, size = 'md' }) {
             role="radio"
             aria-checked={selected}
             onClick={() => onChange(o.value)}
-            className={`rounded-md font-medium transition-colors focus-visible:outline-2 focus-visible:outline-emerald-500 ${
-              size === 'sm' ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm'
+            className={`inline-flex items-center rounded-lg font-medium whitespace-nowrap transition focus-visible:outline-2 focus-visible:outline-emerald-500 ${
+              size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm'
             } ${
               selected
-                ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-zinc-100'
-                : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200'
+                ? 'bg-white text-zinc-900 shadow-[0_1px_2px_rgb(0_0_0/0.08),0_4px_12px_-4px_rgb(0_0_0/0.12)] ring-1 ring-zinc-950/5 dark:bg-white/[0.14] dark:text-white dark:ring-white/10'
+                : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
             }`}
           >
-            {o.icon && <o.icon className="mr-1 inline size-3.5 align-[-2px]" aria-hidden />}
+            {o.icon && <o.icon className="mr-1.5 size-3.5" aria-hidden />}
             {o.label}
           </button>
         );
@@ -96,9 +100,19 @@ export function Segmented({ options, value, onChange, label, size = 'md' }) {
   );
 }
 
+export const fieldText = 'text-sm text-zinc-900 dark:text-zinc-100';
+
 function formatForDisplay(v, decimals) {
   if (!Number.isFinite(v)) return '';
   return v.toLocaleString('en-US', { maximumFractionDigits: decimals });
+}
+
+export function FieldLabel({ htmlFor, children }) {
+  return (
+    <label htmlFor={htmlFor} className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+      {children}
+    </label>
+  );
 }
 
 /**
@@ -125,10 +139,8 @@ export function NumberField({ id, label, value, onChange, prefix, suffix, min = 
 
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-        {label}
-      </label>
-      <div className="flex items-center rounded-lg bg-white ring-1 ring-inset ring-zinc-300 focus-within:ring-2 focus-within:ring-emerald-500 dark:bg-zinc-950 dark:ring-zinc-700">
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <div className="field flex items-center">
         {prefix && <span className="pl-3 text-sm text-zinc-400 dark:text-zinc-500">{prefix}</span>}
         <input
           id={id}
@@ -148,7 +160,7 @@ export function NumberField({ id, label, value, onChange, prefix, suffix, min = 
               commit(String(Math.round(next * 1e6) / 1e6));
             }
           }}
-          className="tabular w-full min-w-0 bg-transparent px-3 py-2 text-sm text-zinc-900 outline-none dark:text-zinc-100"
+          className={`tabular w-full min-w-0 bg-transparent px-3 py-2.5 outline-none ${fieldText}`}
         />
         {suffix && <span className="pr-3 text-sm whitespace-nowrap text-zinc-400 dark:text-zinc-500">{suffix}</span>}
       </div>
@@ -157,11 +169,22 @@ export function NumberField({ id, label, value, onChange, prefix, suffix, min = 
   );
 }
 
+export function SelectField({ id, label, value, onChange, children }) {
+  return (
+    <div>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <select id={id} value={value} onChange={onChange} className={`field w-full px-3 py-2.5 ${fieldText}`}>
+        {children}
+      </select>
+    </div>
+  );
+}
+
 export function Stat({ label, value, sub, className = '' }) {
   return (
     <div className={className}>
-      <div className="text-[11px] font-medium tracking-wide text-zinc-500 uppercase dark:text-zinc-400">{label}</div>
-      <div className="tabular mt-0.5 text-base font-semibold text-zinc-900 dark:text-zinc-100">{value}</div>
+      <div className="eyebrow">{label}</div>
+      <div className="tabular mt-1 text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">{value}</div>
       {sub && <div className="tabular text-[11px] text-zinc-500 dark:text-zinc-400">{sub}</div>}
     </div>
   );
@@ -169,7 +192,7 @@ export function Stat({ label, value, sub, className = '' }) {
 
 /** Green/red text for signed money values, plus the sign so color is never the only cue. */
 export function signedClass(v) {
-  if (v > 0.005) return 'text-green-700 dark:text-green-400';
-  if (v < -0.005) return 'text-red-700 dark:text-red-400';
+  if (v > 0.005) return 'text-emerald-700 dark:text-emerald-400';
+  if (v < -0.005) return 'text-red-600 dark:text-red-400';
   return 'text-zinc-700 dark:text-zinc-300';
 }

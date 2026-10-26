@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { BarChart3, Table2, TrendingUp } from 'lucide-react';
 import { Bar, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { chartTheme } from '../lib/chartTheme.js';
+import { chartTheme, niceScale } from '../lib/chartTheme.js';
 import { compactMoney, money, percent } from '../lib/format.js';
 import { Card, CardHeader, Segmented, Stat } from './ui.jsx';
 
@@ -15,7 +15,7 @@ function ProjectionTooltip({ active, payload, label, theme }) {
   if (!active || !payload?.length) return null;
   const row = payload[0].payload;
   return (
-    <div className="min-w-52 rounded-xl border border-zinc-200 bg-white p-3 text-xs shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+    <div className="glass-strong min-w-56 rounded-2xl p-3.5 text-xs">
       <div className="mb-2 font-semibold text-zinc-900 dark:text-zinc-100">Year {label}</div>
       {SERIES.map((s, i) => (
         <div key={s.key} className="flex items-center justify-between gap-4 py-0.5">
@@ -26,7 +26,7 @@ function ProjectionTooltip({ active, payload, label, theme }) {
           <span className="tabular font-medium text-zinc-900 dark:text-zinc-100">{money(row[s.key], { signed: true })}</span>
         </div>
       ))}
-      <div className="mt-1.5 flex items-center justify-between gap-4 border-t border-zinc-200 pt-1.5 dark:border-zinc-700">
+      <div className="mt-1.5 flex items-center justify-between gap-4 border-t border-hairline pt-1.5">
         <span className="flex items-center gap-1.5 font-semibold text-zinc-900 dark:text-zinc-100">
           <span className="h-0.5 w-3 rounded-full" style={{ background: theme.total }} aria-hidden />
           Total return
@@ -43,6 +43,20 @@ export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
   const theme = chartTheme(dark);
   const y10 = rows[rows.length - 1];
   const years = rows.length;
+
+  // Stacked with stackOffset="sign": positives stack up, negatives stack down.
+  const scale = useMemo(() => {
+    let lo = 0;
+    let hi = 0;
+    rows.forEach((r) => {
+      const parts = SERIES.map((s) => r[s.key]);
+      const up = parts.filter((v) => v > 0).reduce((s, v) => s + v, 0);
+      const down = parts.filter((v) => v < 0).reduce((s, v) => s + v, 0);
+      hi = Math.max(hi, up, r.totalReturn);
+      lo = Math.min(lo, down, r.totalReturn);
+    });
+    return niceScale(lo, hi);
+  }, [rows]);
 
   const annualized = useMemo(() => {
     // Simple CAGR on cash invested: (cash + total return) / cash, annualized.
@@ -91,7 +105,16 @@ export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
                 <ComposedChart data={rows} stackOffset="sign" margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap="28%">
                   <CartesianGrid vertical={false} stroke={theme.grid} />
                   <XAxis dataKey="year" tickLine={false} axisLine={{ stroke: theme.axis }} tick={{ fill: theme.tick, fontSize: 11 }} tickFormatter={(y) => `Y${y}`} />
-                  <YAxis tickLine={false} axisLine={false} tick={{ fill: theme.tick, fontSize: 11 }} tickFormatter={compactMoney} width={56} />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: theme.tick, fontSize: 11 }}
+                    tickFormatter={compactMoney}
+                    width={56}
+                    domain={scale.domain}
+                    ticks={scale.ticks}
+                    allowDataOverflow
+                  />
                   <ReferenceLine y={0} stroke={theme.zero} />
                   <Tooltip content={<ProjectionTooltip theme={theme} />} cursor={{ fill: dark ? 'rgba(148,163,184,0.08)' : 'rgba(15,23,42,0.04)' }} />
                   {SERIES.map((s, i) => (
@@ -124,7 +147,7 @@ export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
-                <tr className="text-[11px] tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
+                <tr className="eyebrow">
                   {['Year', 'Annual cash flow', 'Cum. cash flow', 'Cum. paydown', 'Appreciation', 'Total return', 'Property value', 'Loan balance', 'Equity'].map((h) => (
                     <th key={h} className="py-1.5 pr-2 text-right font-medium first:text-left">
                       {h}
@@ -134,7 +157,7 @@ export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
               </thead>
               <tbody className="tabular">
                 {rows.map((r) => (
-                  <tr key={r.year} className="border-t border-zinc-100 text-zinc-700 dark:border-zinc-800 dark:text-zinc-300">
+                  <tr key={r.year} className="border-t border-hairline text-zinc-700 dark:text-zinc-300">
                     <td className="py-1.5 pr-2">{r.year}</td>
                     <td className="py-1.5 pr-2 text-right">{money(r.cashFlow, { signed: true })}</td>
                     <td className="py-1.5 pr-2 text-right">{money(r.cumCashFlow, { signed: true })}</td>
@@ -152,7 +175,7 @@ export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4 border-t border-zinc-100 px-5 py-4 @lg:grid-cols-3 @4xl:grid-cols-5 dark:border-zinc-800">
+      <div className="grid grid-cols-2 gap-4 border-t border-hairline px-5 py-4 @lg:grid-cols-3 @4xl:grid-cols-5">
         <Stat label={`Year-${years} total return`} value={money(y10.totalReturn, { signed: true })} sub={`${percent(y10.roi, 0)} of cash invested`} />
         <Stat label="Annualized" value={percent(annualized, 1)} sub="on cash invested" />
         <Stat label="Property value" value={money(y10.value)} sub={`from ${money(a.price)}`} />

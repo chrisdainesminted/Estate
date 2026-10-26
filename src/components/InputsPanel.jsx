@@ -1,37 +1,37 @@
-import { Building2, ChevronDown, Landmark, Receipt, SlidersHorizontal, Wrench } from 'lucide-react';
+import { Building2, ChevronDown, Landmark, PencilRuler, Receipt, SlidersHorizontal, Wrench } from 'lucide-react';
 import { UNIT_TYPES } from '../lib/presets.js';
 import { money, percent } from '../lib/format.js';
-import { Card, NumberField } from './ui.jsx';
+import { Card, CardHeader, FieldLabel, NumberField } from './ui.jsx';
 
 function Section({ icon: Icon, title, children, collapsible = false, defaultOpen = true }) {
   const heading = (
-    <span className="flex items-center gap-2 text-xs font-semibold tracking-wide text-zinc-700 uppercase dark:text-zinc-300">
-      <Icon className="size-4 text-emerald-500 dark:text-emerald-400" aria-hidden />
+    <span className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.12em] text-zinc-700 uppercase dark:text-zinc-300">
+      <Icon className="size-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
       {title}
     </span>
   );
   if (collapsible) {
     return (
-      <details open={defaultOpen} className="group border-t border-zinc-100 px-5 py-4 dark:border-zinc-800">
+      <details open={defaultOpen} className="group border-t border-hairline px-6 py-5">
         <summary className="flex cursor-pointer list-none items-center justify-between [&::-webkit-details-marker]:hidden">
           {heading}
           <ChevronDown className="size-4 text-zinc-400 transition-transform group-open:rotate-180" aria-hidden />
         </summary>
-        <div className="mt-3 grid grid-cols-2 gap-3">{children}</div>
+        <div className="mt-4 grid grid-cols-2 gap-3">{children}</div>
       </details>
     );
   }
   return (
-    <div className="border-t border-zinc-100 px-5 py-4 first:border-t-0 dark:border-zinc-800">
+    <div className="border-t border-hairline px-6 py-5">
       {heading}
-      <div className="mt-3 grid grid-cols-2 gap-3">{children}</div>
+      <div className="mt-4 grid grid-cols-2 gap-3">{children}</div>
     </div>
   );
 }
 
 function Derived({ label, value }) {
   return (
-    <div className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 text-xs dark:bg-zinc-800/60">
+    <div className="flex items-center justify-between rounded-xl bg-well px-3 py-2.5 text-xs">
       <span className="text-zinc-500 dark:text-zinc-400">{label}</span>
       <span className="tabular font-semibold text-zinc-800 dark:text-zinc-200">{value}</span>
     </div>
@@ -45,15 +45,14 @@ export default function InputsPanel({ deal, a, onChange }) {
 
   return (
     <Card>
-      <div className="px-5 pt-4 pb-3">
-        <label htmlFor={id('name')} className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-          Deal name
-        </label>
+      <CardHeader icon={PencilRuler} title="Deal inputs" subtitle="Every change recalculates and saves instantly." />
+      <div className="px-6 pt-5 pb-5">
+        <FieldLabel htmlFor={id('name')}>Deal name</FieldLabel>
         <input
           id={id('name')}
           value={deal.name}
           onChange={(e) => onChange({ name: e.target.value })}
-          className="w-full rounded-lg bg-white px-3 py-2 text-sm font-medium text-zinc-900 ring-1 ring-zinc-300 outline-none ring-inset focus:ring-2 focus:ring-emerald-500 dark:bg-zinc-950 dark:text-zinc-100 dark:ring-zinc-700"
+          className="field w-full px-3 py-2.5 text-sm font-medium text-zinc-900 dark:text-zinc-100"
         />
       </div>
 
@@ -62,7 +61,7 @@ export default function InputsPanel({ deal, a, onChange }) {
           <NumberField id={id('price')} label="Purchase price" prefix="$" value={deal.price} onChange={set('price')} step={5000} decimals={0} />
         </div>
         <div className="col-span-2">
-          <label htmlFor={id('unitType')} className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+          <label htmlFor={id('unitType')} className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
             Property type
           </label>
           <select
@@ -72,7 +71,7 @@ export default function InputsPanel({ deal, a, onChange }) {
               const t = UNIT_TYPES.find((u) => u.key === e.target.value);
               onChange({ unitType: t.key, units: t.key === 'multiplex' ? Math.max(deal.units, 5) : t.units });
             }}
-            className="w-full rounded-lg bg-white px-3 py-2 text-sm text-zinc-900 ring-1 ring-zinc-300 outline-none ring-inset focus:ring-2 focus:ring-emerald-500 dark:bg-zinc-950 dark:text-zinc-100 dark:ring-zinc-700"
+            className="field w-full px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100"
           >
             {UNIT_TYPES.map((u) => (
               <option key={u.key} value={u.key}>
@@ -97,14 +96,14 @@ export default function InputsPanel({ deal, a, onChange }) {
         <NumberField id={id('down')} label="Down payment" suffix="%" value={deal.downPct} onChange={set('downPct')} max={100} step={1} hint={money(a.downPayment)} />
         <NumberField id={id('rate')} label="Interest rate" suffix="%" value={deal.rate} onChange={set('rate')} max={30} step={0.125} decimals={3} />
         <div>
-          <label htmlFor={id('term')} className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+          <label htmlFor={id('term')} className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
             Amortization
           </label>
           <select
             id={id('term')}
             value={deal.termYears}
             onChange={(e) => onChange({ termYears: Number(e.target.value) })}
-            className="w-full rounded-lg bg-white px-3 py-2 text-sm text-zinc-900 ring-1 ring-zinc-300 outline-none ring-inset focus:ring-2 focus:ring-emerald-500 dark:bg-zinc-950 dark:text-zinc-100 dark:ring-zinc-700"
+            className="field w-full px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100"
           >
             {[10, 15, 20, 25, 30, 40].map((y) => (
               <option key={y} value={y}>

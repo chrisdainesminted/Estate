@@ -21,23 +21,37 @@ export function dscrStatus(dscr) {
 // Tailwind classes per band, used for chips and card accents.
 export const BAND_CLASSES = {
   negative: {
-    chip: 'bg-red-100 text-red-800 ring-red-600/20 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-400/30',
+    chip: 'bg-red-500/10 text-red-700 ring-red-500/25 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-400/25',
     text: 'text-red-700 dark:text-red-400',
     bar: 'bg-red-600',
   },
   tight: {
-    chip: 'bg-yellow-100 text-yellow-900 ring-yellow-600/30 dark:bg-yellow-400/15 dark:text-yellow-200 dark:ring-yellow-400/30',
+    chip: 'bg-yellow-400/20 text-yellow-900 ring-yellow-600/30 dark:bg-yellow-400/15 dark:text-yellow-200 dark:ring-yellow-300/25',
     text: 'text-yellow-700 dark:text-yellow-300',
     bar: 'bg-yellow-500',
   },
   sweet: {
-    chip: 'bg-green-100 text-green-800 ring-green-600/20 dark:bg-green-500/15 dark:text-green-300 dark:ring-green-400/30',
+    chip: 'bg-green-500/10 text-green-800 ring-green-600/25 dark:bg-green-500/15 dark:text-green-300 dark:ring-green-400/25',
     text: 'text-green-700 dark:text-green-400',
     bar: 'bg-green-600',
   },
   strong: {
-    chip: 'bg-blue-100 text-blue-800 ring-blue-600/20 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-400/30',
+    chip: 'bg-blue-500/10 text-blue-800 ring-blue-600/25 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-400/25',
     text: 'text-blue-700 dark:text-blue-400',
     bar: 'bg-blue-600',
   },
+};
+
+/** One-line verdict on a deal, combining the lender view with real cash flow. */
+export function verdict(a) {
+  if (a.lenderApprovedButNegative) return { key: 'trap', tone: 'bad', label: 'Lender yes, cash flow no' };
+  if (a.netCashFlow < 0) return { key: 'negative', tone: 'bad', label: 'Negative cash flow' };
+  if (a.status.key === 'tight') return { key: 'tight', tone: 'warn', label: 'Cash flows, tight DSCR' };
+  return { key: 'good', tone: 'good', label: 'Cash flows' };
+}
+
+export const TONE_CLASSES = {
+  bad: 'bg-red-500/10 text-red-700 ring-red-500/25 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-400/25',
+  warn: 'bg-amber-400/15 text-amber-800 ring-amber-500/30 dark:bg-amber-400/15 dark:text-amber-200 dark:ring-amber-300/25',
+  good: 'bg-emerald-500/10 text-emerald-800 ring-emerald-600/25 dark:bg-emerald-400/15 dark:text-emerald-200 dark:ring-emerald-300/25',
 };

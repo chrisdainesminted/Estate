@@ -3,19 +3,27 @@ import { money, percent, ratio } from '../lib/format.js';
 import { isNeutralAdjustment } from '../lib/finance.js';
 import { Button, Card, CardHeader, Segmented, signedClass } from './ui.jsx';
 
-function Slider({ id, label, min, max, step, value, onChange, display, note, ticks }) {
+function Slider({ id, label, min, max, step, value, onChange, display, note, ticks, origin = min }) {
+  // Fill the track between the origin (0 for deltas, min otherwise) and the thumb.
+  const pos = (v) => ((v - min) / (max - min)) * 100;
+  const lo = Math.min(pos(origin), pos(value));
+  const hi = Math.max(pos(origin), pos(value));
+  const rangeBg = `linear-gradient(to right, var(--track) ${lo}%, var(--accent) ${lo}%, var(--accent) ${hi}%, var(--track) ${hi}%)`;
   return (
     <div>
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
         <label htmlFor={id} className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
           {label}
         </label>
-        <span className="tabular text-sm font-semibold text-zinc-900 dark:text-zinc-100">{display}</span>
+        <span className="tabular rounded-lg bg-well px-2 py-0.5 text-sm font-semibold text-zinc-900 dark:text-white">{display}</span>
       </div>
-      <input id={id} type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} />
-      <div className="tabular mt-0.5 flex justify-between text-[11px] text-zinc-400 dark:text-zinc-500">
-        {ticks.map((t) => (
-          <span key={t}>{t}</span>
+      <input id={id} type="range" className="range" style={{ '--range-bg': rangeBg }} min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} />
+      {/* Ticks sit under the thumb's actual position (the 20px thumb travels 10px in from each end). */}
+      <div className="tabular relative mt-0.5 h-4 text-[11px] text-zinc-400 dark:text-zinc-500">
+        {ticks.map(([v, text]) => (
+          <span key={text} className="absolute -translate-x-1/2" style={{ left: `calc(10px + (100% - 20px) * ${pos(v) / 100})` }}>
+            {text}
+          </span>
         ))}
       </div>
       {note && <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">{note}</p>}
@@ -100,7 +108,8 @@ export default function SensitivitySliders({ deal, adj, setAdj, scope, setScope,
             value={adj.rateDelta}
             onChange={(v) => setAdj({ ...adj, rateDelta: v })}
             display={`${newRate.toFixed(3).replace(/0$/, '')}% (${adj.rateDelta >= 0 ? '+' : '−'}${Math.abs(adj.rateDelta).toFixed(3).replace(/0$/, '')})`}
-            ticks={['−2%', '0', '+2%']}
+            ticks={[[-2, '−2%'], [0, '0'], [2, '+2%']]}
+            origin={0}
           />
           <Slider
             id="what-if-down"
@@ -111,7 +120,7 @@ export default function SensitivitySliders({ deal, adj, setAdj, scope, setScope,
             value={downValue}
             onChange={(v) => setAdj({ ...adj, downPct: v })}
             display={`${downValue}%${adj.downPct == null ? ' (deal value)' : ''}`}
-            ticks={['15%', '25%', '35%']}
+            ticks={[[15, '15%'], [25, '25%'], [35, '35%']]}
             note={adj.downPct != null && scope === 'all' && dealCount > 1 ? 'Sets every deal to this down payment.' : undefined}
           />
           <Slider
@@ -123,17 +132,18 @@ export default function SensitivitySliders({ deal, adj, setAdj, scope, setScope,
             value={adj.rentPct}
             onChange={(v) => setAdj({ ...adj, rentPct: v })}
             display={`${adj.rentPct > 0 ? '+' : adj.rentPct < 0 ? '−' : ''}${Math.abs(adj.rentPct)}% · ${money(what.grossRent)}/mo`}
-            ticks={['−15%', '0', '+25%']}
+            ticks={[[-15, '−15%'], [0, '0'], [25, '+25%']]}
+            origin={0}
           />
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <caption className="mb-2 text-left text-xs font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
+            <caption className="mb-2 text-left eyebrow">
               Impact on {deal.name}
             </caption>
             <thead>
-              <tr className="text-[11px] tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
+              <tr className="eyebrow">
                 <th className="py-1.5 text-left font-medium">Metric</th>
                 <th className="py-1.5 text-right font-medium">Base</th>
                 <th className="py-1.5 text-right font-medium">What-if</th>
@@ -142,7 +152,7 @@ export default function SensitivitySliders({ deal, adj, setAdj, scope, setScope,
             </thead>
             <tbody className="tabular">
               {rows.map((r) => (
-                <tr key={r.label} className="border-t border-zinc-100 dark:border-zinc-800">
+                <tr key={r.label} className="border-t border-hairline">
                   <td className="py-2 text-zinc-700 dark:text-zinc-300">{r.label}</td>
                   <td className="py-2 text-right text-zinc-500 dark:text-zinc-400">{r.b}</td>
                   <td className="py-2 text-right font-semibold text-zinc-900 dark:text-zinc-100">{r.w}</td>
