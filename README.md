@@ -1,10 +1,10 @@
-<p align="center"><img src="public/favicon.svg" width="72" alt="Keystone logo" /></p>
+<p align="center"><img src="public/favicon.svg" width="72" alt="Bedrock logo" /></p>
 
-# Keystone
+# Bedrock
 
-**Underwriting for investors past five doors.**
+**Cash flow you can build on.**
 
-Keystone separates **lender DSCR math (PITIA)** from **real-world cash flow (PITIA + OpEx)**, so a deal a DSCR lender approves can't quietly lose money every month. The mark is an arch held up by its keystone: the one number (real cash flow) the whole portfolio rests on.
+Bedrock separates **lender DSCR math (PITIA)** from **real-world cash flow (PITIA + OpEx)**, so a deal a DSCR lender approves can't quietly lose money every month. The mark is stacked layers widening to a solid base: real cash flow is the layer a portfolio is built on.
 
 ## Run it
 
@@ -56,7 +56,7 @@ src/components/*          UI sections
 
 ## Brand
 
-- Name: Keystone. Tagline: "Underwriting for investors past five doors."
+- Name: Bedrock. Tagline: "Cash flow you can build on."
 - Accent: emerald (`emerald-700` #047857 light, `emerald-500/600` dark) on zinc "ink" neutrals.
 - Type: Inter.
 

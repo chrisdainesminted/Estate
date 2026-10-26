@@ -207,7 +207,7 @@ export default function App() {
         )}
 
         <footer className="pt-2 pb-8 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-          <span className="font-semibold text-zinc-700 dark:text-zinc-300">Keystone</span> · DSCR = gross monthly rent ÷ PITIA (principal, interest, taxes, insurance, HOA). Real net cash flow also subtracts management,
+          <span className="font-semibold text-zinc-700 dark:text-zinc-300">Bedrock</span> · DSCR = gross monthly rent ÷ PITIA (principal, interest, taxes, insurance, HOA). Real net cash flow also subtracts management,
           maintenance, vacancy and CapEx reserves. Cash out of pocket = down payment + closing costs. Projections assume a fixed-rate loan;
           figures are estimates for personal analysis, not lending or investment advice. Deals are saved in this browser only.
         </footer>
