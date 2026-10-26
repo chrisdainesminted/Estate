@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Briefcase, Cloud, CloudOff, Columns3, Gauge, HardDrive, LayoutDashboard, Moon, RotateCcw, Sun } from 'lucide-react';
+import { Briefcase, Cloud, CloudOff, Columns3, Gauge, HardDrive, LayoutDashboard, Moon, RotateCcw, Sprout, Sun } from 'lucide-react';
 import { useDeals } from './hooks/useDeals.js';
 import { useTheme } from './hooks/useTheme.js';
-import { analyzeDeal, applyAdjustments, isNeutralAdjustment, projectDeal, saleAnalysis } from './lib/finance.js';
+import { analyzeDeal, applyAdjustments, isNeutralAdjustment, maxOffer, projectDeal, refiAnalysis, saleAnalysis } from './lib/finance.js';
 import { MAX_COMPARE } from './lib/presets.js';
 import HeroSummary from './components/HeroSummary.jsx';
 import DscrGauge from './components/DscrGauge.jsx';
@@ -12,6 +12,9 @@ import SensitivitySliders from './components/SensitivitySliders.jsx';
 import ComparisonMatrix, { CompareSelector } from './components/ComparisonMatrix.jsx';
 import ProjectionChart from './components/ProjectionChart.jsx';
 import ExitCard from './components/ExitCard.jsx';
+import MaxOfferCard from './components/MaxOfferCard.jsx';
+import RefiCard from './components/RefiCard.jsx';
+import PlanView from './components/PlanView.jsx';
 import PortfolioView from './components/PortfolioView.jsx';
 import DealPicker from './components/DealPicker.jsx';
 import ExportMenu from './components/ExportMenu.jsx';
@@ -23,9 +26,17 @@ const NO_ADJ = { rateDelta: 0, downPct: null, rentPct: 0 };
 const YEARS = 10;
 const VIEW_KEY = 'bedrock-view';
 
-function build(deal, adjusted = false) {
+function build(deal, targets, adjusted = false) {
   const rows = projectDeal(deal, YEARS);
-  return { deal, a: analyzeDeal(deal), rows, sale: saleAnalysis(deal, rows), adjusted };
+  return {
+    deal,
+    a: analyzeDeal(deal),
+    rows,
+    sale: saleAnalysis(deal, rows),
+    refi: refiAnalysis(deal, YEARS),
+    offer: maxOffer(deal, targets),
+    adjusted,
+  };
 }
 
 const SYNC_TEXT = {
@@ -49,7 +60,7 @@ function useStoredView() {
   const [view, setView] = useState(() => {
     try {
       const v = localStorage.getItem(VIEW_KEY);
-      return ['portfolio', 'analyze', 'compare'].includes(v) ? v : 'analyze';
+      return ['portfolio', 'analyze', 'compare', 'plan'].includes(v) ? v : 'analyze';
     } catch {
       return 'analyze';
     }
@@ -77,17 +88,18 @@ export default function App() {
   const inCompare = (id) => compare.some((c) => c.id === id);
 
   // Saved inputs, untouched by the what-if sliders: the portfolio and deal menu use these.
-  const baseItems = useMemo(() => deals.map((d) => build(d)), [deals]);
+  const targets = lib.settings.targets;
+  const baseItems = useMemo(() => deals.map((d) => build(d, targets)), [deals, targets]);
 
   // What-if adjustments apply to the open deal, or to every compared deal.
   const effective = useMemo(() => {
     const map = new Map();
     baseItems.forEach((x) => {
       const adjusted = !neutral && (effectiveScope === 'compare' ? compare.some((c) => c.id === x.deal.id) : x.deal.id === activeId);
-      map.set(x.deal.id, adjusted ? build(applyAdjustments(x.deal, adj), true) : x);
+      map.set(x.deal.id, adjusted ? build(applyAdjustments(x.deal, adj), targets, true) : x);
     });
     return map;
-  }, [baseItems, adj, neutral, effectiveScope, compare, activeId]);
+  }, [baseItems, adj, neutral, effectiveScope, compare, activeId, targets]);
 
   const current = effective.get(activeId);
   const base = baseItems.find((x) => x.deal.id === activeId);
@@ -150,6 +162,7 @@ export default function App() {
                   { value: 'portfolio', label: 'Portfolio', icon: Briefcase },
                   { value: 'analyze', label: 'Analyze', icon: LayoutDashboard },
                   { value: 'compare', label: 'Compare', icon: Columns3 },
+                  { value: 'plan', label: 'Plan', icon: Sprout },
                 ]}
               />
             </div>
@@ -218,12 +231,23 @@ export default function App() {
                     </Card>
                     <div className="xl:col-span-2">{sliders}</div>
                   </div>
+                  <MaxOfferCard
+                    deal={current.deal}
+                    targets={targets}
+                    onTargets={(patch) => lib.updateSettings('targets', patch)}
+                    onUsePrice={(price) => lib.updateDeal(active.id, { price })}
+                  />
                   <LenderVsReality a={a} />
                   <ProjectionChart rows={current.rows} a={a} dark={dark} appreciationPct={Number(current.deal.appreciationPct)} />
+                  {current.refi && <RefiCard refi={current.refi} a={a} deal={current.deal} />}
                   <ExitCard sale={current.sale} deal={current.deal} />
                 </div>
               </div>
             </>
+          )}
+
+          {view === 'plan' && (
+            <PlanView owned={owned} deals={baseItems} plan={lib.settings.plan} onPlan={(patch) => lib.updateSettings('plan', patch)} dark={dark} onOpen={openDeal} />
           )}
 
           {view === 'compare' && (

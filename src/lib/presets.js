@@ -38,6 +38,14 @@ export const DEFAULT_DEAL = {
   sellingCostPct: 7,
   status: 'prospect', // 'prospect' | 'owned'
   yearsOwned: 0,
+  prepay: 'none', // key of PREPAY_SCHEDULES
+  arv: 0, // after-repair value; 0 means no value-add
+  refiEnabled: false,
+  refiYear: 1,
+  refiLtv: 75,
+  refiRate: 7.25,
+  refiTermYears: 30,
+  refiCostPct: 2,
 };
 
 export const PRESET_DEALS = [

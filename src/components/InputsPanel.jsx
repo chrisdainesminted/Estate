@@ -1,7 +1,8 @@
-import { Building2, ChevronDown, Copy, Landmark, PencilRuler, Receipt, SlidersHorizontal, Trash2, Wallet, Wrench } from 'lucide-react';
+import { Building2, ChevronDown, Copy, Hammer, Landmark, PencilRuler, Receipt, SlidersHorizontal, Trash2, Wallet, Wrench } from 'lucide-react';
 import { UNIT_TYPES } from '../lib/presets.js';
 import { money, percent } from '../lib/format.js';
 import { Card, CardHeader, ConfirmButton, FieldLabel, NumberField, Segmented, SelectField } from './ui.jsx';
+import { InfoTip } from './motion.jsx';
 
 function Section({ icon: Icon, title, children, collapsible = false, defaultOpen = true }) {
   const heading = (
@@ -181,6 +182,13 @@ export default function InputsPanel({ deal, a, onChange, onDuplicate, onDelete }
             </p>
           )}
         </div>
+        <div className="col-span-2">
+          <SelectField id={id('prepay')} label="Prepayment penalty" tip="prepay" value={deal.prepay || 'none'} onChange={(e) => onChange({ prepay: e.target.value })}>
+            <option value="none">None</option>
+            <option value="3-2-1">3-2-1 (3 years)</option>
+            <option value="5-4-3-2-1">5-4-3-2-1 (5 years)</option>
+          </SelectField>
+        </div>
         <div className="col-span-2 grid grid-cols-2 gap-2">
           <Derived label="Loan" value={money(a.loanAmount)} />
           <Derived label="LTV" value={percent(a.ltv, 1)} />
@@ -205,6 +213,52 @@ export default function InputsPanel({ deal, a, onChange, onDuplicate, onDelete }
           <Derived label="Cash invested (down + closing + rehab)" value={money(a.cashInvested)} />
           <Derived label="Cash needed incl. reserves" value={money(a.cashNeeded)} strong />
         </div>
+      </Section>
+
+      <Section icon={Hammer} title="Value-add & refinance">
+        <div className="col-span-2">
+          <NumberField
+            id={id('arv')}
+            label="After-repair value"
+            tip="arv"
+            prefix="$"
+            value={deal.arv}
+            onChange={set('arv')}
+            step={5000}
+            decimals={0}
+            hint={Number(deal.arv) > 0 ? `${money(a.forcedEquity)} of equity created by the rehab` : 'Leave at 0 if the rehab adds no value'}
+          />
+        </div>
+        <div className="col-span-2 flex items-center justify-between gap-3">
+          <span className="flex items-center gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            Cash-out refinance
+            <InfoTip k="refinance" />
+          </span>
+          <Segmented
+            size="sm"
+            label="Cash-out refinance"
+            value={deal.refiEnabled ? 'yes' : 'no'}
+            onChange={(v) => onChange({ refiEnabled: v === 'yes' })}
+            options={[
+              { value: 'no', label: 'No' },
+              { value: 'yes', label: 'Yes' },
+            ]}
+          />
+        </div>
+        {deal.refiEnabled && (
+          <>
+            <SelectField id={id('refiYear')} label="Refinance after" value={deal.refiYear} onChange={(e) => onChange({ refiYear: Number(e.target.value) })}>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((y) => (
+                <option key={y} value={y}>
+                  {y} {y === 1 ? 'year' : 'years'}
+                </option>
+              ))}
+            </SelectField>
+            <NumberField id={id('refiLtv')} label="New loan" suffix="% LTV" value={deal.refiLtv} onChange={set('refiLtv')} max={90} step={5} decimals={1} />
+            <NumberField id={id('refiRate')} label="New rate" suffix="%" value={deal.refiRate} onChange={set('refiRate')} max={30} step={0.125} decimals={3} />
+            <NumberField id={id('refiCost')} label="Refinance costs" suffix="%" value={deal.refiCostPct} onChange={set('refiCostPct')} max={10} step={0.25} decimals={2} />
+          </>
+        )}
       </Section>
 
       <Section icon={Receipt} title="Taxes, insurance & HOA">

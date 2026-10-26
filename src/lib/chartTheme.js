@@ -5,7 +5,7 @@
 
 export const CHART_THEME = {
   light: {
-    series: ['#2a78d6', '#eb6834', '#1baf7a'],
+    series: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100'],
     total: '#18181b',
     grid: '#e4e4e7',
     axis: '#d4d4d8',
@@ -14,7 +14,7 @@ export const CHART_THEME = {
     zero: '#a1a1aa',
   },
   dark: {
-    series: ['#3987e5', '#d95926', '#199e70'],
+    series: ['#3987e5', '#d95926', '#199e70', '#c98500'],
     total: '#f4f4f5',
     grid: '#27272a',
     axis: '#3f3f46',

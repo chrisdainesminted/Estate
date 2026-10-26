@@ -20,7 +20,7 @@ const clean = (s) =>
     .replace(/[‘’]/g, "'")
     .replace(/…/g, '...');
 
-export async function buildMemoPdf({ deal, a, rows, sale }) {
+export async function buildMemoPdf({ deal, a, rows, sale, refi, offer }) {
   const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const { m } = PAGE;
@@ -101,6 +101,17 @@ export async function buildMemoPdf({ deal, a, rows, sale }) {
   });
   y += 58;
 
+  if (offer && offer.price != null) {
+    y += 16;
+    const lim = offer.limits.find((l) => l.key === offer.binding);
+    const line = !offer.feasible
+      ? 'Max offer at your targets: no price works.'
+      : Number.isFinite(offer.price)
+        ? `Max offer at your targets: ${money(offer.price)} (${offer.vsAsking >= 0 ? `${money(offer.vsAsking)} above` : `${money(-offer.vsAsking)} below`} asking; set by ${lim.label}).`
+        : 'Max offer at your targets: no limit.';
+    text(line, m, y, { size: 9, bold: true, color: BRAND });
+  }
+
   if (a.lenderApprovedButNegative) {
     y += 12;
     const msg = `Lender-approved but cash-flow negative: a ${ratio(a.dscr)} DSCR qualifies, yet the deal loses ${money(-a.netCashFlow)}/month after operating expenses. Break-even rent is ${money(a.breakevenRent / a.units)}/unit.`;
@@ -161,13 +172,21 @@ export async function buildMemoPdf({ deal, a, rows, sale }) {
     ['Cash invested', money(a.cashInvested), true],
     [`Reserves (${Number(deal.reserveMonths) || 0} mo PITIA)`, money(a.reserves)],
     ['Cash needed', money(a.cashNeeded), true],
+    ...(refi
+      ? [
+          [`Cash back at refinance (yr ${refi.year})`, money(refi.cashOut, { signed: true })],
+          ['Cash left in deal', money(refi.cashLeft), true],
+        ]
+      : []),
   ]);
   const rightB = section(m + colW + 30, y, `If sold in year ${sale.year}`, [
     ['Sale price', money(sale.salePrice)],
     [`Selling costs (${Number(deal.sellingCostPct) || 0}%)`, `-${money(sale.sellingCosts)}`],
     ['Loan payoff', `-${money(sale.loanPayoff)}`],
+    ...(sale.prepayPenalty > 0 ? [['Prepayment penalty', `-${money(sale.prepayPenalty)}`]] : []),
     ['Net proceeds', money(sale.netProceeds), true],
     [`${sale.year} years of cash flow`, money(sale.totalCashFlow, { signed: true })],
+    ...(sale.cashOut ? [['Cash from refinance', money(sale.cashOut, { signed: true })]] : []),
     ['Profit after cash invested', money(sale.profit, { signed: true }), true],
   ]);
 

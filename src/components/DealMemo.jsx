@@ -36,7 +36,7 @@ function Section({ title, children }) {
 }
 
 export default function DealMemo({ item }) {
-  const { deal, a, rows, sale } = item;
+  const { deal, a, rows, sale, refi, offer } = item;
   const v = verdict(a);
   const type = UNIT_TYPES.find((u) => u.key === deal.unitType);
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -67,6 +67,12 @@ export default function DealMemo({ item }) {
         <Box label="Cash-on-cash" value={percent(a.coc)} sub={`on ${money(a.cashInvested)}`} />
         <Box label={`IRR, sold yr ${sale.year}`} value={Number.isFinite(sale.irr) ? percent(sale.irr, 1) : '—'} sub={`${Number.isFinite(sale.equityMultiple) ? sale.equityMultiple.toFixed(2) : '—'}× equity multiple`} />
       </div>
+
+      {offer && offer.feasible && Number.isFinite(offer.price) && (
+        <p className="mt-3 font-semibold text-emerald-800">
+          Max offer at your targets: {money(offer.price)} ({offer.vsAsking >= 0 ? `${money(offer.vsAsking)} above` : `${money(-offer.vsAsking)} below`} asking).
+        </p>
+      )}
 
       {a.lenderApprovedButNegative && (
         <p className="mt-3 rounded-lg border border-zinc-900 px-3 py-2 font-medium">
@@ -103,14 +109,18 @@ export default function DealMemo({ item }) {
           <Row label="Cash invested" value={money(a.cashInvested)} strong />
           <Row label={`Reserves (${Number(deal.reserveMonths) || 0} mo PITIA)`} value={money(a.reserves)} />
           <Row label="Cash needed" value={money(a.cashNeeded)} strong />
+          {refi && <Row label={`Cash back at refinance (yr ${refi.year})`} value={money(refi.cashOut, { signed: true })} />}
+          {refi && <Row label="Cash left in deal" value={money(refi.cashLeft)} strong />}
         </Section>
 
         <Section title={`If sold in year ${sale.year}`}>
           <Row label="Sale price" value={money(sale.salePrice)} />
           <Row label={`Selling costs (${Number(deal.sellingCostPct) || 0}%)`} value={`−${money(sale.sellingCosts)}`} />
           <Row label="Loan payoff" value={`−${money(sale.loanPayoff)}`} />
+          {sale.prepayPenalty > 0 && <Row label="Prepayment penalty" value={`−${money(sale.prepayPenalty)}`} />}
           <Row label="Net proceeds" value={money(sale.netProceeds)} strong />
           <Row label={`${sale.year} years of cash flow`} value={money(sale.totalCashFlow, { signed: true })} />
+          {sale.cashOut !== 0 && <Row label="Cash from refinance" value={money(sale.cashOut, { signed: true })} />}
           <Row label="Profit after cash invested" value={money(sale.profit, { signed: true })} strong />
         </Section>
       </div>

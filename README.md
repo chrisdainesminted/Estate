@@ -38,6 +38,10 @@ Deals are always saved in the browser. On the hosted page they also sync to the 
 | IRR | rate that zeroes the NPV of −cash invested, each year's cash flow, and net sale proceeds in year 10 |
 | Equity multiple | (cash flow + net sale proceeds) ÷ cash invested |
 | Global DSCR | total lender rent ÷ total PITIA across owned properties |
+| Max offer | the lowest of each target's price ceiling, solved exactly: DSCR, cash flow per door, cash-on-cash (rent, taxes, insurance, rehab held as entered) |
+| Prepayment penalty | step-down % of the balance repaid (none, 3-2-1, 5-4-3-2-1), charged on a refinance or sale inside the window |
+| Cash-out refinance | new loan = value × LTV; cash out = new loan − old balance − penalty − fees; the new loan's payment carries through cash flow, sale and IRR |
+| Growth plan | monthly: savings + reinvested cash flow + refinance cash; buy the chosen deal whenever cash covers cash invested plus reserves for every property |
 
 DSCR bands: **< 1.00** red (negative), **1.00–1.19** yellow (tight), **1.20–1.25** green (sweet spot), **> 1.25** blue (strong). DSCR is banded on the 2-decimal value shown on screen.
 
@@ -49,6 +53,9 @@ Additional figures: cap rate (NOI ÷ price), breakeven rent per unit, rent neede
 - **Analyze view**: hero summary with a one-line verdict, DSCR gauge, a lender-vs-reality breakdown, a warning when DSCR ≥ 1.00 but real cash flow is negative, a 10-year projection, and what you'd walk away with if you sold in year 10.
 - **What-if sliders**: rate ±2%, down payment 15–35%, rent −15% to +25%, for the open deal or every compared deal, without changing saved inputs until you apply them.
 - **Compare view**: pick up to 3 deals from the library; side-by-side matrix with a trophy on the best value per row (ties share it) and a profit-if-sold-by-year chart.
+- **Max offer price**: set targets (DSCR, cash flow per door, cash-on-cash) and see the most you can pay, which target sets it, and a one-click "use this price".
+- **Value-add and refinance (BRRRR)**: after-repair value, a cash-out refinance in year 1–9, cash left in the deal, the new loan's DSCR and cash flow, and prepayment penalties.
+- **Plan view**: cash on hand, monthly savings and a deal to repeat become a 10-year path in doors, cash flow and equity, with every purchase dated and lender reserves held throughout.
 - **Deal library**: unlimited deals, each a prospect or owned, with a searchable picker. Starter deals are tagged "Example" until edited.
 - **Export**: a one-page PDF deal memo (vector, Letter size) and a CSV of every deal. Ctrl+P also prints the memo.
 - **Polish**: count-up numbers, a sweeping gauge needle, animated charts and staggered panels (all off under reduced motion), plain-English explanations on every metric, light/dark mode that follows the host or OS.
@@ -56,7 +63,8 @@ Additional figures: cap rate (NOI ÷ price), breakeven rent per unit, rent neede
 ## Layout
 
 ```
-src/lib/finance.js        calculation engine: loans, DSCR, cash flow, projection, sale/IRR, portfolio (tested)
+src/lib/finance.js        calculation engine: loans, DSCR, cash flow, projection, refinance, sale/IRR, max offer, portfolio (tested)
+src/lib/growth.js         growth plan simulation (tested)
 src/lib/dscr.js           DSCR bands, colors and the one-line verdict
 src/lib/export.js         CSV export (tested)
 src/lib/memoPdf.js        PDF deal memo (jsPDF, loaded on demand)

@@ -94,7 +94,7 @@ export function Segmented({ options, value, onChange, label, size = 'md' }) {
                 : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
             }`}
           >
-            {o.icon && <o.icon className="mr-1.5 size-3.5" aria-hidden />}
+            {o.icon && <o.icon className="mr-1.5 size-3.5 max-sm:hidden" aria-hidden />}
             {o.label}
           </button>
         );

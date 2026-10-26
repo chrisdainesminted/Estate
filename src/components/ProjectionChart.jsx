@@ -11,14 +11,16 @@ const SERIES = [
   { key: 'cumPrincipal', label: 'Principal paydown' },
   { key: 'cumAppreciation', label: 'Appreciation' },
 ];
+// Only shown when a refinance is planned: its penalty and fees, drawn below zero.
+const REFI_SERIES = { key: 'refiCostsNeg', label: 'Refinance costs' };
 
-function ProjectionTooltip({ active, payload, label, theme }) {
+function ProjectionTooltip({ active, payload, label, theme, series }) {
   if (!active || !payload?.length) return null;
   const row = payload[0].payload;
   return (
     <div className="glass-strong min-w-56 rounded-2xl p-3.5 text-xs">
       <div className="mb-2 font-semibold text-zinc-900 dark:text-zinc-100">Year {label}</div>
-      {SERIES.map((s, i) => (
+      {series.map((s, i) => (
         <div key={s.key} className="flex items-center justify-between gap-4 py-0.5">
           <span className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-300">
             <span className="size-2.5 rounded-sm" style={{ background: theme.series[i] }} aria-hidden />
@@ -46,6 +48,9 @@ export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
   const [view, setView] = useState('chart');
   const theme = chartTheme(dark);
   const y10 = rows[rows.length - 1];
+  const hasRefi = rows.some((r) => r.cumRefiCosts > 0);
+  const series = hasRefi ? [...SERIES, REFI_SERIES] : SERIES;
+  const data = useMemo(() => rows.map((r) => ({ ...r, refiCostsNeg: -r.cumRefiCosts })), [rows]);
   const years = rows.length;
 
   // Stacked with stackOffset="sign": positives stack up, negatives stack down.
@@ -53,7 +58,7 @@ export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
     let lo = 0;
     let hi = 0;
     rows.forEach((r) => {
-      const parts = SERIES.map((s) => r[s.key]);
+      const parts = [...SERIES.map((s) => r[s.key]), -r.cumRefiCosts];
       const up = parts.filter((v) => v > 0).reduce((s, v) => s + v, 0);
       const down = parts.filter((v) => v < 0).reduce((s, v) => s + v, 0);
       hi = Math.max(hi, up, r.totalReturn);
@@ -86,7 +91,7 @@ export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
         {view === 'chart' ? (
           <>
             <ul className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-600 dark:text-zinc-300" aria-label="Legend">
-              {SERIES.map((s, i) => (
+              {series.map((s, i) => (
                 <li key={s.key} className="flex items-center gap-1.5">
                   <span className="size-2.5 rounded-sm" style={{ background: theme.series[i] }} aria-hidden />
                   {s.label}
@@ -99,7 +104,7 @@ export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
             </ul>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={rows} stackOffset="sign" margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap="28%">
+                <ComposedChart data={data} stackOffset="sign" margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap="28%">
                   <CartesianGrid vertical={false} stroke={theme.grid} />
                   <XAxis dataKey="year" tickLine={false} axisLine={{ stroke: theme.axis }} tick={{ fill: theme.tick, fontSize: 11 }} tickFormatter={(y) => `Y${y}`} />
                   <YAxis
@@ -113,8 +118,8 @@ export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
                     allowDataOverflow
                   />
                   <ReferenceLine y={0} stroke={theme.zero} />
-                  <Tooltip content={<ProjectionTooltip theme={theme} />} cursor={{ fill: dark ? 'rgba(148,163,184,0.08)' : 'rgba(15,23,42,0.04)' }} />
-                  {SERIES.map((s, i) => (
+                  <Tooltip content={<ProjectionTooltip theme={theme} series={series} />} cursor={{ fill: dark ? 'rgba(148,163,184,0.08)' : 'rgba(15,23,42,0.04)' }} />
+                  {series.map((s, i) => (
                     <Bar
                       key={s.key}
                       dataKey={s.key}
@@ -123,7 +128,7 @@ export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
                       stroke={theme.surface}
                       strokeWidth={2}
                       maxBarSize={28}
-                      radius={i === SERIES.length - 1 ? [4, 4, 0, 0] : 0}
+                      radius={s.key === 'cumAppreciation' ? [4, 4, 0, 0] : 0}
                       isAnimationActive={CHART_ANIMATE} animationDuration={700}
                     />
                   ))}

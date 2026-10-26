@@ -76,6 +76,70 @@ export function irr(flows) {
   return (lo + hi) / 2;
 }
 
+/** Step-down prepayment penalties common on DSCR loans, as % of the balance paid off in loan year 1, 2, ... */
+export const PREPAY_SCHEDULES = {
+  none: [],
+  '3-2-1': [3, 2, 1],
+  '5-4-3-2-1': [5, 4, 3, 2, 1],
+};
+
+/**
+ * Penalty rate for paying a loan off after `ageMonths`. A payoff at the
+ * end of month 12 still counts as loan year 1 (paid before the anniversary).
+ */
+export function prepayRate(schedule, ageMonths) {
+  const steps = PREPAY_SCHEDULES[schedule] ?? [];
+  const year = Math.max(Math.ceil(ageMonths / 12), 1);
+  return (steps[year - 1] ?? 0) / 100;
+}
+
+/** The property's value right after any rehab: the after-repair value when given, else the price. */
+export function startingValue(deal) {
+  const arv = num(deal.arv);
+  return arv > 0 ? arv : num(deal.price);
+}
+
+/** Month of a planned cash-out refinance (end of its year), or null. Never in the sale year. */
+function refiMonthFor(deal, horizonMonths) {
+  if (!deal.refiEnabled) return null;
+  const m = Math.min(Math.max(Math.round(num(deal.refiYear) || 1), 1), 29) * 12;
+  return m < horizonMonths ? m : null;
+}
+
+/**
+ * Month-by-month debt over `months`: the purchase loan, then (optionally)
+ * a cash-out refinance at the end of refiYear that pays it off and starts
+ * a new amortizing loan. Rows carry the age of whichever loan is active so
+ * a payoff can be charged its prepayment penalty.
+ */
+export function loanTimeline(deal, months) {
+  const price = num(deal.price);
+  const loan = Math.max(price - price * pct(deal.downPct), 0);
+  const refiMonth = refiMonthFor(deal, months + 1);
+  const firstLen = refiMonth ?? months;
+  const rows = amortize(loan, deal.rate, deal.termYears, Math.min(firstLen, months), deal.ioYears).map((r) => ({ ...r, loanAge: r.month }));
+  if (refiMonth == null || refiMonth > months) return { rows, refi: null };
+
+  const value = startingValue(deal) * Math.pow(1 + pct(deal.appreciationPct), refiMonth / 12);
+  const oldBalance = rows[refiMonth - 1].balance;
+  const penalty = oldBalance * prepayRate(deal.prepay, refiMonth);
+  const newLoan = value * pct(deal.refiLtv);
+  const costs = newLoan * pct(deal.refiCostPct);
+  const refi = {
+    month: refiMonth,
+    year: refiMonth / 12,
+    value,
+    oldBalance,
+    penalty,
+    newLoan,
+    costs,
+    cashOut: newLoan - oldBalance - penalty - costs,
+  };
+  const second = amortize(newLoan, deal.refiRate, deal.refiTermYears, months - refiMonth, 0);
+  second.forEach((r, i) => rows.push({ ...r, month: refiMonth + i + 1, loanAge: i + 1 }));
+  return { rows, refi };
+}
+
 /** Sum of the OpEx percentages on a deal, as a fraction (0.23 for 23%). */
 export function opexRate(deal) {
   return pct(deal.mgmtPct) + pct(deal.maintPct) + pct(deal.vacancyPct) + pct(deal.capexPct);
@@ -139,9 +203,13 @@ export function analyzeDeal(deal) {
   const rentForDscr120 = haircutKeep > 0 ? (1.2 * pitia) / haircutKeep : Infinity;
 
   const status = dscrStatus(dscr);
+  const value = startingValue(deal);
 
   return {
     price,
+    value,
+    // Equity created by the rehab: after-repair value beyond price + rehab spent.
+    forcedEquity: num(deal.arv) > 0 ? value - price - rehab : 0,
     downPayment,
     loanAmount,
     ltv,
@@ -195,12 +263,15 @@ export function projectDeal(deal, years = 10) {
   const keep = 1 - opexRate(deal);
   const fixedMonthly = a.taxes + a.insurance + a.hoa;
   const sellRate = pct(deal.sellingCostPct);
+  const base = startingValue(deal);
 
-  const schedule = amortize(a.loanAmount, deal.rate, deal.termYears, years * 12, deal.ioYears);
+  const { rows: schedule, refi } = loanTimeline(deal, years * 12);
 
   const rows = [];
   let cumCashFlow = 0;
   let cumPrincipal = 0;
+  let cumCashOut = 0;
+  let cumRefiCosts = 0;
   for (let y = 1; y <= years; y++) {
     const rent = a.grossRent * Math.pow(1 + rentGrowth, y - 1);
     const fixed = fixedMonthly * Math.pow(1 + expenseGrowth, y - 1);
@@ -208,30 +279,43 @@ export function projectDeal(deal, years = 10) {
     const debtService = yearRows.reduce((s, r) => s + r.payment, 0);
     const principal = yearRows.reduce((s, r) => s + r.principal, 0);
     const cashFlow = rent * keep * 12 - fixed * 12 - debtService;
-    const value = a.price * Math.pow(1 + appreciation, y);
-    const balance = yearRows.length ? yearRows[yearRows.length - 1].balance : a.loanAmount;
+    const value = base * Math.pow(1 + appreciation, y);
+    const end = yearRows[yearRows.length - 1];
+    const balance = end ? end.balance : a.loanAmount;
+
+    // A refinance at the end of this year hands back cash and costs a penalty plus fees.
+    const refiCash = refi && refi.year === y ? refi.cashOut : 0;
+    const refiCosts = refi && refi.year === y ? refi.penalty + refi.costs : 0;
 
     cumCashFlow += cashFlow;
     cumPrincipal += principal;
+    cumCashOut += refiCash;
+    cumRefiCosts += refiCosts;
+    // Appreciation is measured from the price, so value added by the rehab counts here.
     const cumAppreciation = value - a.price;
-    const totalReturn = cumCashFlow + cumPrincipal + cumAppreciation;
+    const totalReturn = cumCashFlow + cumPrincipal + cumAppreciation - cumRefiCosts;
     const sellingCosts = value * sellRate;
-    const netProceeds = value - sellingCosts - balance;
-    const profitIfSold = cumCashFlow + netProceeds - a.cashInvested;
+    const prepayPenalty = end ? balance * prepayRate(deal.prepay, end.loanAge) : 0;
+    const netProceeds = value - sellingCosts - balance - prepayPenalty;
+    const profitIfSold = cumCashFlow + cumCashOut + netProceeds - a.cashInvested;
 
     rows.push({
       year: y,
       cashFlow,
+      refiCash,
       principal,
       cumCashFlow,
+      cumCashOut,
       cumPrincipal,
       cumAppreciation,
+      cumRefiCosts,
       totalReturn,
       value,
       balance,
       equity: value - balance,
       roi: a.cashInvested > 0 ? totalReturn / a.cashInvested : 0,
       sellingCosts,
+      prepayPenalty,
       netProceeds,
       profitIfSold,
     });
@@ -240,22 +324,60 @@ export function projectDeal(deal, years = 10) {
 }
 
 /**
+ * The cash-out refinance, if the deal plans one: what it pays off, what it
+ * hands back, and what the deal looks like on the new loan (the lender's
+ * DSCR check for the refinance included). Null when there is none.
+ */
+export function refiAnalysis(deal, years = 10) {
+  const { rows, refi } = loanTimeline(deal, years * 12);
+  if (!refi) return null;
+  const a = analyzeDeal(deal);
+  const yearsIn = refi.year;
+  const rent = a.grossRent * Math.pow(1 + pct(deal.rentGrowthPct), yearsIn);
+  const fixed = (a.taxes + a.insurance + a.hoa) * Math.pow(1 + pct(deal.expenseGrowthPct), yearsIn);
+  const payment = rows[refi.month]?.payment ?? monthlyPI(refi.newLoan, deal.refiRate, deal.refiTermYears);
+  const pitia = payment + fixed;
+  const lenderRent = rent * (1 - pct(deal.lenderHaircutPct));
+  const netCashFlow = rent * (1 - opexRate(deal)) - pitia;
+  const cashLeft = a.cashInvested - refi.cashOut;
+  const dscr = pitia > 0 ? lenderRent / pitia : Infinity;
+  return {
+    ...refi,
+    payment,
+    pitia,
+    dscr,
+    status: dscrStatus(dscr),
+    netCashFlow,
+    cashLeft,
+    allCashBack: cashLeft <= 0,
+    // Cash-on-cash on what's still in the deal: unlimited once all of it is back
+    // and the deal still pays; undefined (NaN) if it is back but losing money.
+    cocAfter: cashLeft > 0 ? (netCashFlow * 12) / cashLeft : netCashFlow > 0 ? Infinity : NaN,
+    ltv: refi.value > 0 ? refi.newLoan / refi.value : 0,
+    equityAfter: refi.value - refi.newLoan,
+  };
+}
+
+/**
  * Exit analysis: sell at the end of the projection. IRR uses the cash
- * invested today, each year's cash flow, and net sale proceeds in the last year.
+ * invested today, each year's cash flow (plus any refinance cash-out), and
+ * net sale proceeds in the last year.
  */
 export function saleAnalysis(deal, rows) {
   const a = analyzeDeal(deal);
   const last = rows[rows.length - 1];
-  const flows = [-a.cashInvested, ...rows.map((r) => r.cashFlow)];
+  const flows = [-a.cashInvested, ...rows.map((r) => r.cashFlow + r.refiCash)];
   flows[flows.length - 1] += last.netProceeds;
-  const returned = last.cumCashFlow + last.netProceeds;
+  const returned = last.cumCashFlow + last.cumCashOut + last.netProceeds;
   return {
     year: last.year,
     salePrice: last.value,
     sellingCosts: last.sellingCosts,
     loanPayoff: last.balance,
+    prepayPenalty: last.prepayPenalty,
     netProceeds: last.netProceeds,
     totalCashFlow: last.cumCashFlow,
+    cashOut: last.cumCashOut,
     cashInvested: a.cashInvested,
     profit: last.profitIfSold,
     equityMultiple: a.cashInvested > 0 ? returned / a.cashInvested : NaN,
@@ -263,14 +385,18 @@ export function saleAnalysis(deal, rows) {
   };
 }
 
-/** Estimated value and loan balance today for a property owned `yearsOwned` years. */
+/**
+ * Estimated value and loan balance today for a property owned `yearsOwned`
+ * years, following its refinance if that has already happened.
+ */
 export function estimateToday(deal) {
   const a = analyzeDeal(deal);
   const yearsOwned = Math.max(num(deal.yearsOwned), 0);
   const months = Math.round(yearsOwned * 12);
-  const value = a.price * Math.pow(1 + pct(deal.appreciationPct), yearsOwned);
-  const balance = months > 0 ? amortize(a.loanAmount, deal.rate, deal.termYears, months, deal.ioYears)[months - 1].balance : a.loanAmount;
-  return { value, balance, equity: value - balance };
+  const value = startingValue(deal) * Math.pow(1 + pct(deal.appreciationPct), yearsOwned);
+  const { rows, refi } = loanTimeline(deal, Math.max(months, 1));
+  const balance = months > 0 ? rows[months - 1].balance : a.loanAmount;
+  return { value, balance, equity: value - balance, refinanced: !!refi && months >= refi.month };
 }
 
 /**
@@ -298,12 +424,14 @@ export function portfolioSummary(items) {
   };
   items.forEach(({ deal, a, rows }) => {
     const today = estimateToday(deal);
+    // Once a property has been refinanced, its payment and cash flow are the new loan's.
+    const now = today.refinanced ? refiAnalysis(deal) : null;
     t.units += a.units;
     t.grossRent += a.grossRent;
     t.lenderRent += a.lenderRent;
-    t.pitia += a.pitia;
+    t.pitia += now ? now.pitia : a.pitia;
     t.opex += a.opex.total;
-    t.netCashFlow += a.netCashFlow;
+    t.netCashFlow += now ? now.netCashFlow : a.netCashFlow;
     t.cashInvested += a.cashInvested;
     t.reserves += a.reserves;
     t.value += today.value;
@@ -320,6 +448,57 @@ export function portfolioSummary(items) {
   t.status = dscrStatus(t.dscr);
   t.coc = t.cashInvested > 0 ? t.annualCashFlow / t.cashInvested : 0;
   return t;
+}
+
+export const DEFAULT_TARGETS = { dscr: 1.25, cashFlowPerDoor: 200, coc: 8, useDscr: true, useCashFlow: true, useCoc: true };
+
+/**
+ * The highest purchase price that still meets every active target, solved
+ * exactly: the loan, its payment and closing costs all scale linearly with
+ * price, so each target gives a closed-form ceiling. Taxes, insurance, HOA,
+ * rent and rehab are held as entered.
+ *
+ * targets: { dscr, cashFlowPerDoor ($/door/mo), coc (%), useDscr, useCashFlow, useCoc }
+ */
+export function maxOffer(deal, targets = DEFAULT_TARGETS) {
+  const a = analyzeDeal(deal);
+  const d = Math.min(pct(deal.downPct), 1);
+  const s = d + pct(deal.closingPct);
+  const fixed = a.taxes + a.insurance + a.hoa;
+  const keep = 1 - opexRate(deal);
+  const R = a.grossRent * keep - fixed; // monthly cash before the loan payment
+  // Monthly payment per dollar of price (interest-only loans qualify on interest).
+  const perLoanDollar = a.interestOnly ? pct(deal.rate) / 12 : monthlyPI(1, deal.rate, deal.termYears);
+  const q = (1 - d) * perLoanDollar;
+
+  const ceiling = (numerator, denominator) => {
+    if (denominator <= 0) return numerator >= 0 ? Infinity : 0;
+    return Math.max(numerator / denominator, 0);
+  };
+
+  const limits = [];
+  if (targets.useDscr && num(targets.dscr) > 0) {
+    limits.push({ key: 'dscr', label: `DSCR ≥ ${num(targets.dscr).toFixed(2)}`, price: ceiling(a.lenderRent / num(targets.dscr) - fixed, q) });
+  }
+  if (targets.useCashFlow) {
+    const need = num(targets.cashFlowPerDoor) * a.units;
+    limits.push({ key: 'cashFlow', label: `$${num(targets.cashFlowPerDoor)}/door cash flow`, price: ceiling(R - need, q) });
+  }
+  if (targets.useCoc && num(targets.coc) > 0) {
+    const C = pct(targets.coc);
+    limits.push({ key: 'coc', label: `${num(targets.coc)}% cash-on-cash`, price: ceiling(12 * R - C * a.rehab, 12 * q + C * s) });
+  }
+
+  if (!limits.length) return { limits, price: null, binding: null };
+  const binding = limits.reduce((m, l) => (l.price < m.price ? l : m));
+  const price = binding.price;
+  return {
+    limits,
+    binding: binding.key,
+    price,
+    feasible: Number.isFinite(price) && price > 0,
+    vsAsking: Number.isFinite(price) ? price - a.price : Infinity,
+  };
 }
 
 /**

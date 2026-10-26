@@ -77,6 +77,26 @@ export const GLOSSARY = {
     term: 'Interest-only period',
     body: 'Many DSCR loans let you pay only interest for the first 5–10 years. DSCR is calculated on that lower payment, and the payment rises when it ends.',
   },
+  maxOffer: {
+    term: 'Max offer price',
+    body: 'Each target sets its own price ceiling: pay more and that target is missed. Your offer is the lowest ceiling, so every target you switched on is met.',
+  },
+  arv: {
+    term: 'After-repair value (ARV)',
+    body: 'What the property is worth once the rehab is done. Bedrock grows value from here instead of the price, so a good rehab shows up as equity.',
+  },
+  refinance: {
+    term: 'Cash-out refinance',
+    body: 'A new, larger loan based on the property’s current value. It pays off the old loan (plus any prepayment penalty and fees) and hands you the rest in cash.',
+  },
+  cashLeft: {
+    term: 'Cash left in the deal',
+    body: 'Cash invested minus the cash you pulled out when you refinanced. At $0 or below you have all your money back and still own the property.',
+  },
+  prepay: {
+    term: 'Prepayment penalty',
+    body: 'Many DSCR loans charge a fee for paying the loan off early, stepping down each year: 5-4-3-2-1 means 5% of the balance in year 1, 4% in year 2, and none after year 5.',
+  },
   equity: {
     term: 'Equity',
     body: 'Estimated property value − loan balance. For owned properties, value and balance are rolled forward by years owned.',

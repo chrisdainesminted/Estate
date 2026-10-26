@@ -7,8 +7,11 @@ import {
   irr,
   isNeutralAdjustment,
   monthlyPI,
+  maxOffer,
   portfolioSummary,
+  prepayRate,
   projectDeal,
+  refiAnalysis,
   saleAnalysis,
 } from './finance.js';
 import { dscrStatus, verdict } from './dscr.js';
@@ -351,5 +354,159 @@ describe('dealsToCsv', () => {
   it('quotes names containing commas and quotes', () => {
     const csv = dealsToCsv([build({ ...PRESET_DEALS[0], name: 'Smith, "Big" Duplex' })]);
     expect(csv.split('\r\n')[1].startsWith('"Smith, ""Big"" Duplex",')).toBe(true);
+  });
+});
+
+describe('maxOffer', () => {
+  const deal = PRESET_DEALS[1]; // $500k duplex
+  const all = { dscr: 1.25, cashFlowPerDoor: 200, coc: 8, useDscr: true, useCashFlow: true, useCoc: true };
+
+  it('each ceiling lands exactly on its target', () => {
+    const m = maxOffer(deal, all);
+    const at = (key) => analyzeDeal({ ...deal, price: m.limits.find((l) => l.key === key).price });
+    expect(at('dscr').dscr).toBeCloseTo(1.25, 8);
+    expect(at('cashFlow').netCashFlow / 2).toBeCloseTo(200, 6);
+    expect(at('coc').coc).toBeCloseTo(0.08, 8);
+  });
+
+  it('the offer is the tightest ceiling and meets every target', () => {
+    const m = maxOffer(deal, all);
+    expect(m.price).toBe(Math.min(...m.limits.map((l) => l.price)));
+    const a = analyzeDeal({ ...deal, price: m.price });
+    expect(a.dscr).toBeGreaterThanOrEqual(1.25 - 1e-9);
+    expect(a.netCashFlow / 2).toBeGreaterThanOrEqual(200 - 1e-6);
+    expect(a.coc).toBeGreaterThanOrEqual(0.08 - 1e-9);
+    expect(m.vsAsking).toBeCloseTo(m.price - 500000, 6);
+  });
+
+  it('respects interest-only payments and rehab', () => {
+    const io = { ...deal, ioYears: 10, rehabCost: 15000 };
+    const m = maxOffer(io, { ...all, useDscr: false, useCashFlow: false });
+    expect(analyzeDeal({ ...io, price: m.price }).coc).toBeCloseTo(0.08, 8);
+  });
+
+  it('reports no feasible price when rent cannot cover fixed costs', () => {
+    const m = maxOffer({ ...deal, rentPerUnit: 300 }, all);
+    expect(m.feasible).toBe(false);
+  });
+
+  it('returns no price when every target is off', () => {
+    expect(maxOffer(deal, { ...all, useDscr: false, useCashFlow: false, useCoc: false }).price).toBeNull();
+  });
+});
+
+describe('prepayment penalties', () => {
+  it('steps down by loan year', () => {
+    expect(prepayRate('5-4-3-2-1', 6)).toBe(0.05);
+    expect(prepayRate('5-4-3-2-1', 12)).toBe(0.05);
+    expect(prepayRate('5-4-3-2-1', 13)).toBe(0.04);
+    expect(prepayRate('5-4-3-2-1', 60)).toBe(0.01);
+    expect(prepayRate('5-4-3-2-1', 61)).toBe(0);
+    expect(prepayRate('none', 6)).toBe(0);
+  });
+
+  it('charges a sale inside the penalty window', () => {
+    const rows = projectDeal({ ...PRESET_DEALS[0], prepay: '3-2-1' }, 10);
+    expect(rows[1].prepayPenalty).toBeCloseTo(rows[1].balance * 0.02, 6);
+    expect(rows[3].prepayPenalty).toBe(0);
+    const plain = projectDeal(PRESET_DEALS[0], 10);
+    expect(rows[1].profitIfSold).toBeCloseTo(plain[1].profitIfSold - rows[1].prepayPenalty, 6);
+  });
+});
+
+describe('ARV and cash-out refinance', () => {
+  // A BRRRR-style deal: buy at $200k, $40k rehab, worth $300k after, refinance at 75% after year 1.
+  const brrrr = {
+    ...PRESET_DEALS[0],
+    price: 200000,
+    downPct: 20,
+    rehabCost: 40000,
+    arv: 300000,
+    rentPerUnit: 2400,
+    refiEnabled: true,
+    refiYear: 1,
+    refiLtv: 75,
+    refiRate: 7.25,
+    refiTermYears: 30,
+    refiCostPct: 2,
+    prepay: '3-2-1',
+  };
+
+  it('values the property from its after-repair value', () => {
+    const a = analyzeDeal(brrrr);
+    expect(a.value).toBe(300000);
+    expect(a.forcedEquity).toBe(300000 - 200000 - 40000);
+    expect(projectDeal(brrrr, 10)[0].value).toBeCloseTo(300000 * 1.03, 6);
+  });
+
+  it('pays off the old loan with penalty and fees, and hands back the rest', () => {
+    const r = refiAnalysis(brrrr);
+    const oldBalance = amortize(160000, 7, 30, 12)[11].balance;
+    expect(r.year).toBe(1);
+    expect(r.value).toBeCloseTo(309000, 6);
+    expect(r.newLoan).toBeCloseTo(309000 * 0.75, 6);
+    expect(r.oldBalance).toBeCloseTo(oldBalance, 6);
+    expect(r.penalty).toBeCloseTo(oldBalance * 0.03, 6);
+    expect(r.costs).toBeCloseTo(r.newLoan * 0.02, 6);
+    expect(r.cashOut).toBeCloseTo(r.newLoan - oldBalance - r.penalty - r.costs, 6);
+    expect(r.cashLeft).toBeCloseTo(analyzeDeal(brrrr).cashInvested - r.cashOut, 6);
+    expect(r.payment).toBeCloseTo(monthlyPI(r.newLoan, 7.25, 30), 6);
+  });
+
+  it('carries the new loan through the projection, sale and IRR', () => {
+    const rows = projectDeal(brrrr, 10);
+    const r = refiAnalysis(brrrr);
+    expect(rows[0].refiCash).toBeCloseTo(r.cashOut, 6);
+    expect(rows[1].refiCash).toBe(0);
+    expect(rows[1].cashFlow).toBeLessThan(rows[0].cashFlow); // bigger loan, bigger payment
+    const newBal = amortize(r.newLoan, 7.25, 30, 108)[107].balance;
+    expect(rows[9].balance).toBeCloseTo(newBal, 4);
+
+    const sale = saleAnalysis(brrrr, rows);
+    const flows = [-analyzeDeal(brrrr).cashInvested, ...rows.map((x) => x.cashFlow + x.refiCash)];
+    flows[10] += sale.netProceeds;
+    const npv = flows.reduce((s, cf, t) => s + cf / Math.pow(1 + sale.irr, t), 0);
+    expect(Math.abs(npv)).toBeLessThan(0.01);
+    expect(sale.profit).toBeCloseTo(rows[9].cumCashFlow + rows[9].cumCashOut + sale.netProceeds - analyzeDeal(brrrr).cashInvested, 6);
+  });
+
+  it('nets refinance costs out of total return', () => {
+    const rows = projectDeal(brrrr, 10);
+    const y = rows[9];
+    expect(y.totalReturn).toBeCloseTo(y.cumCashFlow + y.cumPrincipal + y.cumAppreciation - y.cumRefiCosts, 6);
+  });
+
+  it('follows the refinance for an owned property', () => {
+    const owned = { ...brrrr, status: 'owned', yearsOwned: 3 };
+    const today = estimateToday(owned);
+    expect(today.refinanced).toBe(true);
+    const r = refiAnalysis(owned);
+    expect(today.balance).toBeCloseTo(amortize(r.newLoan, 7.25, 30, 24)[23].balance, 4);
+    const p = portfolioSummary([{ deal: owned, a: analyzeDeal(owned), rows: projectDeal(owned, 10) }]);
+    expect(p.netCashFlow).toBeCloseTo(r.netCashFlow, 6);
+  });
+
+  it('has no refinance when disabled', () => {
+    expect(refiAnalysis({ ...brrrr, refiEnabled: false })).toBeNull();
+  });
+});
+
+describe('cash-on-cash after a refinance', () => {
+  // A strong rehab: worth $340k after, so the refinance returns more than was invested.
+  const base = { ...PRESET_DEALS[0], price: 200000, downPct: 20, rehabCost: 40000, arv: 340000, refiEnabled: true, refiYear: 1, refiLtv: 75, refiRate: 7.25, refiTermYears: 30, refiCostPct: 2 };
+  it('is unlimited only when all cash is back and the deal still pays', () => {
+    const pays = refiAnalysis({ ...base, rentPerUnit: 3600 });
+    expect(pays.allCashBack).toBe(true);
+    expect(pays.netCashFlow).toBeGreaterThan(0);
+    expect(pays.cocAfter).toBe(Infinity);
+    const loses = refiAnalysis({ ...base, rentPerUnit: 2400 });
+    expect(loses.allCashBack).toBe(true);
+    expect(loses.netCashFlow).toBeLessThan(0);
+    expect(loses.cocAfter).toBeNaN();
+  });
+  it('is an ordinary percentage while cash is still in the deal', () => {
+    const r = refiAnalysis({ ...base, arv: 300000, rentPerUnit: 3200 });
+    expect(r.cashLeft).toBeGreaterThan(0);
+    expect(r.cocAfter).toBeCloseTo((r.netCashFlow * 12) / r.cashLeft, 10);
   });
 });

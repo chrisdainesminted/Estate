@@ -1,6 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DEFAULT_DEAL, MAX_COMPARE, PRESET_DEALS, PRESET_OWNED, makeDeal } from '../lib/presets.js';
 import { capability } from '../lib/runtime.js';
+import { DEFAULT_TARGETS } from '../lib/finance.js';
+import { DEFAULT_PLAN } from '../lib/growth.js';
+
+// Per-library settings that travel with the deals: offer targets and the growth plan.
+const DEFAULT_SETTINGS = { targets: DEFAULT_TARGETS, plan: DEFAULT_PLAN };
+
+function normalizeSettings(s) {
+  return {
+    targets: { ...DEFAULT_TARGETS, ...(s?.targets ?? {}) },
+    plan: { ...DEFAULT_PLAN, ...(s?.plan ?? {}) },
+  };
+}
 
 const STORAGE_KEY = 'bedrock-library-v2';
 const LEGACY_KEY = 'dscr-deals-v1';
@@ -19,6 +31,7 @@ function freshState(updatedAt = 0) {
     deals: [...prospects, ...owned],
     activeId: prospects[0].id,
     compare: prospects.map((d, slot) => ({ id: d.id, slot })),
+    settings: normalizeSettings(DEFAULT_SETTINGS),
     updatedAt,
   };
 }
@@ -40,6 +53,7 @@ function normalize(saved, activeId) {
     deals,
     activeId: ids.has(want) ? want : deals[0].id,
     compare: compare.slice(0, MAX_COMPARE),
+    settings: normalizeSettings(saved.settings),
     updatedAt: Number(saved.updatedAt) || 0,
   };
 }
@@ -57,7 +71,7 @@ function loadLocal() {
 }
 
 // What goes to the account: the library itself. Which deal is open stays per device.
-const toCloud = (s) => ({ version: 2, deals: s.deals, compare: s.compare, updatedAt: s.updatedAt });
+const toCloud = (s) => ({ version: 2, deals: s.deals, compare: s.compare, settings: s.settings, updatedAt: s.updatedAt });
 
 /**
  * The deal library. Always saved in this browser; in the hosted viewer it
@@ -218,6 +232,12 @@ export function useDeals() {
     [commit],
   );
 
+  // section is 'targets' or 'plan'.
+  const updateSettings = useCallback(
+    (section, patch) => commit((s) => ({ ...s, settings: { ...s.settings, [section]: { ...s.settings[section], ...patch } } })),
+    [commit],
+  );
+
   // Which deal is open is per device, so it doesn't count as a library change.
   const setActive = useCallback((id) => setState((s) => ({ ...s, activeId: id })), []);
   const resetAll = useCallback(() => commit(() => freshState()), [commit]);
@@ -232,6 +252,8 @@ export function useDeals() {
     compare: state.compare,
     slotOf,
     sync,
+    settings: state.settings,
+    updateSettings,
     updateDeal,
     updateMany,
     addDeal,
