@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Calculator, Columns3, Gauge, LayoutDashboard, Moon, Plus, RotateCcw, Sun } from 'lucide-react';
+import { AlertTriangle, Columns3, Gauge, LayoutDashboard, Moon, Plus, RotateCcw, Sun } from 'lucide-react';
 import { useDeals } from './hooks/useDeals.js';
 import { useTheme } from './hooks/useTheme.js';
 import { analyzeDeal, applyAdjustments, isNeutralAdjustment, projectDeal } from './lib/finance.js';
@@ -13,6 +13,7 @@ import LenderVsReality from './components/LenderVsReality.jsx';
 import SensitivitySliders from './components/SensitivitySliders.jsx';
 import ComparisonMatrix from './components/ComparisonMatrix.jsx';
 import ProjectionChart from './components/ProjectionChart.jsx';
+import Logo from './components/Logo.jsx';
 import { Button, Card, CardHeader, Segmented } from './components/ui.jsx';
 
 const NO_ADJ = { rateDelta: 0, downPct: null, rentPct: 0 };
@@ -87,17 +88,11 @@ export default function App() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/85 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
+      <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/85 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/85">
         <div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-2.5">
-            <div className="rounded-xl bg-indigo-600 p-2 text-white">
-              <Calculator className="size-5" aria-hidden />
-            </div>
-            <div>
-              <h1 className="text-base leading-tight font-semibold">DSCR Deal Workbench</h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Lender math vs. real-world cash flow</p>
-            </div>
-          </div>
+          <h1>
+            <Logo />
+          </h1>
 
           <nav aria-label="Deals" className="order-3 flex w-full items-center gap-1.5 overflow-x-auto md:order-none md:w-auto md:flex-1 md:justify-center">
             {deals.map((d) => {
@@ -111,13 +106,13 @@ export default function App() {
                   aria-current={selected ? 'true' : undefined}
                   className={`flex shrink-0 items-center gap-2 rounded-full px-3 py-1.5 text-sm transition-colors ${
                     selected
-                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                      ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
+                      : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'
                   }`}
                 >
                   <span className="size-2 rounded-full" style={{ background: theme.series[d.slot] }} aria-hidden />
                   <span className="max-w-40 truncate">{d.name}</span>
-                  <span className={`tabular text-xs ${selected ? 'opacity-70' : 'text-slate-500 dark:text-slate-400'}`}>{ratio(x.a.dscr)}</span>
+                  <span className={`tabular text-xs ${selected ? 'opacity-70' : 'text-zinc-500 dark:text-zinc-400'}`}>{ratio(x.a.dscr)}</span>
                 </button>
               );
             })}
@@ -125,7 +120,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={addDeal}
-                className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-sm text-slate-500 ring-1 ring-slate-300 ring-inset hover:bg-slate-100 dark:text-slate-400 dark:ring-slate-700 dark:hover:bg-slate-800"
+                className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-sm text-zinc-500 ring-1 ring-zinc-300 ring-inset hover:bg-zinc-100 dark:text-zinc-400 dark:ring-zinc-700 dark:hover:bg-zinc-800"
                 aria-label="Add deal"
               >
                 <Plus className="size-4" aria-hidden /> Add
@@ -211,8 +206,8 @@ export default function App() {
           </>
         )}
 
-        <footer className="pt-2 pb-8 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-          DSCR = gross monthly rent ÷ PITIA (principal, interest, taxes, insurance, HOA). Real net cash flow also subtracts management,
+        <footer className="pt-2 pb-8 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+          <span className="font-semibold text-zinc-700 dark:text-zinc-300">Keystone</span> · DSCR = gross monthly rent ÷ PITIA (principal, interest, taxes, insurance, HOA). Real net cash flow also subtracts management,
           maintenance, vacancy and CapEx reserves. Cash out of pocket = down payment + closing costs. Projections assume a fixed-rate loan;
           figures are estimates for personal analysis, not lending or investment advice. Deals are saved in this browser only.
         </footer>

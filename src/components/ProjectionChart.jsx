@@ -15,25 +15,25 @@ function ProjectionTooltip({ active, payload, label, theme }) {
   if (!active || !payload?.length) return null;
   const row = payload[0].payload;
   return (
-    <div className="min-w-52 rounded-xl border border-slate-200 bg-white p-3 text-xs shadow-lg dark:border-slate-700 dark:bg-slate-900">
-      <div className="mb-2 font-semibold text-slate-900 dark:text-slate-100">Year {label}</div>
+    <div className="min-w-52 rounded-xl border border-zinc-200 bg-white p-3 text-xs shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+      <div className="mb-2 font-semibold text-zinc-900 dark:text-zinc-100">Year {label}</div>
       {SERIES.map((s, i) => (
         <div key={s.key} className="flex items-center justify-between gap-4 py-0.5">
-          <span className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+          <span className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-300">
             <span className="size-2.5 rounded-sm" style={{ background: theme.series[i] }} aria-hidden />
             {s.label}
           </span>
-          <span className="tabular font-medium text-slate-900 dark:text-slate-100">{money(row[s.key], { signed: true })}</span>
+          <span className="tabular font-medium text-zinc-900 dark:text-zinc-100">{money(row[s.key], { signed: true })}</span>
         </div>
       ))}
-      <div className="mt-1.5 flex items-center justify-between gap-4 border-t border-slate-200 pt-1.5 dark:border-slate-700">
-        <span className="flex items-center gap-1.5 font-semibold text-slate-900 dark:text-slate-100">
+      <div className="mt-1.5 flex items-center justify-between gap-4 border-t border-zinc-200 pt-1.5 dark:border-zinc-700">
+        <span className="flex items-center gap-1.5 font-semibold text-zinc-900 dark:text-zinc-100">
           <span className="h-0.5 w-3 rounded-full" style={{ background: theme.total }} aria-hidden />
           Total return
         </span>
-        <span className="tabular font-semibold text-slate-900 dark:text-slate-100">{money(row.totalReturn, { signed: true })}</span>
+        <span className="tabular font-semibold text-zinc-900 dark:text-zinc-100">{money(row.totalReturn, { signed: true })}</span>
       </div>
-      <div className="tabular mt-1 text-right text-slate-500 dark:text-slate-400">{percent(row.roi, 0)} of cash invested</div>
+      <div className="tabular mt-1 text-right text-zinc-500 dark:text-zinc-400">{percent(row.roi, 0)} of cash invested</div>
     </div>
   );
 }
@@ -74,7 +74,7 @@ export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
       <div className="p-5">
         {view === 'chart' ? (
           <>
-            <ul className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-300" aria-label="Legend">
+            <ul className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-600 dark:text-zinc-300" aria-label="Legend">
               {SERIES.map((s, i) => (
                 <li key={s.key} className="flex items-center gap-1.5">
                   <span className="size-2.5 rounded-sm" style={{ background: theme.series[i] }} aria-hidden />
@@ -124,7 +124,7 @@ export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
-                <tr className="text-[11px] tracking-wide text-slate-500 uppercase dark:text-slate-400">
+                <tr className="text-[11px] tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
                   {['Year', 'Annual cash flow', 'Cum. cash flow', 'Cum. paydown', 'Appreciation', 'Total return', 'Property value', 'Loan balance', 'Equity'].map((h) => (
                     <th key={h} className="py-1.5 pr-2 text-right font-medium first:text-left">
                       {h}
@@ -134,13 +134,13 @@ export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
               </thead>
               <tbody className="tabular">
                 {rows.map((r) => (
-                  <tr key={r.year} className="border-t border-slate-100 text-slate-700 dark:border-slate-800 dark:text-slate-300">
+                  <tr key={r.year} className="border-t border-zinc-100 text-zinc-700 dark:border-zinc-800 dark:text-zinc-300">
                     <td className="py-1.5 pr-2">{r.year}</td>
                     <td className="py-1.5 pr-2 text-right">{money(r.cashFlow, { signed: true })}</td>
                     <td className="py-1.5 pr-2 text-right">{money(r.cumCashFlow, { signed: true })}</td>
                     <td className="py-1.5 pr-2 text-right">{money(r.cumPrincipal)}</td>
                     <td className="py-1.5 pr-2 text-right">{money(r.cumAppreciation, { signed: true })}</td>
-                    <td className="py-1.5 pr-2 text-right font-semibold text-slate-900 dark:text-slate-100">{money(r.totalReturn, { signed: true })}</td>
+                    <td className="py-1.5 pr-2 text-right font-semibold text-zinc-900 dark:text-zinc-100">{money(r.totalReturn, { signed: true })}</td>
                     <td className="py-1.5 pr-2 text-right">{money(r.value)}</td>
                     <td className="py-1.5 pr-2 text-right">{money(r.balance)}</td>
                     <td className="py-1.5 pr-2 text-right">{money(r.equity)}</td>
@@ -152,7 +152,7 @@ export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4 border-t border-slate-100 px-5 py-4 @lg:grid-cols-3 @4xl:grid-cols-5 dark:border-slate-800">
+      <div className="grid grid-cols-2 gap-4 border-t border-zinc-100 px-5 py-4 @lg:grid-cols-3 @4xl:grid-cols-5 dark:border-zinc-800">
         <Stat label={`Year-${years} total return`} value={money(y10.totalReturn, { signed: true })} sub={`${percent(y10.roi, 0)} of cash invested`} />
         <Stat label="Annualized" value={percent(annualized, 1)} sub="on cash invested" />
         <Stat label="Property value" value={money(y10.value)} sub={`from ${money(a.price)}`} />

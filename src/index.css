@@ -14,7 +14,7 @@ html.dark {
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
+  @apply bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100;
 }
 
 .tabular {
@@ -22,5 +22,5 @@ body {
 }
 
 input[type='range'] {
-  @apply w-full cursor-pointer accent-indigo-600 dark:accent-indigo-400;
+  @apply w-full cursor-pointer accent-emerald-600 dark:accent-emerald-400;
 }

@@ -56,15 +56,15 @@ function CompareTooltip({ active, payload, label, items, theme }) {
   if (!active || !payload?.length) return null;
   const row = payload[0].payload;
   return (
-    <div className="min-w-48 rounded-xl border border-slate-200 bg-white p-3 text-xs shadow-lg dark:border-slate-700 dark:bg-slate-900">
-      <div className="mb-1.5 font-semibold text-slate-900 dark:text-slate-100">Year {label} total return</div>
+    <div className="min-w-48 rounded-xl border border-zinc-200 bg-white p-3 text-xs shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+      <div className="mb-1.5 font-semibold text-zinc-900 dark:text-zinc-100">Year {label} total return</div>
       {items.map((x) => (
         <div key={x.deal.id} className="flex items-center justify-between gap-4 py-0.5">
-          <span className="flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-slate-300">
+          <span className="flex min-w-0 items-center gap-1.5 text-zinc-600 dark:text-zinc-300">
             <span className="size-2.5 shrink-0 rounded-full" style={{ background: theme.series[x.deal.slot] }} aria-hidden />
             <span className="truncate">{x.deal.name}</span>
           </span>
-          <span className="tabular font-medium text-slate-900 dark:text-slate-100">{money(row[x.deal.id], { signed: true })}</span>
+          <span className="tabular font-medium text-zinc-900 dark:text-zinc-100">{money(row[x.deal.id], { signed: true })}</span>
         </div>
       ))}
     </div>
@@ -100,7 +100,7 @@ function CompareChart({ items, dark }) {
 
   return (
     <div>
-      <ul className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-300" aria-label="Legend">
+      <ul className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-600 dark:text-zinc-300" aria-label="Legend">
         {items.map((x) => (
           <li key={x.deal.id} className="flex items-center gap-1.5">
             <span className="h-0.5 w-3.5 rounded-full" style={{ background: theme.series[x.deal.slot] }} aria-hidden />
@@ -159,14 +159,14 @@ export default function ComparisonMatrix({ items, activeId, onEdit, onDuplicate,
           <table className="w-full min-w-[560px] text-sm">
             <thead>
               <tr>
-                <th className="sticky left-0 z-10 w-44 bg-white px-5 py-3 text-left text-[11px] font-medium tracking-wide text-slate-500 uppercase dark:bg-slate-900 dark:text-slate-400">
+                <th className="sticky left-0 z-10 w-44 bg-white px-5 py-3 text-left text-[11px] font-medium tracking-wide text-zinc-500 uppercase dark:bg-zinc-900 dark:text-zinc-400">
                   Metric
                 </th>
                 {items.map((x) => (
                   <th key={x.deal.id} className="px-4 py-3 text-right align-top">
                     <div className="flex items-center justify-end gap-2">
                       <span className="size-2.5 shrink-0 rounded-full" style={{ background: theme.series[x.deal.slot] }} aria-hidden />
-                      <span className={`truncate font-semibold ${x.deal.id === activeId ? 'text-indigo-700 dark:text-indigo-300' : 'text-slate-900 dark:text-slate-100'}`}>
+                      <span className={`truncate font-semibold ${x.deal.id === activeId ? 'text-emerald-700 dark:text-emerald-300' : 'text-zinc-900 dark:text-zinc-100'}`}>
                         {x.deal.name}
                       </span>
                     </div>
@@ -174,7 +174,7 @@ export default function ComparisonMatrix({ items, activeId, onEdit, onDuplicate,
                       <button
                         type="button"
                         onClick={() => onEdit(x.deal.id)}
-                        className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                        className="rounded-md p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
                         aria-label={`Edit ${x.deal.name}`}
                         title="Edit"
                       >
@@ -184,7 +184,7 @@ export default function ComparisonMatrix({ items, activeId, onEdit, onDuplicate,
                         <button
                           type="button"
                           onClick={() => onDuplicate(x.deal.id)}
-                          className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                          className="rounded-md p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
                           aria-label={`Duplicate ${x.deal.name}`}
                           title="Duplicate"
                         >
@@ -195,7 +195,7 @@ export default function ComparisonMatrix({ items, activeId, onEdit, onDuplicate,
                         <button
                           type="button"
                           onClick={() => onRemove(x.deal.id)}
-                          className="rounded-md p-1 text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                          className="rounded-md p-1 text-zinc-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
                           aria-label={`Remove ${x.deal.name}`}
                           title="Remove"
                         >
@@ -211,10 +211,10 @@ export default function ComparisonMatrix({ items, activeId, onEdit, onDuplicate,
               {ROWS.map((row) => {
                 if (row.group) {
                   return (
-                    <tr key={row.group} className="bg-slate-50 dark:bg-slate-800/40">
+                    <tr key={row.group} className="bg-zinc-50 dark:bg-zinc-800/40">
                       <th
                         colSpan={items.length + 1}
-                        className="sticky left-0 px-5 py-1.5 text-left text-[11px] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                        className="sticky left-0 px-5 py-1.5 text-left text-[11px] font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400"
                       >
                         {row.group}
                       </th>
@@ -223,18 +223,18 @@ export default function ComparisonMatrix({ items, activeId, onEdit, onDuplicate,
                 }
                 const best = bestIndexes(row, items);
                 return (
-                  <tr key={row.label} className="border-t border-slate-100 dark:border-slate-800">
-                    <th scope="row" className="sticky left-0 z-10 bg-white px-5 py-2 text-left font-normal text-slate-600 dark:bg-slate-900 dark:text-slate-300" title={row.hint}>
+                  <tr key={row.label} className="border-t border-zinc-100 dark:border-zinc-800">
+                    <th scope="row" className="sticky left-0 z-10 bg-white px-5 py-2 text-left font-normal text-zinc-600 dark:bg-zinc-900 dark:text-zinc-300" title={row.hint}>
                       {row.label}
                     </th>
                     {items.map((x, i) => {
                       const v = row.get(x);
                       const isBest = best.has(i);
                       return (
-                        <td key={x.deal.id} className={`px-4 py-2 text-right ${isBest ? 'bg-indigo-50/70 dark:bg-indigo-500/10' : ''}`}>
+                        <td key={x.deal.id} className={`px-4 py-2 text-right ${isBest ? 'bg-emerald-50/70 dark:bg-emerald-500/10' : ''}`}>
                           <span className="inline-flex items-center justify-end gap-1.5">
-                            {isBest && <Trophy className="size-3.5 text-indigo-500 dark:text-indigo-400" aria-label="Best" />}
-                            <span className={`${isBest ? 'font-semibold' : ''} ${row.signed ? signedClass(v) : 'text-slate-900 dark:text-slate-100'}`}>
+                            {isBest && <Trophy className="size-3.5 text-emerald-500 dark:text-emerald-400" aria-label="Best" />}
+                            <span className={`${isBest ? 'font-semibold' : ''} ${row.signed ? signedClass(v) : 'text-zinc-900 dark:text-zinc-100'}`}>
                               {row.fmt(v, x)}
                             </span>
                           </span>
@@ -244,8 +244,8 @@ export default function ComparisonMatrix({ items, activeId, onEdit, onDuplicate,
                   </tr>
                 );
               })}
-              <tr className="border-t border-slate-100 dark:border-slate-800">
-                <th scope="row" className="sticky left-0 z-10 bg-white px-5 py-2 text-left font-normal text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+              <tr className="border-t border-zinc-100 dark:border-zinc-800">
+                <th scope="row" className="sticky left-0 z-10 bg-white px-5 py-2 text-left font-normal text-zinc-600 dark:bg-zinc-900 dark:text-zinc-300">
                   Verdict
                 </th>
                 {items.map((x) => (

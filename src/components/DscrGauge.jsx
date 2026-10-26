@@ -74,23 +74,23 @@ export default function DscrGauge({ a }) {
               y={ty}
               textAnchor="middle"
               dominantBaseline="middle"
-              className="fill-slate-500 text-[9px] dark:fill-slate-400"
+              className="fill-zinc-500 text-[9px] dark:fill-zinc-400"
               style={{ fontVariantNumeric: 'tabular-nums' }}
             >
               {l.text}
             </text>
           );
         })}
-        <line x1={CX} y1={CY} x2={nx} y2={ny} strokeWidth={3} strokeLinecap="round" className="stroke-slate-800 dark:stroke-slate-100" />
-        <circle cx={CX} cy={CY} r={6} className="fill-slate-800 stroke-white dark:fill-slate-100 dark:stroke-slate-900" strokeWidth={2} />
+        <line x1={CX} y1={CY} x2={nx} y2={ny} strokeWidth={3} strokeLinecap="round" className="stroke-zinc-800 dark:stroke-zinc-100" />
+        <circle cx={CX} cy={CY} r={6} className="fill-zinc-800 stroke-white dark:fill-zinc-100 dark:stroke-zinc-900" strokeWidth={2} />
       </svg>
-      <div className="-mt-1 text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{ratio(a.dscr)}</div>
+      <div className="-mt-1 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{ratio(a.dscr)}</div>
       <div className="mt-1.5">
         <DscrChip status={a.status} />
       </div>
       <dl className="mt-4 grid w-full max-w-xs grid-cols-1 gap-y-1.5 text-xs">
         {DSCR_BANDS.map((b) => (
-          <div key={b.key} className={`flex items-center gap-1.5 ${b.key === a.status.key ? 'font-semibold text-slate-900 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400'}`}>
+          <div key={b.key} className={`flex items-center gap-1.5 ${b.key === a.status.key ? 'font-semibold text-zinc-900 dark:text-zinc-100' : 'text-zinc-500 dark:text-zinc-400'}`}>
             <span className="size-2.5 shrink-0 rounded-sm" style={{ background: b.color }} aria-hidden />
             <dt className="tabular w-20 shrink-0">{b.short}</dt>
             <dd className="truncate">{b.label}</dd>

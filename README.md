@@ -1,6 +1,10 @@
-# DSCR Deal Workbench
+<p align="center"><img src="public/favicon.svg" width="72" alt="Keystone logo" /></p>
 
-A personal real-estate calculator that separates **lender DSCR math (PITIA)** from **real-world cash flow (PITIA + OpEx)**, so a deal that a DSCR lender approves can't quietly lose money every month.
+# Keystone
+
+**Underwriting for investors past five doors.**
+
+Keystone separates **lender DSCR math (PITIA)** from **real-world cash flow (PITIA + OpEx)**, so a deal a DSCR lender approves can't quietly lose money every month. The mark is an arch held up by its keystone: the one number (real cash flow) the whole portfolio rests on.
 
 ## Run it
 
@@ -46,7 +50,14 @@ src/lib/finance.js        pure calculation engine (tested in finance.test.js)
 src/lib/dscr.js           DSCR bands and colors
 src/lib/presets.js        default and starter deals
 src/hooks/useDeals.js     deal state + localStorage
+src/components/Logo.jsx   brand mark (same geometry as public/favicon.svg)
 src/components/*          UI sections
 ```
+
+## Brand
+
+- Name: Keystone. Tagline: "Underwriting for investors past five doors."
+- Accent: emerald (`emerald-700` #047857 light, `emerald-500/600` dark) on zinc "ink" neutrals.
+- Type: Inter.
 
 Estimates for personal analysis only. Not lending or investment advice.

@@ -6,7 +6,7 @@ import { ratio } from '../lib/format.js';
 export function Card({ className = '', children, ...rest }) {
   return (
     <section
-      className={`rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 ${className}`}
+      className={`rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 ${className}`}
       {...rest}
     >
       {children}
@@ -16,16 +16,16 @@ export function Card({ className = '', children, ...rest }) {
 
 export function CardHeader({ icon: Icon, title, subtitle, actions }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
       <div className="flex min-w-0 items-start gap-3">
         {Icon && (
-          <div className="mt-0.5 rounded-lg bg-indigo-50 p-1.5 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
+          <div className="mt-0.5 rounded-lg bg-emerald-50 p-1.5 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
             <Icon className="size-4" aria-hidden />
           </div>
         )}
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
-          {subtitle && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>}
+          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{title}</h2>
+          {subtitle && <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{subtitle}</p>}
         </div>
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -50,15 +50,15 @@ export function DscrChip({ status, dscr, size = 'md' }) {
 
 export function Button({ variant = 'secondary', className = '', children, ...rest }) {
   const styles = {
-    primary: 'bg-indigo-600 text-white hover:bg-indigo-500 disabled:bg-indigo-300 dark:disabled:bg-indigo-900',
+    primary: 'bg-emerald-700 text-white hover:bg-emerald-600 dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400',
     secondary:
-      'bg-white text-slate-700 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700 dark:hover:bg-slate-700',
-    ghost: 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800',
+      'bg-white text-zinc-700 ring-1 ring-inset ring-zinc-300 hover:bg-zinc-50 dark:bg-zinc-800 dark:text-zinc-200 dark:ring-zinc-700 dark:hover:bg-zinc-700',
+    ghost: 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800',
   };
   return (
     <button
       type="button"
-      className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 ${styles[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 ${styles[variant]} ${className}`}
       {...rest}
     >
       {children}
@@ -69,7 +69,7 @@ export function Button({ variant = 'secondary', className = '', children, ...res
 /** Two-or-more option segmented control. */
 export function Segmented({ options, value, onChange, label, size = 'md' }) {
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex rounded-lg bg-slate-100 p-0.5 dark:bg-slate-800">
+    <div role="radiogroup" aria-label={label} className="inline-flex rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-800">
       {options.map((o) => {
         const selected = o.value === value;
         return (
@@ -79,12 +79,12 @@ export function Segmented({ options, value, onChange, label, size = 'md' }) {
             role="radio"
             aria-checked={selected}
             onClick={() => onChange(o.value)}
-            className={`rounded-md font-medium transition-colors focus-visible:outline-2 focus-visible:outline-indigo-500 ${
+            className={`rounded-md font-medium transition-colors focus-visible:outline-2 focus-visible:outline-emerald-500 ${
               size === 'sm' ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm'
             } ${
               selected
-                ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100'
-                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
+                ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-zinc-100'
+                : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200'
             }`}
           >
             {o.icon && <o.icon className="mr-1 inline size-3.5 align-[-2px]" aria-hidden />}
@@ -125,11 +125,11 @@ export function NumberField({ id, label, value, onChange, prefix, suffix, min = 
 
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
+      <label htmlFor={id} className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
         {label}
       </label>
-      <div className="flex items-center rounded-lg bg-white ring-1 ring-inset ring-slate-300 focus-within:ring-2 focus-within:ring-indigo-500 dark:bg-slate-950 dark:ring-slate-700">
-        {prefix && <span className="pl-3 text-sm text-slate-400 dark:text-slate-500">{prefix}</span>}
+      <div className="flex items-center rounded-lg bg-white ring-1 ring-inset ring-zinc-300 focus-within:ring-2 focus-within:ring-emerald-500 dark:bg-zinc-950 dark:ring-zinc-700">
+        {prefix && <span className="pl-3 text-sm text-zinc-400 dark:text-zinc-500">{prefix}</span>}
         <input
           id={id}
           type="text"
@@ -148,11 +148,11 @@ export function NumberField({ id, label, value, onChange, prefix, suffix, min = 
               commit(String(Math.round(next * 1e6) / 1e6));
             }
           }}
-          className="tabular w-full min-w-0 bg-transparent px-3 py-2 text-sm text-slate-900 outline-none dark:text-slate-100"
+          className="tabular w-full min-w-0 bg-transparent px-3 py-2 text-sm text-zinc-900 outline-none dark:text-zinc-100"
         />
-        {suffix && <span className="pr-3 text-sm whitespace-nowrap text-slate-400 dark:text-slate-500">{suffix}</span>}
+        {suffix && <span className="pr-3 text-sm whitespace-nowrap text-zinc-400 dark:text-zinc-500">{suffix}</span>}
       </div>
-      {hint && <p className="tabular mt-1 text-[11px] text-slate-500 dark:text-slate-400">{hint}</p>}
+      {hint && <p className="tabular mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">{hint}</p>}
     </div>
   );
 }
@@ -160,9 +160,9 @@ export function NumberField({ id, label, value, onChange, prefix, suffix, min = 
 export function Stat({ label, value, sub, className = '' }) {
   return (
     <div className={className}>
-      <div className="text-[11px] font-medium tracking-wide text-slate-500 uppercase dark:text-slate-400">{label}</div>
-      <div className="tabular mt-0.5 text-base font-semibold text-slate-900 dark:text-slate-100">{value}</div>
-      {sub && <div className="tabular text-[11px] text-slate-500 dark:text-slate-400">{sub}</div>}
+      <div className="text-[11px] font-medium tracking-wide text-zinc-500 uppercase dark:text-zinc-400">{label}</div>
+      <div className="tabular mt-0.5 text-base font-semibold text-zinc-900 dark:text-zinc-100">{value}</div>
+      {sub && <div className="tabular text-[11px] text-zinc-500 dark:text-zinc-400">{sub}</div>}
     </div>
   );
 }
@@ -171,5 +171,5 @@ export function Stat({ label, value, sub, className = '' }) {
 export function signedClass(v) {
   if (v > 0.005) return 'text-green-700 dark:text-green-400';
   if (v < -0.005) return 'text-red-700 dark:text-red-400';
-  return 'text-slate-700 dark:text-slate-300';
+  return 'text-zinc-700 dark:text-zinc-300';
 }

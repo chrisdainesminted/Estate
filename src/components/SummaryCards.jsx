@@ -7,15 +7,15 @@ function Tile({ icon: Icon, label, value, valueClass = '', sub, base, accent }) 
   return (
     <Card className="relative overflow-hidden p-4">
       {accent && <div className={`absolute inset-x-0 top-0 h-1 ${accent}`} aria-hidden />}
-      <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+      <div className="flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
         <Icon className="size-4" aria-hidden />
         {label}
       </div>
-      <div className={`mt-2 text-3xl font-semibold tracking-tight ${valueClass || 'text-slate-900 dark:text-slate-100'}`}>{value}</div>
-      <div className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">{sub}</div>
+      <div className={`mt-2 text-3xl font-semibold tracking-tight ${valueClass || 'text-zinc-900 dark:text-zinc-100'}`}>{value}</div>
+      <div className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">{sub}</div>
       {base && (
-        <div className="tabular mt-2 border-t border-dashed border-slate-200 pt-2 text-[11px] text-slate-500 dark:border-slate-700 dark:text-slate-400">
-          Before what-if: <span className="font-medium text-slate-700 dark:text-slate-300">{base}</span>
+        <div className="tabular mt-2 border-t border-dashed border-zinc-200 pt-2 text-[11px] text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+          Before what-if: <span className="font-medium text-zinc-700 dark:text-zinc-300">{base}</span>
         </div>
       )}
     </Card>
@@ -45,7 +45,7 @@ export default function SummaryCards({ a, base }) {
         value={
           <>
             {money(a.netCashFlow, { signed: true })}
-            <span className="ml-1 text-base font-medium text-slate-400 dark:text-slate-500">/mo</span>
+            <span className="ml-1 text-base font-medium text-zinc-400 dark:text-zinc-500">/mo</span>
           </>
         }
         valueClass={signedClass(a.netCashFlow)}

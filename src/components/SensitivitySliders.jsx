@@ -7,18 +7,18 @@ function Slider({ id, label, min, max, step, value, onChange, display, note, tic
   return (
     <div>
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
-        <label htmlFor={id} className="text-sm font-medium text-slate-700 dark:text-slate-300">
+        <label htmlFor={id} className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
           {label}
         </label>
-        <span className="tabular text-sm font-semibold text-slate-900 dark:text-slate-100">{display}</span>
+        <span className="tabular text-sm font-semibold text-zinc-900 dark:text-zinc-100">{display}</span>
       </div>
       <input id={id} type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} />
-      <div className="tabular mt-0.5 flex justify-between text-[11px] text-slate-400 dark:text-slate-500">
+      <div className="tabular mt-0.5 flex justify-between text-[11px] text-zinc-400 dark:text-zinc-500">
         {ticks.map((t) => (
           <span key={t}>{t}</span>
         ))}
       </div>
-      {note && <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{note}</p>}
+      {note && <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">{note}</p>}
     </div>
   );
 }
@@ -129,11 +129,11 @@ export default function SensitivitySliders({ deal, adj, setAdj, scope, setScope,
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <caption className="mb-2 text-left text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">
+            <caption className="mb-2 text-left text-xs font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
               Impact on {deal.name}
             </caption>
             <thead>
-              <tr className="text-[11px] tracking-wide text-slate-500 uppercase dark:text-slate-400">
+              <tr className="text-[11px] tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
                 <th className="py-1.5 text-left font-medium">Metric</th>
                 <th className="py-1.5 text-right font-medium">Base</th>
                 <th className="py-1.5 text-right font-medium">What-if</th>
@@ -142,17 +142,17 @@ export default function SensitivitySliders({ deal, adj, setAdj, scope, setScope,
             </thead>
             <tbody className="tabular">
               {rows.map((r) => (
-                <tr key={r.label} className="border-t border-slate-100 dark:border-slate-800">
-                  <td className="py-2 text-slate-700 dark:text-slate-300">{r.label}</td>
-                  <td className="py-2 text-right text-slate-500 dark:text-slate-400">{r.b}</td>
-                  <td className="py-2 text-right font-semibold text-slate-900 dark:text-slate-100">{r.w}</td>
-                  <td className={`py-2 text-right font-medium ${r.d === '—' ? 'text-slate-400' : signedClass(r.raw)}`}>{r.d}</td>
+                <tr key={r.label} className="border-t border-zinc-100 dark:border-zinc-800">
+                  <td className="py-2 text-zinc-700 dark:text-zinc-300">{r.label}</td>
+                  <td className="py-2 text-right text-zinc-500 dark:text-zinc-400">{r.b}</td>
+                  <td className="py-2 text-right font-semibold text-zinc-900 dark:text-zinc-100">{r.w}</td>
+                  <td className={`py-2 text-right font-medium ${r.d === '—' ? 'text-zinc-400' : signedClass(r.raw)}`}>{r.d}</td>
                 </tr>
               ))}
             </tbody>
           </table>
           {what.status.key !== base.status.key && (
-            <p className="mt-3 text-xs text-slate-600 dark:text-slate-300">
+            <p className="mt-3 text-xs text-zinc-600 dark:text-zinc-300">
               DSCR band moves from <strong>{base.status.label}</strong> to <strong>{what.status.label}</strong>.
             </p>
           )}
