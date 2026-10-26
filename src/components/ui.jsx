@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { forwardRef, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, ShieldCheck, TrendingUp, XCircle } from 'lucide-react';
 import { BAND_CLASSES } from '../lib/dscr.js';
 import { ratio } from '../lib/format.js';
+import { InfoTip } from './motion.jsx';
 
-export function Card({ className = '', children, ...rest }) {
+/** Glass panel. `delay` (ms) staggers its entrance when a view opens. */
+export function Card({ className = '', delay = 0, style, children, ...rest }) {
   return (
-    <section className={`glass rounded-3xl ${className}`} {...rest}>
+    <section className={`glass rise rounded-3xl ${className}`} style={{ animationDelay: `${delay}ms`, ...style }} {...rest}>
       {children}
     </section>
   );
@@ -51,7 +53,7 @@ export function DscrChip({ status, dscr, size = 'md' }) {
   );
 }
 
-export function Button({ variant = 'secondary', className = '', children, ...rest }) {
+export const Button = forwardRef(function Button({ variant = 'secondary', className = '', children, ...rest }, ref) {
   const styles = {
     primary:
       'bg-gradient-to-b from-emerald-600 to-emerald-700 text-white font-semibold shadow-[0_10px_24px_-10px_rgb(5_150_105/0.8),inset_0_1px_0_rgb(255_255_255/0.25)] ring-1 ring-emerald-800/40 ring-inset hover:from-emerald-500 hover:to-emerald-700 disabled:shadow-none',
@@ -61,6 +63,7 @@ export function Button({ variant = 'secondary', className = '', children, ...res
   };
   return (
     <button
+      ref={ref}
       type="button"
       className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-40 ${styles[variant]} ${className}`}
       {...rest}
@@ -68,7 +71,7 @@ export function Button({ variant = 'secondary', className = '', children, ...res
       {children}
     </button>
   );
-}
+});
 
 /** Two-or-more option segmented control. */
 export function Segmented({ options, value, onChange, label, size = 'md' }) {
@@ -107,11 +110,15 @@ function formatForDisplay(v, decimals) {
   return v.toLocaleString('en-US', { maximumFractionDigits: decimals });
 }
 
-export function FieldLabel({ htmlFor, children }) {
+/** Field label; an optional glossary tip sits beside it, outside the <label>, so clicking it never focuses the input. */
+export function FieldLabel({ htmlFor, children, tip }) {
   return (
-    <label htmlFor={htmlFor} className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-      {children}
-    </label>
+    <div className="mb-1.5 flex items-center gap-1">
+      <label htmlFor={htmlFor} className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+        {children}
+      </label>
+      {tip && <InfoTip k={tip} />}
+    </div>
   );
 }
 
@@ -119,7 +126,7 @@ export function FieldLabel({ htmlFor, children }) {
  * Numeric input that tolerates partial typing ("", "7.") and shows thousands
  * separators when not focused. Commits only valid numbers, clamped to [min, max].
  */
-export function NumberField({ id, label, value, onChange, prefix, suffix, min = 0, max, step = 1, decimals = 2, hint }) {
+export function NumberField({ id, label, tip, value, onChange, prefix, suffix, min = 0, max, step = 1, decimals = 2, hint }) {
   const [focused, setFocused] = useState(false);
   const [text, setText] = useState(formatForDisplay(value, decimals));
 
@@ -139,7 +146,9 @@ export function NumberField({ id, label, value, onChange, prefix, suffix, min = 
 
   return (
     <div>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <FieldLabel htmlFor={id} tip={tip}>
+        {label}
+      </FieldLabel>
       <div className="field flex items-center">
         {prefix && <span className="pl-3 text-sm text-zinc-400 dark:text-zinc-500">{prefix}</span>}
         <input
@@ -169,10 +178,12 @@ export function NumberField({ id, label, value, onChange, prefix, suffix, min = 
   );
 }
 
-export function SelectField({ id, label, value, onChange, children }) {
+export function SelectField({ id, label, tip, value, onChange, children }) {
   return (
     <div>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <FieldLabel htmlFor={id} tip={tip}>
+        {label}
+      </FieldLabel>
       <select id={id} value={value} onChange={onChange} className={`field w-full px-3 py-2.5 ${fieldText}`}>
         {children}
       </select>
@@ -180,10 +191,13 @@ export function SelectField({ id, label, value, onChange, children }) {
   );
 }
 
-export function Stat({ label, value, sub, className = '' }) {
+export function Stat({ label, value, sub, tip, className = '' }) {
   return (
     <div className={className}>
-      <div className="eyebrow">{label}</div>
+      <div className="eyebrow flex items-center gap-1">
+        {label}
+        {tip && <InfoTip k={tip} />}
+      </div>
       <div className="tabular mt-1 text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">{value}</div>
       {sub && <div className="tabular text-[11px] text-zinc-500 dark:text-zinc-400">{sub}</div>}
     </div>
@@ -195,4 +209,69 @@ export function signedClass(v) {
   if (v > 0.005) return 'text-emerald-700 dark:text-emerald-400';
   if (v < -0.005) return 'text-red-600 dark:text-red-400';
   return 'text-zinc-700 dark:text-zinc-300';
+}
+
+/**
+ * A button that asks before doing something destructive. The question
+ * opens in-page, because the hosted viewer blocks window.confirm().
+ */
+export function ConfirmButton({ label, title, body, confirmLabel, onConfirm, className = '', align = 'right', children }) {
+  const [open, setOpen] = useState(false);
+  const root = useRef(null);
+  const cancel = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    cancel.current?.focus();
+    const onDown = (e) => root.current && !root.current.contains(e.target) && setOpen(false);
+    const onKey = (e) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={root} className="relative">
+      <button type="button" aria-label={label} title={label} aria-expanded={open} onClick={() => setOpen((o) => !o)} className={className}>
+        {children}
+      </button>
+      {open && (
+        <div
+          role="alertdialog"
+          aria-label={title}
+          className={`glass-strong pop absolute top-full z-50 mt-2 w-72 rounded-2xl p-4 text-left ${align === 'right' ? 'right-0' : 'left-0'}`}
+        >
+          <p className="text-sm font-semibold text-zinc-900 dark:text-white">{title}</p>
+          <p className="mt-1 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">{body}</p>
+          <div className="mt-3 flex justify-end gap-2">
+            <Button ref={cancel} onClick={() => setOpen(false)} className="px-3 py-1.5">
+              Cancel
+            </Button>
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onConfirm();
+              }}
+              className="rounded-xl bg-red-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-red-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+            >
+              {confirmLabel}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Marks a starter deal that ships with the app; it disappears once edited. */
+export function ExampleTag() {
+  return (
+    <span className="shrink-0 rounded-md bg-zinc-950/[0.06] px-1.5 py-px text-[10px] font-semibold tracking-wide text-zinc-500 uppercase dark:bg-white/10 dark:text-zinc-400">
+      Example
+    </span>
+  );
 }

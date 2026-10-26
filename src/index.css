@@ -52,6 +52,28 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Side gutter that also clears a phone's side system bar. */
+.gutter {
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+@media (min-width: 640px) {
+  .gutter {
+    padding-left: max(24px, env(safe-area-inset-left, 0px));
+    padding-right: max(24px, env(safe-area-inset-right, 0px));
+  }
+}
+
+/* Paint the top safe-area band so content never scrolls under the host's controls. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px);
+  z-index: 40;
+  background: var(--page);
+}
+
 /* ---------- Backdrop: aurora + grid + grain ---------- */
 
 .app-backdrop {
@@ -215,5 +237,74 @@ html.dark .app-backdrop {
     background: var(--glass-strong);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+  }
+}
+
+/* ---------- Motion ---------- */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.rise {
+  animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.needle {
+  transform-box: view-box;
+  transition: transform 0.8s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.pop {
+  animation: pop 0.18s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .pop {
+    animation: none;
+  }
+  .needle {
+    transition: none;
+  }
+}
+
+/* ---------- Print: the deal memo ---------- */
+
+@page {
+  size: letter;
+  margin: 0.5in;
+}
+
+@media print {
+  /* color-scheme decides the canvas color in the page margins; keep it light even from dark mode. */
+  html,
+  html.dark {
+    color-scheme: light;
+  }
+  html,
+  body {
+    background: #fff !important;
+    color: #18181b;
+  }
+  .memo {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }

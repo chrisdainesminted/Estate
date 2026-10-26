@@ -8,7 +8,8 @@ export const UNIT_TYPES = [
   { key: 'multiplex', label: 'Multiplex (5+)', units: 6 },
 ];
 
-export const MAX_DEALS = 3;
+// The library is unlimited; this caps how many deals sit side by side in Compare.
+export const MAX_COMPARE = 3;
 
 export const DEFAULT_DEAL = {
   name: 'New Deal',
@@ -31,6 +32,12 @@ export const DEFAULT_DEAL = {
   rentGrowthPct: 0,
   expenseGrowthPct: 0,
   lenderHaircutPct: 0,
+  rehabCost: 0,
+  ioYears: 0,
+  reserveMonths: 6,
+  sellingCostPct: 7,
+  status: 'prospect', // 'prospect' | 'owned'
+  yearsOwned: 0,
 };
 
 export const PRESET_DEALS = [
@@ -62,6 +69,35 @@ export const PRESET_DEALS = [
     taxesAnnual: 6500,
     insuranceAnnual: 3600,
     mgmtPct: 10,
+  },
+];
+
+// Example properties already owned, so the Portfolio view has something to roll up.
+export const PRESET_OWNED = [
+  {
+    ...DEFAULT_DEAL,
+    name: 'Maple St Duplex',
+    status: 'owned',
+    yearsOwned: 3,
+    price: 340000,
+    unitType: 'duplex',
+    units: 2,
+    rate: 4.75,
+    rentPerUnit: 1650,
+    taxesAnnual: 4300,
+    insuranceAnnual: 2100,
+  },
+  {
+    ...DEFAULT_DEAL,
+    name: 'Oak Ave Single-Family',
+    status: 'owned',
+    yearsOwned: 5,
+    price: 215000,
+    downPct: 20,
+    rate: 3.875,
+    rentPerUnit: 1850,
+    taxesAnnual: 2700,
+    insuranceAnnual: 1400,
   },
 ];
 

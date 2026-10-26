@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react';
 import { BarChart3, Table2, TrendingUp } from 'lucide-react';
 import { Bar, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { chartTheme, niceScale } from '../lib/chartTheme.js';
-import { compactMoney, money, percent } from '../lib/format.js';
-import { Card, CardHeader, Segmented, Stat } from './ui.jsx';
+import { compactMoney, money } from '../lib/format.js';
+import { Card, CardHeader, Segmented, Stat, signedClass } from './ui.jsx';
+import { CHART_ANIMATE } from './motion.jsx';
 
 const SERIES = [
   { key: 'cumCashFlow', label: 'Cumulative cash flow' },
@@ -33,7 +34,10 @@ function ProjectionTooltip({ active, payload, label, theme }) {
         </span>
         <span className="tabular font-semibold text-zinc-900 dark:text-zinc-100">{money(row.totalReturn, { signed: true })}</span>
       </div>
-      <div className="tabular mt-1 text-right text-zinc-500 dark:text-zinc-400">{percent(row.roi, 0)} of cash invested</div>
+      <div className="tabular mt-1.5 flex justify-between gap-4 text-zinc-500 dark:text-zinc-400">
+        <span>If sold this year</span>
+        <span className={`font-medium ${signedClass(row.profitIfSold)}`}>{money(row.profitIfSold, { signed: true })}</span>
+      </div>
     </div>
   );
 }
@@ -58,19 +62,12 @@ export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
     return niceScale(lo, hi);
   }, [rows]);
 
-  const annualized = useMemo(() => {
-    // Simple CAGR on cash invested: (cash + total return) / cash, annualized.
-    if (!(a.cashToClose > 0)) return 0;
-    const end = a.cashToClose + y10.totalReturn;
-    return end > 0 ? Math.pow(end / a.cashToClose, 1 / years) - 1 : -1;
-  }, [a.cashToClose, y10.totalReturn, years]);
-
   return (
-    <Card className="@container">
+    <Card delay={180} className="@container">
       <CardHeader
         icon={TrendingUp}
         title={`${years}-year wealth projection`}
-        subtitle={`Cash flow + principal paydown + ${appreciationPct}% annual appreciation, cumulative.`}
+        subtitle={`Cumulative cash flow + principal paydown + ${appreciationPct}% annual appreciation, before selling costs.`}
         actions={
           <Segmented
             size="sm"
@@ -127,7 +124,7 @@ export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
                       strokeWidth={2}
                       maxBarSize={28}
                       radius={i === SERIES.length - 1 ? [4, 4, 0, 0] : 0}
-                      isAnimationActive={false}
+                      isAnimationActive={CHART_ANIMATE} animationDuration={700}
                     />
                   ))}
                   <Line
@@ -137,7 +134,7 @@ export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
                     strokeWidth={2}
                     dot={{ r: 4, fill: theme.total, stroke: theme.surface, strokeWidth: 2 }}
                     activeDot={{ r: 5, fill: theme.total, stroke: theme.surface, strokeWidth: 2 }}
-                    isAnimationActive={false}
+                    isAnimationActive={CHART_ANIMATE} animationDuration={700}
                   />
                 </ComposedChart>
               </ResponsiveContainer>
@@ -176,11 +173,11 @@ export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
       </div>
 
       <div className="grid grid-cols-2 gap-4 border-t border-hairline px-5 py-4 @lg:grid-cols-3 @4xl:grid-cols-5">
-        <Stat label={`Year-${years} total return`} value={money(y10.totalReturn, { signed: true })} sub={`${percent(y10.roi, 0)} of cash invested`} />
-        <Stat label="Annualized" value={percent(annualized, 1)} sub="on cash invested" />
+        <Stat label={`Year-${years} total return`} tip="totalReturn" value={money(y10.totalReturn, { signed: true })} sub="before selling costs" />
+        <Stat label="Principal paid down" tip="paydown" value={money(y10.cumPrincipal)} sub={`over ${years} years`} />
         <Stat label="Property value" value={money(y10.value)} sub={`from ${money(a.price)}`} />
         <Stat label="Loan balance" value={money(y10.balance)} sub={`from ${money(a.loanAmount)}`} />
-        <Stat label="Equity" value={money(y10.equity)} sub="value − balance" />
+        <Stat label="Equity" tip="equity" value={money(y10.equity)} sub="value − balance" />
       </div>
     </Card>
   );

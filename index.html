@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bedrock · DSCR & Cash Flow Underwriting</title>
+    <title>Bedrock</title>
     <meta name="description" content="Bedrock underwrites rental deals the way your bank account sees them: lender DSCR, real cash flow after OpEx, and 10-year wealth." />
     <meta name="theme-color" content="#047857" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -11,12 +11,18 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&display=swap" rel="stylesheet" />
     <script>
-      // Apply saved/system theme before paint to avoid a flash.
-      try {
-        const t = localStorage.getItem('dscr-theme');
-        const dark = t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-        document.documentElement.classList.toggle('dark', dark);
-      } catch (e) {}
+      // Pick the theme before paint to avoid a flash: the host's explicit
+      // choice (data-theme) first, then the in-app toggle, then the OS.
+      (function () {
+        var root = document.documentElement;
+        var host = root.getAttribute('data-theme');
+        var saved = null;
+        try {
+          saved = localStorage.getItem('dscr-theme');
+        } catch (e) {}
+        var dark = host === 'dark' || host === 'light' ? host === 'dark' : saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+        root.classList.toggle('dark', dark);
+      })();
     </script>
   </head>
   <body>

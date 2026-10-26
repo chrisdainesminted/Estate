@@ -3,6 +3,7 @@ import { BAND_CLASSES, TONE_CLASSES, verdict } from '../lib/dscr.js';
 import { money, percent, ratio } from '../lib/format.js';
 import { UNIT_TYPES } from '../lib/presets.js';
 import { Card, DscrChip, signedClass } from './ui.jsx';
+import { InfoTip, Num } from './motion.jsx';
 
 const TONE_ICONS = { bad: XCircle, warn: AlertTriangle, good: CheckCircle2 };
 const TONE_GLOW = {
@@ -19,12 +20,15 @@ function MetaPill({ children }) {
   );
 }
 
-function Kpi({ icon: Icon, label, value, valueClass, sub, base }) {
+function Kpi({ icon: Icon, label, short, tip, value, valueClass, sub, base }) {
   return (
     <div className="border-hairline p-5 sm:p-7 max-lg:odd:border-r max-lg:[&:nth-child(-n+2)]:border-b lg:[&:not(:last-child)]:border-r">
       <dt className="eyebrow flex items-center gap-1.5">
-        <Icon className="size-3.5" aria-hidden />
-        {label}
+        <Icon className="size-3.5 shrink-0" aria-hidden />
+        {/* Phones get a shorter label so it never wraps under the icon. */}
+        <span className="truncate sm:hidden">{short ?? label}</span>
+        <span className="truncate max-sm:hidden">{label}</span>
+        {tip && <InfoTip k={tip} />}
       </dt>
       <dd className={`mt-3 text-[28px] leading-none font-semibold tracking-tight sm:text-[40px] ${valueClass || 'text-zinc-900 dark:text-white'}`}>{value}</dd>
       <dd className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">{sub}</dd>
@@ -37,7 +41,7 @@ function Kpi({ icon: Icon, label, value, valueClass, sub, base }) {
   );
 }
 
-export default function HeroSummary({ deal, a, base }) {
+export default function HeroSummary({ deal, a, sale, base }) {
   const v = verdict(a);
   const VIcon = TONE_ICONS[v.tone];
   const type = UNIT_TYPES.find((u) => u.key === deal.unitType);
@@ -49,9 +53,10 @@ export default function HeroSummary({ deal, a, base }) {
 
       <div className="relative flex flex-wrap items-start justify-between gap-5 px-5 pt-6 sm:px-7 sm:pt-7">
         <div className="min-w-0">
-          <p className="eyebrow">Deal analysis</p>
+          <p className="eyebrow">{deal.status === 'owned' ? 'Owned property' : 'Deal analysis'}</p>
           <h2 className="mt-1.5 truncate text-2xl font-semibold tracking-tight text-zinc-950 sm:text-[34px] sm:leading-tight dark:text-white">{deal.name}</h2>
           <div className="mt-3 flex flex-wrap gap-1.5">
+            {deal.example && <MetaPill>Example deal: edit it or add your own</MetaPill>}
             <MetaPill>{money(a.price)}</MetaPill>
             <MetaPill>
               {type?.key === 'multiplex' ? `Multiplex · ${a.units} units` : type?.label}
@@ -61,6 +66,8 @@ export default function HeroSummary({ deal, a, base }) {
               {Number(deal.rate).toFixed(3).replace(/0$/, '')}% · {deal.termYears}-yr
             </MetaPill>
             <MetaPill>{money(a.grossRent)}/mo rent</MetaPill>
+            {a.interestOnly && <MetaPill>Interest-only {a.ioYears} yrs</MetaPill>}
+            {sale && Number.isFinite(sale.irr) && <MetaPill>{percent(sale.irr, 1)} IRR if sold yr {sale.year}</MetaPill>}
           </div>
         </div>
         <span className={`inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-semibold ring-1 ring-inset backdrop-blur ${TONE_CLASSES[v.tone]}`}>
@@ -73,7 +80,9 @@ export default function HeroSummary({ deal, a, base }) {
         <Kpi
           icon={Gauge}
           label="Lender DSCR"
-          value={ratio(a.dscr)}
+          short="DSCR"
+          tip="dscr"
+          value={<Num value={a.dscr} format={ratio} />}
           valueClass={BAND_CLASSES[a.status.key].text}
           sub={
             <span className="flex flex-wrap items-center gap-2">
@@ -86,9 +95,11 @@ export default function HeroSummary({ deal, a, base }) {
         <Kpi
           icon={Wallet}
           label="Real net cash flow"
+          short="Cash flow"
+          tip="netCashFlow"
           value={
             <>
-              {money(a.netCashFlow, { signed: true })}
+              <Num value={a.netCashFlow} format={(v) => money(v, { signed: true })} />
               <span className="ml-1 text-sm font-medium tracking-normal text-zinc-400 sm:text-base dark:text-zinc-500">/mo</span>
             </>
           }
@@ -99,17 +110,26 @@ export default function HeroSummary({ deal, a, base }) {
         <Kpi
           icon={Percent}
           label="Cash-on-cash"
-          value={percent(a.coc)}
+          short="CoC"
+          tip="coc"
+          value={<Num value={a.coc} format={(v) => percent(v)} />}
           valueClass={signedClass(a.coc)}
-          sub={`On ${money(a.cashToClose)} invested`}
+          sub={`On ${money(a.cashInvested)} invested`}
           base={base && percent(base.coc)}
         />
         <Kpi
           icon={PiggyBank}
-          label="Cash out of pocket"
-          value={money(a.cashToClose)}
-          sub={`${money(a.downPayment)} down + ${money(a.closingCosts)} closing`}
-          base={base && money(base.cashToClose)}
+          label="Cash invested"
+          short="Invested"
+          tip="cashInvested"
+          value={<Num value={a.cashInvested} format={(v) => money(v)} />}
+          sub={
+            <>
+              {money(a.downPayment)} down + {money(a.closingCosts)} closing{a.rehab > 0 && ` + ${money(a.rehab)} rehab`}
+              <span className="mt-0.5 block">Plus {money(a.reserves)} reserves to hold</span>
+            </>
+          }
+          base={base && money(base.cashInvested)}
         />
       </dl>
 

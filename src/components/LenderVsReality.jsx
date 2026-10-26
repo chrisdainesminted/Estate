@@ -35,7 +35,7 @@ function WaterfallRow({ label, amount, rent, kind }) {
 export default function LenderVsReality({ a }) {
   const haircut = a.grossRent - a.lenderRent;
   return (
-    <Card className="@container">
+    <Card delay={140} className="@container">
       <CardHeader icon={Scale} title="Lender math vs. real-world math" subtitle="Lenders approve on PITIA. Your bank account also pays for OpEx." />
       <div className="grid gap-6 p-5 @2xl:grid-cols-2">
         <div>
@@ -43,7 +43,7 @@ export default function LenderVsReality({ a }) {
           <Line label="Gross monthly rent" value={money(a.grossRent)} />
           {haircut > 0 && <Line label="Lender rent haircut" value={`−${money(haircut)}`} muted indent />}
           <div className="mt-2" />
-          <Line label="Principal & interest" value={money(a.pi, { cents: true })} indent />
+          <Line label={a.interestOnly ? `Interest only (first ${a.ioYears} yrs)` : 'Principal & interest'} value={money(a.pi, { cents: true })} indent />
           <Line label="Property taxes" value={money(a.taxes, { cents: true })} indent />
           <Line label="Insurance" value={money(a.insurance, { cents: true })} indent />
           <Line label="HOA" value={money(a.hoa, { cents: true })} indent />
@@ -72,11 +72,11 @@ export default function LenderVsReality({ a }) {
       </div>
 
       <div className="grid grid-cols-2 gap-4 border-t border-hairline px-5 py-4 @lg:grid-cols-3 @4xl:grid-cols-5">
-        <Stat label="Year-1 paydown" value={money(a.year1Principal)} sub="principal paid by tenants" />
+        <Stat label="Year-1 paydown" tip="paydown" value={money(a.year1Principal)} sub={a.interestOnly ? 'none while interest-only' : 'principal paid by tenants'} />
         <Stat label="Year-1 total return" value={money(a.year1TotalReturn, { signed: true })} sub="cash flow + paydown" />
-        <Stat label="Cap rate" value={percent(a.capRate)} sub="NOI ÷ price" />
-        <Stat label="Breakeven rent" value={`${money(a.breakevenRent / a.units)}/unit`} sub="net cash flow = $0" />
-        <Stat label="Rent for 1.20 DSCR" value={`${money(a.rentForDscr120 / a.units)}/unit`} sub={`current ${ratio(a.dscr)}`} />
+        <Stat label="Cap rate" tip="capRate" value={percent(a.capRate)} sub="NOI ÷ price" />
+        <Stat label="Breakeven rent" tip="breakevenRent" value={`${money(a.breakevenRent / a.units)}/unit`} sub="net cash flow = $0" />
+        <Stat label="Rent for 1.20 DSCR" tip="rentFor120" value={`${money(a.rentForDscr120 / a.units)}/unit`} sub={`current ${ratio(a.dscr)}`} />
       </div>
     </Card>
   );

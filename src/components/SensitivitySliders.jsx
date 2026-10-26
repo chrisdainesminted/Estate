@@ -36,7 +36,8 @@ function deltaText(d, fmt) {
   return fmt(d);
 }
 
-export default function SensitivitySliders({ deal, adj, setAdj, scope, setScope, base, what, onApply, dealCount }) {
+export default function SensitivitySliders({ deal, adj, setAdj, scope, setScope, base, what, onApply, compareCount }) {
+  const all = scope === 'compare' && compareCount > 1;
   const neutral = isNeutralAdjustment(adj);
   const sign = (v, s) => (v > 0 ? `+${s}` : v < 0 ? `−${s.replace('-', '')}` : s);
   const downValue = adj.downPct ?? Math.min(Math.max(Number(deal.downPct) || 0, 15), 35);
@@ -59,24 +60,24 @@ export default function SensitivitySliders({ deal, adj, setAdj, scope, setScope,
       raw: what.coc - base.coc,
     },
     {
-      label: 'Cash to close',
-      b: money(base.cashToClose),
-      w: money(what.cashToClose),
-      d: deltaText(what.cashToClose - base.cashToClose, (v) => money(v, { signed: true })),
+      label: 'Cash invested',
+      b: money(base.cashInvested),
+      w: money(what.cashInvested),
+      d: deltaText(what.cashInvested - base.cashInvested, (v) => money(v, { signed: true })),
       // More cash out of pocket is a cost, not a gain.
-      raw: -(what.cashToClose - base.cashToClose),
+      raw: -(what.cashInvested - base.cashInvested),
     },
   ];
 
   return (
-    <Card className="@container h-full">
+    <Card delay={100} className="@container h-full">
       <CardHeader
         icon={FlaskConical}
         title="What-if sensitivity"
         subtitle="Stress-test the deal without changing its saved inputs."
         actions={
           <>
-            {dealCount > 1 && (
+            {compareCount > 1 && (
               <Segmented
                 size="sm"
                 label="Apply what-if to"
@@ -84,7 +85,7 @@ export default function SensitivitySliders({ deal, adj, setAdj, scope, setScope,
                 onChange={setScope}
                 options={[
                   { value: 'active', label: 'This deal' },
-                  { value: 'all', label: 'All deals' },
+                  { value: 'compare', label: `All ${compareCount} compared` },
                 ]}
               />
             )}
@@ -92,7 +93,7 @@ export default function SensitivitySliders({ deal, adj, setAdj, scope, setScope,
               <RotateCcw className="size-3.5" aria-hidden /> Reset
             </Button>
             <Button variant="primary" onClick={onApply} disabled={neutral}>
-              <Check className="size-3.5" aria-hidden /> Apply to {scope === 'all' && dealCount > 1 ? 'all deals' : 'deal'}
+              <Check className="size-3.5" aria-hidden /> Apply to {all ? `${compareCount} deals` : 'deal'}
             </Button>
           </>
         }
@@ -121,7 +122,7 @@ export default function SensitivitySliders({ deal, adj, setAdj, scope, setScope,
             onChange={(v) => setAdj({ ...adj, downPct: v })}
             display={`${downValue}%${adj.downPct == null ? ' (deal value)' : ''}`}
             ticks={[[15, '15%'], [25, '25%'], [35, '35%']]}
-            note={adj.downPct != null && scope === 'all' && dealCount > 1 ? 'Sets every deal to this down payment.' : undefined}
+            note={adj.downPct != null && all ? 'Sets every compared deal to this down payment.' : undefined}
           />
           <Slider
             id="what-if-rent"

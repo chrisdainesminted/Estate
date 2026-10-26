@@ -1,6 +1,7 @@
 import { DSCR_BANDS } from '../lib/dscr.js';
 import { ratio } from '../lib/format.js';
 import { DscrChip } from './ui.jsx';
+import { Num } from './motion.jsx';
 
 // Piecewise-linear scale so the narrow 1.20–1.25 sweet spot stays visible.
 // Tick labels sit at every breakpoint, so the stretching is never hidden.
@@ -39,7 +40,6 @@ const GAP = 0.006;
 
 export default function DscrGauge({ a }) {
   const f = toFrac(a.dscr);
-  const [nx, ny] = point(f, R - 26);
   const labels = [
     { v: 0.5, text: '0.50' },
     { v: 1.0, text: '1.00' },
@@ -82,10 +82,22 @@ export default function DscrGauge({ a }) {
             </text>
           );
         })}
-        <line x1={CX} y1={CY} x2={nx} y2={ny} strokeWidth={3} strokeLinecap="round" className="stroke-zinc-900 dark:stroke-white" />
+        {/* Drawn pointing at 0.50 and rotated into place, so it sweeps when DSCR changes. */}
+        <line
+          x1={CX}
+          y1={CY}
+          x2={CX - (R - 26)}
+          y2={CY}
+          strokeWidth={3}
+          strokeLinecap="round"
+          className="needle stroke-zinc-900 dark:stroke-white"
+          style={{ transform: `rotate(${f * 180}deg)`, transformOrigin: `${CX}px ${CY}px` }}
+        />
         <circle cx={CX} cy={CY} r={7} className="fill-zinc-900 stroke-white/80 dark:fill-white dark:stroke-zinc-900" strokeWidth={2.5} />
       </svg>
-      <div className="-mt-1 text-4xl font-semibold tracking-tight text-zinc-950 dark:text-white">{ratio(a.dscr)}</div>
+      <div className="-mt-1 text-4xl font-semibold tracking-tight text-zinc-950 dark:text-white">
+        <Num value={a.dscr} format={ratio} />
+      </div>
       <div className="mt-1.5">
         <DscrChip status={a.status} />
       </div>

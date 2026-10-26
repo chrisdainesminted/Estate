@@ -1,7 +1,7 @@
-import { Building2, ChevronDown, Landmark, PencilRuler, Receipt, SlidersHorizontal, Wrench } from 'lucide-react';
+import { Building2, ChevronDown, Copy, Landmark, PencilRuler, Receipt, SlidersHorizontal, Trash2, Wallet, Wrench } from 'lucide-react';
 import { UNIT_TYPES } from '../lib/presets.js';
 import { money, percent } from '../lib/format.js';
-import { Card, CardHeader, FieldLabel, NumberField } from './ui.jsx';
+import { Card, CardHeader, ConfirmButton, FieldLabel, NumberField, Segmented, SelectField } from './ui.jsx';
 
 function Section({ icon: Icon, title, children, collapsible = false, defaultOpen = true }) {
   const heading = (
@@ -29,31 +29,82 @@ function Section({ icon: Icon, title, children, collapsible = false, defaultOpen
   );
 }
 
-function Derived({ label, value }) {
+function Derived({ label, value, strong }) {
   return (
-    <div className="flex items-center justify-between rounded-xl bg-well px-3 py-2.5 text-xs">
-      <span className="text-zinc-500 dark:text-zinc-400">{label}</span>
+    <div
+      className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-xs ${
+        strong ? 'bg-emerald-500/10 ring-1 ring-emerald-600/15 ring-inset dark:bg-emerald-400/10 dark:ring-emerald-300/15' : 'bg-well'
+      }`}
+    >
+      <span className={strong ? 'font-medium text-emerald-900 dark:text-emerald-100' : 'text-zinc-500 dark:text-zinc-400'}>{label}</span>
       <span className="tabular font-semibold text-zinc-800 dark:text-zinc-200">{value}</span>
     </div>
   );
 }
 
-export default function InputsPanel({ deal, a, onChange }) {
+const iconBtn = 'rounded-lg p-1.5 text-zinc-400 transition hover:bg-zinc-950/5 hover:text-zinc-700 dark:hover:bg-white/10 dark:hover:text-zinc-200';
+
+export default function InputsPanel({ deal, a, onChange, onDuplicate, onDelete }) {
   const id = (k) => `${deal.id}-${k}`;
   const set = (k) => (v) => onChange({ [k]: v });
   const opexPct = (Number(deal.mgmtPct) || 0) + (Number(deal.maintPct) || 0) + (Number(deal.vacancyPct) || 0) + (Number(deal.capexPct) || 0);
 
   return (
     <Card>
-      <CardHeader icon={PencilRuler} title="Deal inputs" subtitle="Every change recalculates and saves instantly." />
-      <div className="px-6 pt-5 pb-5">
-        <FieldLabel htmlFor={id('name')}>Deal name</FieldLabel>
-        <input
-          id={id('name')}
-          value={deal.name}
-          onChange={(e) => onChange({ name: e.target.value })}
-          className="field w-full px-3 py-2.5 text-sm font-medium text-zinc-900 dark:text-zinc-100"
-        />
+      <CardHeader
+        icon={PencilRuler}
+        title="Deal inputs"
+        subtitle="Saves as you type."
+        actions={
+          <>
+            <button type="button" onClick={onDuplicate} className={iconBtn} aria-label="Duplicate deal" title="Duplicate deal">
+              <Copy className="size-4" aria-hidden />
+            </button>
+            {onDelete && (
+              <ConfirmButton
+                label="Delete deal"
+                title={`Delete “${deal.name}”?`}
+                body="It’s removed from your deals, the portfolio and any comparison. This can’t be undone."
+                confirmLabel="Delete deal"
+                onConfirm={onDelete}
+                className="rounded-lg p-1.5 text-zinc-400 transition hover:bg-red-500/10 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:hover:text-red-400"
+              >
+                <Trash2 className="size-4" aria-hidden />
+              </ConfirmButton>
+            )}
+          </>
+        }
+      />
+      <div className="space-y-4 px-6 pt-5 pb-5">
+        <div>
+          <FieldLabel htmlFor={id('name')}>Deal name</FieldLabel>
+          <input
+            id={id('name')}
+            value={deal.name}
+            onChange={(e) => onChange({ name: e.target.value })}
+            className="field w-full px-3 py-2.5 text-sm font-medium text-zinc-900 dark:text-zinc-100"
+          />
+        </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <span className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">Status</span>
+            <Segmented
+              size="sm"
+              label="Deal status"
+              value={deal.status === 'owned' ? 'owned' : 'prospect'}
+              onChange={(v) => onChange({ status: v })}
+              options={[
+                { value: 'prospect', label: 'Prospect' },
+                { value: 'owned', label: 'Owned' },
+              ]}
+            />
+          </div>
+          {deal.status === 'owned' && (
+            <div className="w-28">
+              <NumberField id={id('owned')} label="Years owned" value={deal.yearsOwned} onChange={set('yearsOwned')} max={40} step={1} decimals={1} />
+            </div>
+          )}
+        </div>
       </div>
 
       <Section icon={Building2} title="Property & income">
@@ -113,9 +164,46 @@ export default function InputsPanel({ deal, a, onChange }) {
           </select>
         </div>
         <NumberField id={id('closing')} label="Closing costs" suffix="%" value={deal.closingPct} onChange={set('closingPct')} max={15} step={0.5} hint={money(a.closingCosts)} />
+        <div className="col-span-2">
+          <SelectField id={id('io')} label="Interest-only period" tip="interestOnly" value={a.ioYears} onChange={(e) => onChange({ ioYears: Number(e.target.value) })}>
+            {[...new Set([0, 5, 7, 10, a.ioYears])]
+              .filter((y) => y === 0 || y <= Number(deal.termYears) - 1)
+              .sort((p, q) => p - q)
+              .map((y) => (
+                <option key={y} value={y}>
+                  {y === 0 ? 'None: fully amortizing' : `${y} years, then amortizing`}
+                </option>
+              ))}
+          </SelectField>
+          {a.interestOnly && (
+            <p className="tabular mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+              {money(a.pi)}/mo now → {money(a.amortizingPI)}/mo after year {a.ioYears}
+            </p>
+          )}
+        </div>
         <div className="col-span-2 grid grid-cols-2 gap-2">
           <Derived label="Loan" value={money(a.loanAmount)} />
           <Derived label="LTV" value={percent(a.ltv, 1)} />
+        </div>
+      </Section>
+
+      <Section icon={Wallet} title="Cash required">
+        <NumberField id={id('rehab')} label="Rehab budget" prefix="$" value={deal.rehabCost} onChange={set('rehabCost')} step={1000} decimals={0} />
+        <NumberField
+          id={id('reserves')}
+          label="Lender reserves"
+          tip="reserves"
+          suffix="mo"
+          value={deal.reserveMonths}
+          onChange={set('reserveMonths')}
+          max={24}
+          step={1}
+          decimals={0}
+          hint={`${money(a.reserves)} of PITIA`}
+        />
+        <div className="col-span-2 grid gap-2">
+          <Derived label="Cash invested (down + closing + rehab)" value={money(a.cashInvested)} />
+          <Derived label="Cash needed incl. reserves" value={money(a.cashNeeded)} strong />
         </div>
       </Section>
 
@@ -149,6 +237,16 @@ export default function InputsPanel({ deal, a, onChange }) {
           max={50}
           step={5}
           hint="Some lenders count only 75% of rent"
+        />
+        <NumberField
+          id={id('sell')}
+          label="Selling costs"
+          suffix="% of sale"
+          value={deal.sellingCostPct}
+          onChange={set('sellingCostPct')}
+          max={20}
+          step={0.5}
+          hint="Agent fees, transfer tax, concessions"
         />
       </Section>
     </Card>

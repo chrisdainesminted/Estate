@@ -6,30 +6,38 @@
 
 Bedrock separates **lender DSCR math (PITIA)** from **real-world cash flow (PITIA + OpEx)**, so a deal a DSCR lender approves can't quietly lose money every month. The mark is stacked layers widening to a solid base: real cash flow is the layer a portfolio is built on.
 
+Live: https://claude.ai/artifact/5KH4ZZHoZ8CvCKF5CXutGJ (private to the owner until shared).
+
 ## Run it
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173
-npm test         # finance engine unit tests
-npm run build    # static site in dist/
+npm run dev             # http://localhost:5173
+npm test                # finance engine unit tests
+npm run build           # static site in dist/
+npm run build:artifact  # page fragment + assets in dist-artifact/ for the Claude artifact host
 ```
 
-Deals are saved in your browser's localStorage. The ↺ button in the header restores the three starter deals.
+Deals are always saved in the browser. On the hosted page they also sync to the viewer's private space in their Claude account, so the same deals show up on every device (newest edit wins). The ↺ button in the header starts over with the example deals, after an in-page confirmation.
 
 ## What it calculates
 
 | Metric | Formula |
 |---|---|
 | P&I | `P · r(1+r)^n / ((1+r)^n − 1)`, r = rate/12, n = years × 12 |
-| PITIA | P&I + taxes/12 + insurance/12 + HOA |
+| Interest-only | interest only for the IO period, then the balance amortizes over the remaining term |
+| PITIA | debt service + taxes/12 + insurance/12 + HOA (the IO payment during an IO period) |
 | Lender DSCR | (gross rent × (1 − lender haircut)) ÷ PITIA |
 | OpEx | gross rent × (management + maintenance + vacancy + CapEx %) |
 | Real net cash flow | gross rent − PITIA − OpEx |
-| Cash out of pocket | down payment + closing costs (3% default) |
-| Cash-on-cash | annual net cash flow ÷ cash out of pocket |
-| Year-1 paydown | principal from amortization months 1–12 |
-| 10-year total return | cumulative cash flow + principal paydown + appreciation (3%/yr default) |
+| Cash invested | down payment + closing costs (3% default) + rehab |
+| Lender reserves | months of PITIA held in the bank (6 by default); shown separately, not spent |
+| Cash-on-cash | annual net cash flow ÷ cash invested |
+| 10-year total return | cumulative cash flow + principal paydown + appreciation, before selling costs |
+| Profit if sold | cash flow + sale price − selling costs (7% default) − loan payoff − cash invested |
+| IRR | rate that zeroes the NPV of −cash invested, each year's cash flow, and net sale proceeds in year 10 |
+| Equity multiple | (cash flow + net sale proceeds) ÷ cash invested |
+| Global DSCR | total lender rent ÷ total PITIA across owned properties |
 
 DSCR bands: **< 1.00** red (negative), **1.00–1.19** yellow (tight), **1.20–1.25** green (sweet spot), **> 1.25** blue (strong). DSCR is banded on the 2-decimal value shown on screen.
 
@@ -37,21 +45,26 @@ Additional figures: cap rate (NOI ÷ price), breakeven rent per unit, rent neede
 
 ## Features
 
-- **Analyze view**: hero summary with a one-line verdict, DSCR gauge, a lender-vs-reality breakdown, and a warning banner when DSCR ≥ 1.00 but real cash flow is negative.
-- **What-if sliders**: rate ±2%, down payment 15–35%, rent −15% to +25%. They apply to the active deal or all deals without changing saved inputs. Use "Apply" to commit them.
-- **Compare view**: 2–3 deals side by side, with a trophy on the best value per row (ties share it) and a 10-year total-return chart.
-- **10-year projection**: stacked chart or table, with optional rent growth and tax/insurance/HOA growth (both 0% by default).
-- Light/dark mode (follows the OS until toggled), responsive down to phone width.
+- **Portfolio view**: owned properties rolled up into net cash flow, global DSCR, cash-on-cash and equity today (value and loan balance rolled forward by years owned), a cash-flow-by-property chart, and "What if you buy it?", which shows how a prospect changes the whole portfolio.
+- **Analyze view**: hero summary with a one-line verdict, DSCR gauge, a lender-vs-reality breakdown, a warning when DSCR ≥ 1.00 but real cash flow is negative, a 10-year projection, and what you'd walk away with if you sold in year 10.
+- **What-if sliders**: rate ±2%, down payment 15–35%, rent −15% to +25%, for the open deal or every compared deal, without changing saved inputs until you apply them.
+- **Compare view**: pick up to 3 deals from the library; side-by-side matrix with a trophy on the best value per row (ties share it) and a profit-if-sold-by-year chart.
+- **Deal library**: unlimited deals, each a prospect or owned, with a searchable picker. Starter deals are tagged "Example" until edited.
+- **Export**: a one-page PDF deal memo (vector, Letter size) and a CSV of every deal. Ctrl+P also prints the memo.
+- **Polish**: count-up numbers, a sweeping gauge needle, animated charts and staggered panels (all off under reduced motion), plain-English explanations on every metric, light/dark mode that follows the host or OS.
 
 ## Layout
 
 ```
-src/lib/finance.js        pure calculation engine (tested in finance.test.js)
-src/lib/dscr.js           DSCR bands and colors
-src/lib/presets.js        default and starter deals
-src/hooks/useDeals.js     deal state + localStorage
-src/components/Logo.jsx   brand mark (same geometry as public/favicon.svg)
+src/lib/finance.js        calculation engine: loans, DSCR, cash flow, projection, sale/IRR, portfolio (tested)
+src/lib/dscr.js           DSCR bands, colors and the one-line verdict
+src/lib/export.js         CSV export (tested)
+src/lib/memoPdf.js        PDF deal memo (jsPDF, loaded on demand)
+src/lib/runtime.js        hosted-viewer capabilities with plain-browser fallbacks
+src/lib/glossary.js       metric explanations used by the hover tips
+src/hooks/useDeals.js     deal library: browser storage + account sync
 src/components/*          UI sections
+scripts/build-artifact.mjs  turns the Vite build into the hosted page
 ```
 
 ## Brand

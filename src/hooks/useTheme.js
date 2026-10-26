@@ -14,6 +14,18 @@ export function useTheme() {
     document.documentElement.classList.toggle('dark', dark);
   }, [dark]);
 
+  // Follow the host viewer's theme choice whenever it changes.
+  useEffect(() => {
+    const root = document.documentElement;
+    const follow = () => {
+      const t = root.getAttribute('data-theme');
+      if (t === 'dark' || t === 'light') setDark(t === 'dark');
+    };
+    const mo = new MutationObserver(follow);
+    mo.observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => mo.disconnect();
+  }, []);
+
   // Follow the OS setting until the user picks a theme explicitly.
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');

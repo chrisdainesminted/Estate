@@ -1,8 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { amortize, analyzeDeal, applyAdjustments, isNeutralAdjustment, monthlyPI, projectDeal } from './finance.js';
+import {
+  amortize,
+  analyzeDeal,
+  applyAdjustments,
+  estimateToday,
+  irr,
+  isNeutralAdjustment,
+  monthlyPI,
+  portfolioSummary,
+  projectDeal,
+  saleAnalysis,
+} from './finance.js';
 import { dscrStatus, verdict } from './dscr.js';
-import { PRESET_DEALS } from './presets.js';
+import { PRESET_DEALS, PRESET_OWNED } from './presets.js';
 import { niceScale } from './chartTheme.js';
+import { dealsToCsv } from './export.js';
 
 // Independent closed-form remaining balance, used to cross-check the month loop.
 function balanceAfter(P, ratePct, years, k) {
@@ -201,5 +213,143 @@ describe('niceScale', () => {
     expect(s.ticks[0]).toBeLessThan(0);
     expect(s.ticks).toContain(0);
     expect(s.domain).toEqual([s.ticks[0], s.ticks[s.ticks.length - 1]]);
+  });
+});
+
+describe('interest-only loans', () => {
+  it('pays interest only during the IO period, then amortizes the rest of the term', () => {
+    const rows = amortize(300000, 7, 30, 360, 10);
+    expect(rows[0].payment).toBeCloseTo(300000 * 0.07 / 12, 6);
+    expect(rows[119].principal).toBe(0);
+    expect(rows[119].balance).toBe(300000);
+    expect(rows[120].payment).toBeCloseTo(monthlyPI(300000, 7, 20), 6);
+    expect(rows[359].balance).toBeCloseTo(0, 4);
+  });
+
+  it('qualifies DSCR on the interest-only payment and reports the later payment', () => {
+    const deal = { ...PRESET_DEALS[0], ioYears: 10 };
+    const a = analyzeDeal(deal);
+    expect(a.interestOnly).toBe(true);
+    expect(a.pi).toBeCloseTo(187500 * 0.07 / 12, 6);
+    expect(a.amortizingPI).toBeCloseTo(monthlyPI(187500, 7, 20), 6);
+    expect(a.year1Principal).toBe(0);
+    expect(a.dscr).toBeGreaterThan(analyzeDeal(PRESET_DEALS[0]).dscr);
+  });
+
+  it('steps cash flow down when interest-only ends inside the projection', () => {
+    const rows = projectDeal({ ...PRESET_DEALS[0], ioYears: 5 }, 10);
+    expect(rows[5].cashFlow).toBeLessThan(rows[4].cashFlow);
+  });
+
+  it('keeps at least a year of amortization', () => {
+    const a = analyzeDeal({ ...PRESET_DEALS[0], termYears: 10, ioYears: 10 });
+    expect(a.ioYears).toBe(9);
+  });
+});
+
+describe('cash invested, rehab and reserves', () => {
+  it('adds rehab to cash invested and uses it for cash-on-cash', () => {
+    const a = analyzeDeal({ ...PRESET_DEALS[2], rehabCost: 20000 });
+    expect(a.cashToClose).toBe(140000);
+    expect(a.cashInvested).toBe(160000);
+    expect(a.coc).toBeCloseTo(a.annualCashFlow / 160000, 10);
+  });
+
+  it('holds reserves as months of PITIA on top of cash invested', () => {
+    const a = analyzeDeal(PRESET_DEALS[0]);
+    expect(a.reserves).toBeCloseTo(6 * a.pitia, 6);
+    expect(a.cashNeeded).toBeCloseTo(a.cashInvested + a.reserves, 6);
+  });
+});
+
+describe('irr', () => {
+  it('matches hand-checked cases', () => {
+    expect(irr([-100, 110])).toBeCloseTo(0.1, 6);
+    expect(irr([-1000, 0, 0, 1331])).toBeCloseTo(0.1, 6);
+    expect(irr([-1000, 100, 100, 1100])).toBeCloseTo(0.1, 6);
+  });
+  it('returns NaN when no rate can break even', () => {
+    expect(irr([-100, -10])).toBeNaN();
+  });
+});
+
+describe('saleAnalysis', () => {
+  const deal = PRESET_DEALS[2];
+  const rows = projectDeal(deal, 10);
+  const sale = saleAnalysis(deal, rows);
+  const y10 = rows[9];
+
+  it('nets selling costs and the loan payoff from the sale price', () => {
+    expect(sale.salePrice).toBeCloseTo(500000 * Math.pow(1.03, 10), 4);
+    expect(sale.sellingCosts).toBeCloseTo(sale.salePrice * 0.07, 6);
+    expect(sale.netProceeds).toBeCloseTo(sale.salePrice - sale.sellingCosts - y10.balance, 6);
+  });
+
+  it('profit is cash flow plus net proceeds minus everything invested', () => {
+    expect(sale.profit).toBeCloseTo(y10.cumCashFlow + sale.netProceeds - 140000, 6);
+    // Paper total return ignores selling costs and closing costs, so it is higher.
+    expect(sale.profit).toBeLessThan(y10.totalReturn);
+    expect(sale.profit).toBeCloseTo(y10.totalReturn - sale.sellingCosts - 15000, 4);
+  });
+
+  it('IRR zeroes the NPV of the deal cash flows', () => {
+    const flows = [-140000, ...rows.map((r) => r.cashFlow)];
+    flows[10] += sale.netProceeds;
+    const npv = flows.reduce((s, cf, t) => s + cf / Math.pow(1 + sale.irr, t), 0);
+    expect(Math.abs(npv)).toBeLessThan(0.01);
+    expect(sale.equityMultiple).toBeCloseTo((y10.cumCashFlow + sale.netProceeds) / 140000, 10);
+  });
+});
+
+describe('portfolio', () => {
+  const build = (deal) => {
+    const rows = projectDeal(deal, 10);
+    return { deal, a: analyzeDeal(deal), rows, sale: saleAnalysis(deal, rows) };
+  };
+
+  it('estimates value and balance today from years owned', () => {
+    const d = PRESET_OWNED[0];
+    const today = estimateToday(d);
+    expect(today.value).toBeCloseTo(340000 * Math.pow(1.03, 3), 4);
+    expect(today.balance).toBeCloseTo(balanceAfter(255000, 4.75, 30, 36), 4);
+    expect(estimateToday({ ...d, yearsOwned: 0 }).balance).toBe(255000);
+  });
+
+  it('sums cash flow and uses global DSCR (total rent over total PITIA)', () => {
+    const items = [...PRESET_OWNED, PRESET_DEALS[0]].map(build);
+    const p = portfolioSummary(items);
+    expect(p.properties).toBe(3);
+    expect(p.units).toBe(4);
+    expect(p.netCashFlow).toBeCloseTo(items.reduce((s, x) => s + x.a.netCashFlow, 0), 6);
+    expect(p.dscr).toBeCloseTo(items.reduce((s, x) => s + x.a.lenderRent, 0) / items.reduce((s, x) => s + x.a.pitia, 0), 10);
+    expect(p.traps).toBe(1);
+    expect(p.coc).toBeCloseTo(p.annualCashFlow / p.cashInvested, 10);
+  });
+
+  it('handles an empty portfolio', () => {
+    const p = portfolioSummary([]);
+    expect(p.properties).toBe(0);
+    expect(p.coc).toBe(0);
+  });
+});
+
+describe('dealsToCsv', () => {
+  const build = (deal) => {
+    const rows = projectDeal(deal, 10);
+    return { deal, a: analyzeDeal(deal), rows, sale: saleAnalysis(deal, rows) };
+  };
+
+  it('writes a header and one row per deal with matching column counts', () => {
+    const csv = dealsToCsv([...PRESET_DEALS, ...PRESET_OWNED].map(build));
+    const lines = csv.trim().split('\r\n');
+    expect(lines).toHaveLength(6);
+    const cols = lines[0].split(',').length;
+    lines.forEach((l) => expect(l.split(',').length).toBe(cols));
+    expect(lines[1].startsWith('$250k Single-Family,Prospect,')).toBe(true);
+  });
+
+  it('quotes names containing commas and quotes', () => {
+    const csv = dealsToCsv([build({ ...PRESET_DEALS[0], name: 'Smith, "Big" Duplex' })]);
+    expect(csv.split('\r\n')[1].startsWith('"Smith, ""Big"" Duplex",')).toBe(true);
   });
 });
