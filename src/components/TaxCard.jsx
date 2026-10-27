@@ -70,7 +70,9 @@ export default function TaxCard({ deal, tax, onTax }) {
               <span className="ml-1 text-base font-medium tracking-normal text-zinc-500 dark:text-zinc-400">/mo</span>
             </div>
             <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">
-              {money(t.afterTaxCashFlow, { signed: true })} a year, versus {money(t.preTaxCashFlow, { signed: true })} before tax.
+              {t.taxDue === 0
+                ? `${money(t.afterTaxCashFlow, { signed: true })} a year, the same as before tax: no tax is due.`
+                : `${money(t.afterTaxCashFlow, { signed: true })} a year, versus ${money(t.preTaxCashFlow, { signed: true })} before tax.`}
               {t.depreciationSaves > 0 && ` Depreciation keeps ${money(t.depreciationSaves)} of tax off this deal each year.`}
             </p>
           </div>
