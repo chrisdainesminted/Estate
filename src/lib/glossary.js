@@ -97,6 +97,22 @@ export const GLOSSARY = {
     term: 'Prepayment penalty',
     body: 'Many DSCR loans charge a fee for paying the loan off early, stepping down each year: 5-4-3-2-1 means 5% of the balance in year 1, 4% in year 2, and none after year 5.',
   },
+  saleProceeds: {
+    term: 'Cash if sold',
+    body: 'Sale price minus selling costs, the loan payoff and any prepayment penalty: the cash you would walk away with, before taxes.',
+  },
+  depreciation: {
+    term: 'Depreciation',
+    body: 'The IRS lets you deduct the building (not the land) over 27.5 years, even though you didn’t spend that money this year. It lowers taxable income without lowering cash flow.',
+  },
+  land: {
+    term: 'Land share',
+    body: 'Land can’t be depreciated, only the building. Your property tax bill or county assessor usually splits the value between the two.',
+  },
+  passiveLoss: {
+    term: 'Using rental losses',
+    body: 'Rental losses are “passive”. They offset your other income only if you qualify as a real estate professional, or up to $25,000 a year if your income is under about $100,000–$150,000. Otherwise they carry forward to offset future rental income.',
+  },
   equity: {
     term: 'Equity',
     body: 'Estimated property value − loan balance. For owned properties, value and balance are rolled forward by years owned.',

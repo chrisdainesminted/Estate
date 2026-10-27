@@ -1,7 +1,7 @@
-import { Building2, ChevronDown, Copy, Hammer, Landmark, PencilRuler, Receipt, SlidersHorizontal, Trash2, Wallet, Wrench } from 'lucide-react';
+import { Building2, ChevronDown, Copy, Hammer, Landmark, MapPin, PencilRuler, Receipt, SlidersHorizontal, Trash2, Wallet, Wrench } from 'lucide-react';
 import { UNIT_TYPES } from '../lib/presets.js';
 import { money, percent } from '../lib/format.js';
-import { Card, CardHeader, ConfirmButton, FieldLabel, NumberField, Segmented, SelectField } from './ui.jsx';
+import { Card, CardHeader, FieldLabel, NumberField, Segmented, SelectField } from './ui.jsx';
 import { InfoTip } from './motion.jsx';
 
 function Section({ icon: Icon, title, children, collapsible = false, defaultOpen = true }) {
@@ -43,7 +43,7 @@ function Derived({ label, value, strong }) {
   );
 }
 
-const iconBtn = 'rounded-lg p-1.5 text-zinc-400 transition hover:bg-zinc-950/5 hover:text-zinc-700 dark:hover:bg-white/10 dark:hover:text-zinc-200';
+const iconBtn = 'rounded-lg p-1.5 text-zinc-500 transition dark:text-zinc-400 hover:bg-zinc-950/5 hover:text-zinc-700 dark:hover:bg-white/10 dark:hover:text-zinc-200';
 
 export default function InputsPanel({ deal, a, onChange, onDuplicate, onDelete }) {
   const id = (k) => `${deal.id}-${k}`;
@@ -51,7 +51,7 @@ export default function InputsPanel({ deal, a, onChange, onDuplicate, onDelete }
   const opexPct = (Number(deal.mgmtPct) || 0) + (Number(deal.maintPct) || 0) + (Number(deal.vacancyPct) || 0) + (Number(deal.capexPct) || 0);
 
   return (
-    <Card>
+    <Card id="sec-inputs">
       <CardHeader
         icon={PencilRuler}
         title="Deal inputs"
@@ -62,16 +62,16 @@ export default function InputsPanel({ deal, a, onChange, onDuplicate, onDelete }
               <Copy className="size-4" aria-hidden />
             </button>
             {onDelete && (
-              <ConfirmButton
-                label="Delete deal"
-                title={`Delete “${deal.name}”?`}
-                body="It’s removed from your deals, the portfolio and any comparison. This can’t be undone."
-                confirmLabel="Delete deal"
-                onConfirm={onDelete}
-                className="rounded-lg p-1.5 text-zinc-400 transition hover:bg-red-500/10 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:hover:text-red-400"
+              // No confirm step: deleting shows an Undo toast instead.
+              <button
+                type="button"
+                onClick={onDelete}
+                aria-label="Delete deal"
+                title="Delete deal"
+                className="rounded-lg p-1.5 text-zinc-500 transition dark:text-zinc-400 hover:bg-red-500/10 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:hover:text-red-400"
               >
                 <Trash2 className="size-4" aria-hidden />
-              </ConfirmButton>
+              </button>
             )}
           </>
         }
@@ -107,6 +107,44 @@ export default function InputsPanel({ deal, a, onChange, onDuplicate, onDelete }
           )}
         </div>
       </div>
+
+      <Section icon={MapPin} title="Details" collapsible defaultOpen={Boolean(deal.address || deal.listingUrl || deal.notes)}>
+        <div className="col-span-2">
+          <FieldLabel htmlFor={id('address')}>Address</FieldLabel>
+          <input
+            id={id('address')}
+            value={deal.address ?? ''}
+            onChange={(e) => onChange({ address: e.target.value })}
+            placeholder="123 Main St, Springfield"
+            autoComplete="off"
+            className="field w-full px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 dark:text-zinc-100"
+          />
+        </div>
+        <div className="col-span-2">
+          <FieldLabel htmlFor={id('url')}>Listing link</FieldLabel>
+          <input
+            id={id('url')}
+            type="url"
+            inputMode="url"
+            value={deal.listingUrl ?? ''}
+            onChange={(e) => onChange({ listingUrl: e.target.value })}
+            placeholder="https://"
+            autoComplete="off"
+            className="field w-full px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 dark:text-zinc-100"
+          />
+        </div>
+        <div className="col-span-2">
+          <FieldLabel htmlFor={id('notes')}>Notes</FieldLabel>
+          <textarea
+            id={id('notes')}
+            rows={3}
+            value={deal.notes ?? ''}
+            onChange={(e) => onChange({ notes: e.target.value })}
+            placeholder="Seller motivation, inspection items, comps…"
+            className="field w-full resize-y px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 dark:text-zinc-100"
+          />
+        </div>
+      </Section>
 
       <Section icon={Building2} title="Property & income">
         <div className="col-span-2">

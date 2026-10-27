@@ -28,7 +28,7 @@ export default function MaxOfferCard({ deal, targets, onTargets, onUsePrice }) {
   const maxBar = Math.max(...m.limits.filter((l) => Number.isFinite(l.price)).map((l) => l.price), asking, 1);
 
   return (
-    <Card delay={120} className="@container">
+    <Card id="sec-offer" delay={120} className="@container">
       <CardHeader
         icon={Target}
         title="Max offer price"
@@ -77,7 +77,7 @@ export default function MaxOfferCard({ deal, targets, onTargets, onUsePrice }) {
                 {Number.isFinite(m.price) ? <Num value={m.price} format={(v) => money(v)} /> : 'No limit'}
               </div>
               {Number.isFinite(m.price) && (
-                <p className={`tabular mt-2 text-sm font-medium ${room >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                <p className={`tabular mt-2 text-sm font-medium ${room >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
                   {room >= 0
                     ? `Asking works, with ${money(room)} of room`
                     : `${money(-room)} under asking (${percent(room / asking, 1)})`}

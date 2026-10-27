@@ -141,7 +141,7 @@ export default function PlanView({ owned, deals, plan, onPlan, dark, onOpen }) {
           <Kpi icon={Wallet} label="Cash flow in 10 years" short="Cash flow, yr 10" sub={`${money(sim.start.monthlyCashFlow, { signed: true })}/mo today`}>
             <span className={signedClass(sim.end.monthlyCashFlow)}>
               <Num value={sim.end.monthlyCashFlow} format={(v) => money(v, { signed: true })} />
-              <span className="ml-1 text-sm font-medium tracking-normal text-zinc-400 sm:text-base dark:text-zinc-500">/mo</span>
+              <span className="ml-1 text-sm font-medium tracking-normal text-zinc-500 sm:text-base dark:text-zinc-400">/mo</span>
             </span>
           </Kpi>
           <Kpi icon={PiggyBank} label="Equity in 10 years" short="Equity, yr 10" sub={`${compactMoney(sim.start.equity)} today · ${compactMoney(sim.end.cash)} cash on hand`}>
@@ -236,7 +236,7 @@ export default function PlanView({ owned, deals, plan, onPlan, dark, onOpen }) {
           <Card delay={200}>
             <CardHeader icon={ShoppingCart} title="Purchases" subtitle={sim.purchases.length ? `${sim.purchases.length} over ten years.` : 'None yet: cash never covers a purchase plus reserves.'} />
             {sim.purchases.length > 0 && (
-              <div className="thin-scroll max-h-96 overflow-auto">
+              <div tabIndex={0} role="region" aria-label="Purchases" className="thin-scroll max-h-96 overflow-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500">
                 <table className="w-full min-w-[620px] text-sm">
                   <thead className="sticky top-0 bg-(--glass-strong) backdrop-blur-xl">
                     <tr className="eyebrow">
@@ -266,7 +266,7 @@ export default function PlanView({ owned, deals, plan, onPlan, dark, onOpen }) {
 
           <Card delay={260}>
             <CardHeader icon={CalendarClock} title="Year by year" subtitle="End of each year. Reserves are cash you keep but can’t spend." />
-            <div className="thin-scroll overflow-x-auto">
+            <div tabIndex={0} role="region" aria-label="Year by year" className="thin-scroll overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500">
               <table className="w-full min-w-[620px] text-sm">
                 <thead>
                   <tr className="eyebrow">

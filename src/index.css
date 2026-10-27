@@ -24,6 +24,8 @@
   --accent: #059669;
   --accent-glow: rgb(16 185 129 / 0.18);
   --track: rgb(9 9 11 / 0.1);
+  /* Secondary text runs a touch darker than stock zinc-500 so it keeps 4.5:1 on tinted glass and wells. */
+  --color-zinc-500: #67676f;
 }
 
 html.dark {
@@ -40,6 +42,7 @@ html.dark {
   --track: rgb(255 255 255 / 0.12);
   --color-hairline: rgb(255 255 255 / 0.07);
   --color-well: rgb(255 255 255 / 0.04);
+  --color-zinc-500: oklch(55.2% 0.016 285.938);
 }
 
 body {
@@ -275,9 +278,56 @@ html.dark .app-backdrop {
   animation: pop 0.18s ease-out both;
 }
 
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+.sheet {
+  animation: sheet-up 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Toasts sit above the phone's "Edit deal" button and the home indicator. */
+.toast-stack {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+}
+@media (max-width: 1023px) {
+  .toast-stack {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 84px);
+  }
+}
+
+/* Jump targets (command palette) land below the header, which sticks from lg up. */
+[id^='sec-'] {
+  scroll-margin-top: 16px;
+}
+@media (min-width: 1024px) {
+  [id^='sec-'] {
+    scroll-margin-top: 104px;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+.skeleton {
+  background: linear-gradient(90deg, transparent 0%, var(--color-well) 40%, transparent 80%) 0 0 / 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rise,
-  .pop {
+  .pop,
+  .sheet,
+  .skeleton {
     animation: none;
   }
   .needle {

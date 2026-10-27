@@ -386,23 +386,49 @@ export function saleAnalysis(deal, rows) {
 }
 
 /**
- * Estimated value and loan balance today for a property owned `yearsOwned`
- * years, following its refinance if that has already happened.
+ * A property `ageMonths` after purchase: value, loan balance, and what a
+ * sale would net after selling costs, the payoff and any prepayment penalty.
  */
-export function estimateToday(deal) {
+export function positionAt(deal, ageMonths) {
   const a = analyzeDeal(deal);
-  const yearsOwned = Math.max(num(deal.yearsOwned), 0);
-  const months = Math.round(yearsOwned * 12);
-  const value = startingValue(deal) * Math.pow(1 + pct(deal.appreciationPct), yearsOwned);
-  const { rows, refi } = loanTimeline(deal, Math.max(months, 1));
+  const months = Math.max(Math.round(ageMonths), 0);
+  const value = startingValue(deal) * Math.pow(1 + pct(deal.appreciationPct), months / 12);
+  const { rows, refi } = loanTimeline(deal, months + 1);
   const balance = months > 0 ? rows[months - 1].balance : a.loanAmount;
-  return { value, balance, equity: value - balance, refinanced: !!refi && months >= refi.month };
+  const loanAge = months > 0 ? rows[months - 1].loanAge : 0;
+  const penalty = months > 0 ? balance * prepayRate(deal.prepay, loanAge) : 0;
+  const netProceeds = value * (1 - pct(deal.sellingCostPct)) - balance - penalty;
+  return { value, balance, equity: value - balance, netProceeds, nextPayment: rows[months]?.payment ?? 0, refinanced: !!refi && months >= refi.month };
 }
 
 /**
- * Roll a set of analyzed deals into portfolio totals. Each item is
- * { deal, a, rows, sale }. DSCR here is global DSCR: total lender rent over
- * total PITIA, the way lenders look at a borrower's whole schedule.
+ * Where a property stands today, `yearsOwned` years in. Rent, taxes,
+ * insurance and HOA are read as today's figures; the loan is rolled forward,
+ * so a finished interest-only period or a completed refinance shows up in
+ * this month's payment, cash flow and DSCR.
+ */
+export function estimateToday(deal) {
+  const a = analyzeDeal(deal);
+  const age = Math.round(Math.max(num(deal.yearsOwned), 0) * 12);
+  const pos = positionAt(deal, age);
+  const pitia = pos.nextPayment + a.taxes + a.insurance + a.hoa;
+  const netCashFlow = a.grossRent * (1 - opexRate(deal)) - pitia;
+  const dscr = pitia > 0 ? a.lenderRent / pitia : Infinity;
+  return {
+    ...pos,
+    payment: pos.nextPayment,
+    pitia,
+    netCashFlow,
+    dscr,
+    status: dscrStatus(dscr),
+    lenderApprovedButNegative: Number.isFinite(dscr) && round2(dscr) >= 1 && netCashFlow < 0,
+  };
+}
+
+/**
+ * Roll a set of analyzed deals into portfolio totals, as of today. Each item
+ * is { deal, a }. DSCR here is global DSCR: total lender rent over total
+ * PITIA, the way lenders look at a borrower's whole schedule.
  */
 export function portfolioSummary(items) {
   const t = {
@@ -418,28 +444,29 @@ export function portfolioSummary(items) {
     value: 0,
     debt: 0,
     year10Equity: 0,
-    year10Profit: 0,
+    year10Proceeds: 0,
     negative: 0,
     traps: 0,
   };
-  items.forEach(({ deal, a, rows }) => {
-    const today = estimateToday(deal);
-    // Once a property has been refinanced, its payment and cash flow are the new loan's.
-    const now = today.refinanced ? refiAnalysis(deal) : null;
+  items.forEach(({ deal, a }) => {
+    // Today's payment (after any interest-only period or refinance), and
+    // ten years from today rather than from each purchase date.
+    const now = estimateToday(deal);
+    const later = positionAt(deal, Math.round(Math.max(num(deal.yearsOwned), 0) * 12) + 120);
     t.units += a.units;
     t.grossRent += a.grossRent;
     t.lenderRent += a.lenderRent;
-    t.pitia += now ? now.pitia : a.pitia;
+    t.pitia += now.pitia;
     t.opex += a.opex.total;
-    t.netCashFlow += now ? now.netCashFlow : a.netCashFlow;
+    t.netCashFlow += now.netCashFlow;
     t.cashInvested += a.cashInvested;
     t.reserves += a.reserves;
-    t.value += today.value;
-    t.debt += today.balance;
-    t.year10Equity += rows[rows.length - 1].equity;
-    t.year10Profit += rows[rows.length - 1].profitIfSold;
-    if (a.netCashFlow < 0) t.negative += 1;
-    if (a.lenderApprovedButNegative) t.traps += 1;
+    t.value += now.value;
+    t.debt += now.balance;
+    t.year10Equity += later.equity;
+    t.year10Proceeds += later.netProceeds;
+    if (now.netCashFlow < 0) t.negative += 1;
+    if (now.lenderApprovedButNegative) t.traps += 1;
   });
   t.annualCashFlow = t.netCashFlow * 12;
   t.equity = t.value - t.debt;
@@ -499,6 +526,111 @@ export function maxOffer(deal, targets = DEFAULT_TARGETS) {
     feasible: Number.isFinite(price) && price > 0,
     vsAsking: Number.isFinite(price) ? price - a.price : Infinity,
   };
+}
+
+export const DEFAULT_TAX = { rate: 32, landPct: 20, useLosses: false };
+
+/**
+ * Year-1 income tax picture for a rental, in the usual US shape.
+ * Depreciation: residential property over 27.5 years, straight line, on the
+ * building's share of price and closing costs plus the rehab. Deductions:
+ * management, repairs, property tax, insurance, HOA, mortgage interest and
+ * depreciation. Vacancy is rent never received; the CapEx reserve isn't
+ * deductible until it's spent (and then it's depreciated). A loss offsets
+ * other income only if you can use it (real estate professional status or
+ * the $25k allowance); otherwise it carries forward to future years.
+ *
+ * tax: { rate (% marginal), landPct (% of price that's land), useLosses }
+ */
+export function taxSnapshot(deal, tax = DEFAULT_TAX) {
+  const a = analyzeDeal(deal);
+  const land = Math.min(Math.max(pct(tax.landPct), 0), 1);
+  const rate = Math.min(Math.max(pct(tax.rate), 0), 1);
+  const basis = (a.price + a.closingCosts) * (1 - land) + a.rehab;
+  const depreciation = basis / 27.5;
+  const rentCollected = a.grossRent * 12 * (1 - pct(deal.vacancyPct));
+  const operating = (a.opex.management + a.opex.maintenance + a.taxes + a.insurance + a.hoa) * 12;
+  const interest = a.year1Interest;
+  const taxable = rentCollected - operating - interest - depreciation;
+  // Tax on a year's rental income: a loss only helps if you can use it.
+  const taxOn = (income) => (income > 0 || tax.useLosses ? income * rate : 0);
+  const taxDue = taxOn(taxable); // negative = tax saved on other income
+  const afterTaxCashFlow = a.annualCashFlow - taxDue;
+  return {
+    basis,
+    depreciation,
+    rentCollected,
+    operating,
+    interest,
+    taxable,
+    rate,
+    taxDue,
+    carryForward: taxable < 0 && !tax.useLosses ? -taxable : 0,
+    depreciationSaves: taxOn(taxable + depreciation) - taxDue,
+    preTaxCashFlow: a.annualCashFlow,
+    afterTaxCashFlow,
+    preTaxCoc: a.coc,
+    afterTaxCoc: a.cashInvested > 0 ? afterTaxCashFlow / a.cashInvested : 0,
+  };
+}
+
+export const STRESS_RENT_STEPS = [-15, -10, -5, 0, 5, 10, 15];
+export const STRESS_RATE_STEPS = [-1, -0.5, 0, 0.5, 1, 1.5, 2];
+
+/**
+ * Monthly cash flow and DSCR across rent changes (rows) and rate changes
+ * (columns), each cell the deal re-run with that what-if applied.
+ */
+export function stressGrid(deal, rentSteps = STRESS_RENT_STEPS, rateSteps = STRESS_RATE_STEPS) {
+  return rentSteps.map((rentPct) =>
+    rateSteps.map((rateDelta) => {
+      const a = analyzeDeal(applyAdjustments(deal, { rateDelta, rentPct, downPct: null }));
+      return { rentPct, rateDelta, rate: Math.max(num(deal.rate) + rateDelta, 0), netCashFlow: a.netCashFlow, dscr: a.dscr, status: a.status };
+    }),
+  );
+}
+
+/**
+ * The interest rate at which monthly cash flow reaches $0, everything else
+ * as entered. null when no rate in 0–30% gets there (the deal loses money
+ * even at 0%, or still cash flows at 30%).
+ */
+export function breakevenRate(deal) {
+  const cf = (rate) => analyzeDeal({ ...deal, rate }).netCashFlow;
+  let lo = 0;
+  let hi = 30;
+  if (cf(lo) < 0 || cf(hi) > 0) return null;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    if (cf(mid) > 0) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+/**
+ * The loan year by year: payments, interest, principal and balance, with a
+ * note where something changes (interest-only ends, refinance).
+ */
+export function loanSchedule(deal, years = 10) {
+  const { rows, refi } = loanTimeline(deal, years * 12);
+  const io = analyzeDeal(deal).ioYears;
+  return Array.from({ length: years }, (_, i) => {
+    const ys = rows.slice(i * 12, i * 12 + 12);
+    const y = i + 1;
+    let note = '';
+    if (io > 0 && y <= io) note = 'Interest only';
+    if (io > 0 && y === io + 1 && !(refi && refi.year < y)) note = 'Payments rise: principal starts';
+    if (refi && y === refi.year) note = `Refinanced at year end: new ${Math.round(refi.newLoan).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })} loan`;
+    return {
+      year: y,
+      payment: ys.reduce((s, r) => s + r.payment, 0),
+      interest: ys.reduce((s, r) => s + r.interest, 0),
+      principal: ys.reduce((s, r) => s + r.principal, 0),
+      balance: ys.length ? ys[ys.length - 1].balance : 0,
+      note,
+    };
+  });
 }
 
 /**

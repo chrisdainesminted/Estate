@@ -7,7 +7,7 @@ function Step({ label, value, op, strong, tip }) {
   return (
     <div className={`flex items-baseline justify-between gap-3 py-1.5 text-sm ${strong ? 'mt-1 border-t border-hairline pt-2.5 font-semibold text-zinc-900 dark:text-white' : 'text-zinc-600 dark:text-zinc-300'}`}>
       <span className="flex items-center gap-1">
-        {op && <span className="tabular w-3 text-zinc-400">{op}</span>}
+        {op && <span className="tabular w-3 text-zinc-500 dark:text-zinc-400">{op}</span>}
         {label}
         {tip && <InfoTip k={tip} />}
       </span>
@@ -20,7 +20,7 @@ function Step({ label, value, op, strong, tip }) {
 export default function ExitCard({ sale, deal }) {
   const multiple = Number.isFinite(sale.equityMultiple) ? `${sale.equityMultiple.toFixed(2)}×` : '—';
   return (
-    <Card delay={220} className="@container overflow-hidden">
+    <Card id="sec-exit" delay={220} className="@container overflow-hidden">
       <CardHeader icon={DoorOpen} title={`If you sell in year ${sale.year}`} subtitle={`After ${Number(deal.sellingCostPct) || 0}% selling costs${sale.prepayPenalty > 0 ? ', the prepayment penalty' : ''} and paying off the loan.`} />
       <div className="grid gap-8 p-6 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <div>
@@ -50,7 +50,7 @@ export default function ExitCard({ sale, deal }) {
               Internal rate of return
               <InfoTip k="irr" />
             </div>
-            <div className={`mt-2 text-5xl font-semibold tracking-tight ${Number.isFinite(sale.irr) ? signedClass(sale.irr) : 'text-zinc-400'}`}>
+            <div className={`mt-2 text-5xl font-semibold tracking-tight ${Number.isFinite(sale.irr) ? signedClass(sale.irr) : 'text-zinc-500 dark:text-zinc-400'}`}>
               {Number.isFinite(sale.irr) ? <Num value={sale.irr} format={(v) => percent(v, 1)} /> : '—'}
             </div>
             <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">

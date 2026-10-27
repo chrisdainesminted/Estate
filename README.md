@@ -18,7 +18,7 @@ npm run build           # static site in dist/
 npm run build:artifact  # page fragment + assets in dist-artifact/ for the Claude artifact host
 ```
 
-Deals are always saved in the browser. On the hosted page they also sync to the viewer's private space in their Claude account, so the same deals show up on every device (newest edit wins). The ↺ button in the header starts over with the example deals, after an in-page confirmation.
+Deals are always saved in the browser. On the hosted page they also sync to the viewer's private space in their Claude account, so the same deals show up on every device (newest edit wins). The ↺ button in the header starts over with the example deals, after an in-page confirmation, and you can undo it.
 
 ## What it calculates
 
@@ -42,6 +42,11 @@ Deals are always saved in the browser. On the hosted page they also sync to the 
 | Prepayment penalty | step-down % of the balance repaid (none, 3-2-1, 5-4-3-2-1), charged on a refinance or sale inside the window |
 | Cash-out refinance | new loan = value × LTV; cash out = new loan − old balance − penalty − fees; the new loan's payment carries through cash flow, sale and IRR |
 | Growth plan | monthly: savings + reinvested cash flow + refinance cash; buy the chosen deal whenever cash covers cash invested plus reserves for every property |
+| Today's figures (owned) | value and loan balance rolled forward by years owned; the payment due now (after an IO period ends or a refinance) drives today's PITIA, DSCR and cash flow |
+| Depreciation | ((price + closing costs) × (1 − land share) + rehab) ÷ 27.5 years, residential straight-line |
+| Taxable rental income | rent collected − management, maintenance, taxes, insurance, HOA − mortgage interest − depreciation (CapEx reserves aren't deducted in the year they're saved) |
+| After-tax cash flow | cash flow − taxable income × your rate; a loss lowers tax only if you can use rental losses, otherwise it carries forward |
+| Stress test | the deal re-run for rent −15% to +15% against rate −1 to +2 points; break-even rate solved by bisection |
 
 DSCR bands: **< 1.00** red (negative), **1.00–1.19** yellow (tight), **1.20–1.25** green (sweet spot), **> 1.25** blue (strong). DSCR is banded on the 2-decimal value shown on screen.
 
@@ -49,16 +54,25 @@ Additional figures: cap rate (NOI ÷ price), breakeven rent per unit, rent neede
 
 ## Features
 
-- **Portfolio view**: owned properties rolled up into net cash flow, global DSCR, cash-on-cash and equity today (value and loan balance rolled forward by years owned), a cash-flow-by-property chart, and "What if you buy it?", which shows how a prospect changes the whole portfolio.
+- **Portfolio view**: owned properties rolled up into today's net cash flow, global DSCR, cash-on-cash and equity (value, loan balance and payment rolled forward by years owned), what you'd net if you sold everything in 10 years, a cash-flow-by-property chart, and "What if you buy it?", which shows how a prospect changes the whole portfolio.
 - **Analyze view**: hero summary with a one-line verdict, DSCR gauge, a lender-vs-reality breakdown, a warning when DSCR ≥ 1.00 but real cash flow is negative, a 10-year projection, and what you'd walk away with if you sold in year 10.
+- **Stress test**: a 7×7 heatmap of rent against rate, in cash flow or DSCR, with the break-even rate and rent. Click any cell to load it as the what-if.
+- **Taxes, year 1**: depreciation, mortgage interest and operating costs become taxable income, then after-tax cash flow and cash-on-cash, using your tax rate, the land share of the price and whether you can use rental losses.
+- **Loan schedule**: a third projection view with yearly payments, interest, principal and balance, noting when interest-only ends or a refinance happens.
+- **Second opinion** (hosted page): Claude reviews the open deal like an underwriter: a verdict, the biggest risks, assumptions to check and a negotiation angle based on your max offer. It runs on the viewer's own Claude account and asks before the first request.
 - **What-if sliders**: rate ±2%, down payment 15–35%, rent −15% to +25%, for the open deal or every compared deal, without changing saved inputs until you apply them.
 - **Compare view**: pick up to 3 deals from the library; side-by-side matrix with a trophy on the best value per row (ties share it) and a profit-if-sold-by-year chart.
 - **Max offer price**: set targets (DSCR, cash flow per door, cash-on-cash) and see the most you can pay, which target sets it, and a one-click "use this price".
 - **Value-add and refinance (BRRRR)**: after-repair value, a cash-out refinance in year 1–9, cash left in the deal, the new loan's DSCR and cash flow, and prepayment penalties.
 - **Plan view**: cash on hand, monthly savings and a deal to repeat become a 10-year path in doors, cash flow and equity, with every purchase dated and lender reserves held throughout.
-- **Deal library**: unlimited deals, each a prospect or owned, with a searchable picker. Starter deals are tagged "Example" until edited.
+- **Deal library**: unlimited deals, each a prospect or owned, with a searchable picker. Each deal can carry an address, a listing link and notes, which search, the CSV and the PDF memo include. Starter deals are tagged "Example" until edited.
+- **Search** (Ctrl K, or ⌘K on a Mac): open any deal, view or section, or run an action such as export, duplicate or new deal.
+- **Undo instead of "are you sure?"**: deleting a deal, applying a what-if, using the max-offer price and starting over each show an Undo button for a few seconds.
+- **Phones**: deal inputs open in a slide-up sheet from an "Edit deal" button, and the header stays compact. First-time visitors get a short welcome card.
 - **Export**: a one-page PDF deal memo (vector, Letter size) and a CSV of every deal. Ctrl+P also prints the memo.
-- **Polish**: count-up numbers, a sweeping gauge needle, animated charts and staggered panels (all off under reduced motion), plain-English explanations on every metric, light/dark mode that follows the host or OS.
+- **Polish**: count-up numbers, a sweeping gauge needle, animated charts and staggered panels (all off under reduced motion), plain-English explanations on every metric (open on hover, tap or keyboard focus; Escape closes), light/dark mode that follows the host or OS.
+- **Accessibility**: no axe-core violations in either theme on phones or desktop, across every view, the search palette, the edit sheet, menus, dialogs and tips. Every control works by keyboard, and scrollable tables can be focused and scrolled.
+- **Speed**: views and charts load on demand, so the first load is about 117 KB of gzipped JavaScript (215 KB before). The PDF libraries load only when you export.
 
 ## Layout
 
@@ -70,8 +84,11 @@ src/lib/export.js         CSV export (tested)
 src/lib/memoPdf.js        PDF deal memo (jsPDF, loaded on demand)
 src/lib/runtime.js        hosted-viewer capabilities with plain-browser fallbacks
 src/lib/glossary.js       metric explanations used by the hover tips
-src/hooks/useDeals.js     deal library: browser storage + account sync
-src/components/*          UI sections
+src/lib/opinion.js        second-opinion prompt and reply parser (tested)
+src/hooks/useDeals.js     deal library: browser storage + account sync, snapshots for undo
+src/hooks/useExports.js   PDF and CSV export with status toasts
+src/components/*          UI sections, plus the search palette, phone sheet and toasts
+src/views/CompareView.jsx compare view (loaded on demand)
 scripts/build-artifact.mjs  turns the Vite build into the hosted page
 ```
 

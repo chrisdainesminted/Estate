@@ -73,6 +73,10 @@ export async function buildMemoPdf({ deal, a, rows, sale, refi, offer }) {
   ].join('  ·  ');
   y += 16;
   text(terms, m, y, { size: 9, color: MUTED });
+  if (deal.address) {
+    y += 12;
+    text(deal.address, m, y, { size: 9, color: MUTED });
+  }
   y += 12;
   rule(m, y, m + W, INK, 1.4);
 

@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { CheckCircle2, Download, FileSpreadsheet, FileText, Loader2, XCircle } from 'lucide-react';
-import { dealsToCsv } from '../lib/export.js';
-import { saveFile } from '../lib/runtime.js';
+import { Download, FileSpreadsheet, FileText, Loader2 } from 'lucide-react';
 
 function MenuItem({ icon: Icon, title, sub, onClick, busy }) {
   return (
@@ -23,10 +21,9 @@ function MenuItem({ icon: Icon, title, sub, onClick, busy }) {
   );
 }
 
-export default function ExportMenu({ current, items }) {
+/** Header menu for the PDF memo and CSV; the work lives in useExports. */
+export default function ExportMenu({ current, count, exports }) {
   const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(null);
-  const [status, setStatus] = useState(null);
   const root = useRef(null);
 
   useEffect(() => {
@@ -41,28 +38,6 @@ export default function ExportMenu({ current, items }) {
     };
   }, [open]);
 
-  useEffect(() => {
-    if (!status) return undefined;
-    const t = setTimeout(() => setStatus(null), 4000);
-    return () => clearTimeout(t);
-  }, [status]);
-
-  const run = async (kind, make) => {
-    setBusy(kind);
-    try {
-      const { filename, data } = await make();
-      const result = await saveFile(filename, data);
-      setOpen(false);
-      if (result === 'saved') setStatus({ ok: true, text: `Saved ${filename}` });
-    } catch (e) {
-      setStatus({ ok: false, text: e.message || 'Couldn’t save the file.' });
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const stamp = new Date().toISOString().slice(0, 10);
-
   return (
     <div ref={root} className="relative">
       <button
@@ -71,10 +46,10 @@ export default function ExportMenu({ current, items }) {
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         title="Export"
-        className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-sm font-medium text-zinc-600 transition hover:bg-zinc-950/5 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white"
+        className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-sm font-medium text-zinc-600 transition hover:bg-zinc-950/5 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white"
       >
         <Download className="size-4" aria-hidden />
-        <span className="max-lg:sr-only">Export</span>
+        <span className="max-xl:sr-only">Export</span>
       </button>
       {open && (
         <div role="menu" className="glass-strong pop absolute top-full right-0 z-50 mt-2 w-72 rounded-2xl p-1.5">
@@ -82,33 +57,22 @@ export default function ExportMenu({ current, items }) {
             icon={FileText}
             title="Deal memo (PDF)"
             sub={`One page on “${current.deal.name}”: DSCR, cash flow, cash needed and the year-10 sale.`}
-            busy={busy === 'pdf'}
-            onClick={() =>
-              run('pdf', async () => {
-                const { buildMemoPdf, memoFilename } = await import('../lib/memoPdf.js');
-                return { filename: memoFilename(current.deal), data: await buildMemoPdf(current) };
-              })
-            }
+            busy={exports.busy === 'pdf'}
+            onClick={async () => {
+              await exports.exportPdf();
+              setOpen(false);
+            }}
           />
           <MenuItem
             icon={FileSpreadsheet}
             title="All deals (CSV)"
-            sub={`${items.length} deals with inputs and results, for Excel or Sheets.`}
-            busy={busy === 'csv'}
-            // The byte-order mark makes Excel read the file as UTF-8.
-            onClick={() => run('csv', async () => ({ filename: `bedrock-deals-${stamp}.csv`, data: `﻿${dealsToCsv(items)}` }))}
+            sub={`${count} deals with inputs and results, for Excel or Sheets.`}
+            busy={exports.busy === 'csv'}
+            onClick={async () => {
+              await exports.exportCsv();
+              setOpen(false);
+            }}
           />
-        </div>
-      )}
-      {status && (
-        <div
-          role="status"
-          className={`glass-strong pop absolute top-full right-0 z-50 mt-2 flex w-72 items-start gap-2 rounded-2xl px-3.5 py-3 text-sm ${
-            status.ok ? 'text-emerald-800 dark:text-emerald-200' : 'text-red-700 dark:text-red-300'
-          }`}
-        >
-          {status.ok ? <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden /> : <XCircle className="mt-0.5 size-4 shrink-0" aria-hidden />}
-          <span className="min-w-0 break-words">{status.text}</span>
         </div>
       )}
     </div>

@@ -25,7 +25,7 @@ export default function Logo() {
       <LogoMark />
       <div>
         <div className="bg-gradient-to-r from-zinc-950 to-emerald-800 bg-clip-text text-[17px] leading-tight font-semibold tracking-tight text-transparent dark:from-white dark:to-emerald-300">Bedrock</div>
-        <p className="text-[11px] leading-tight text-zinc-500 dark:text-zinc-400">Cash flow you can build on</p>
+        <p className="text-[11px] leading-tight text-zinc-500 lg:max-xl:hidden dark:text-zinc-400">Cash flow you can build on</p>
       </div>
     </div>
   );

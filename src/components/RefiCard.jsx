@@ -7,7 +7,7 @@ function Step({ label, value, op, strong, tip }) {
   return (
     <div className={`flex items-baseline justify-between gap-3 py-1.5 text-sm ${strong ? 'mt-1 border-t border-hairline pt-2.5 font-semibold text-zinc-900 dark:text-white' : 'text-zinc-600 dark:text-zinc-300'}`}>
       <span className="flex items-center gap-1">
-        {op && <span className="tabular w-3 text-zinc-400">{op}</span>}
+        {op && <span className="tabular w-3 text-zinc-500 dark:text-zinc-400">{op}</span>}
         {label}
         {tip && <InfoTip k={tip} />}
       </span>
@@ -21,7 +21,7 @@ export default function RefiCard({ refi, a, deal }) {
   const yrs = `${refi.year} ${refi.year === 1 ? 'year' : 'years'}`;
   const lenderNo = refi.dscr < 1;
   return (
-    <Card delay={200} className="@container overflow-hidden">
+    <Card id="sec-refi" delay={200} className="@container overflow-hidden">
       <CardHeader icon={Repeat} title={`Cash-out refinance after ${yrs}`} subtitle={`${Number(deal.refiLtv)}% of the value at that point, at ${Number(deal.refiRate)}% over ${deal.refiTermYears} years.`} />
       <div className="grid gap-8 p-6 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <div>

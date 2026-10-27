@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DEFAULT_DEAL, MAX_COMPARE, PRESET_DEALS, PRESET_OWNED, makeDeal } from '../lib/presets.js';
 import { capability } from '../lib/runtime.js';
-import { DEFAULT_TARGETS } from '../lib/finance.js';
+import { DEFAULT_TARGETS, DEFAULT_TAX } from '../lib/finance.js';
 import { DEFAULT_PLAN } from '../lib/growth.js';
 
 // Per-library settings that travel with the deals: offer targets and the growth plan.
-const DEFAULT_SETTINGS = { targets: DEFAULT_TARGETS, plan: DEFAULT_PLAN };
+const DEFAULT_SETTINGS = { targets: DEFAULT_TARGETS, plan: DEFAULT_PLAN, tax: DEFAULT_TAX };
 
 function normalizeSettings(s) {
   return {
     targets: { ...DEFAULT_TARGETS, ...(s?.targets ?? {}) },
     plan: { ...DEFAULT_PLAN, ...(s?.plan ?? {}) },
+    tax: { ...DEFAULT_TAX, ...(s?.tax ?? {}) },
   };
 }
 
@@ -242,6 +243,10 @@ export function useDeals() {
   const setActive = useCallback((id) => setState((s) => ({ ...s, activeId: id })), []);
   const resetAll = useCallback(() => commit(() => freshState()), [commit]);
 
+  // Undo support: capture the library before a change, put it back later.
+  const snapshot = useCallback(() => stateRef.current, []);
+  const restore = useCallback((snap) => commit(() => ({ ...snap })), [commit]);
+
   const active = state.deals.find((d) => d.id === state.activeId) ?? state.deals[0];
   const slotOf = (id) => state.compare.find((c) => c.id === id)?.slot;
 
@@ -262,5 +267,7 @@ export function useDeals() {
     toggleCompare,
     setActive,
     resetAll,
+    snapshot,
+    restore,
   };
 }

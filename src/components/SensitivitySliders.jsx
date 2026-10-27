@@ -19,7 +19,7 @@ function Slider({ id, label, min, max, step, value, onChange, display, note, tic
       </div>
       <input id={id} type="range" className="range" style={{ '--range-bg': rangeBg }} min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} />
       {/* Ticks sit under the thumb's actual position (the 20px thumb travels 10px in from each end). */}
-      <div className="tabular relative mt-0.5 h-4 text-[11px] text-zinc-400 dark:text-zinc-500">
+      <div className="tabular relative mt-0.5 h-4 text-[11px] text-zinc-500 dark:text-zinc-400">
         {ticks.map(([v, text]) => (
           <span key={text} className="absolute -translate-x-1/2" style={{ left: `calc(10px + (100% - 20px) * ${pos(v) / 100})` }}>
             {text}
@@ -70,7 +70,7 @@ export default function SensitivitySliders({ deal, adj, setAdj, scope, setScope,
   ];
 
   return (
-    <Card delay={100} className="@container h-full">
+    <Card id="sec-whatif" delay={100} className="@container h-full">
       <CardHeader
         icon={FlaskConical}
         title="What-if sensitivity"
@@ -157,7 +157,7 @@ export default function SensitivitySliders({ deal, adj, setAdj, scope, setScope,
                   <td className="py-2 text-zinc-700 dark:text-zinc-300">{r.label}</td>
                   <td className="py-2 text-right text-zinc-500 dark:text-zinc-400">{r.b}</td>
                   <td className="py-2 text-right font-semibold text-zinc-900 dark:text-zinc-100">{r.w}</td>
-                  <td className={`py-2 text-right font-medium ${r.d === '—' ? 'text-zinc-400' : signedClass(r.raw)}`}>{r.d}</td>
+                  <td className={`py-2 text-right font-medium ${r.d === '—' ? 'text-zinc-500 dark:text-zinc-400' : signedClass(r.raw)}`}>{r.d}</td>
                 </tr>
               ))}
             </tbody>

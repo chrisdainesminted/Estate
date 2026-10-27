@@ -6,6 +6,7 @@ const pct2 = (v) => (Number.isFinite(v) ? Math.round(v * 10000) / 100 : '');
 
 const COLUMNS = [
   ['Deal', (x) => x.deal.name],
+  ['Address', (x) => x.deal.address ?? ''],
   ['Status', (x) => (x.deal.status === 'owned' ? 'Owned' : 'Prospect')],
   ['Years owned', (x) => (x.deal.status === 'owned' ? r2(Number(x.deal.yearsOwned) || 0) : '')],
   ['Purchase price', (x) => r2(x.a.price)],
@@ -40,6 +41,8 @@ const COLUMNS = [
   ['Profit if sold yr 10', (x) => r2(x.sale.profit)],
   ['IRR %', (x) => pct2(x.sale.irr)],
   ['Equity multiple', (x) => r2(x.sale.equityMultiple)],
+  ['Listing link', (x) => x.deal.listingUrl ?? ''],
+  ['Notes', (x) => x.deal.notes ?? ''],
 ];
 
 function cell(v) {

@@ -1,6 +1,6 @@
-import { AlertTriangle, CheckCircle2, Gauge, PiggyBank, Percent, Wallet, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ExternalLink, Gauge, MapPin, Percent, PiggyBank, Wallet, XCircle } from 'lucide-react';
 import { BAND_CLASSES, TONE_CLASSES, verdict } from '../lib/dscr.js';
-import { money, percent, ratio } from '../lib/format.js';
+import { money, percent, ratio, safeHttpUrl } from '../lib/format.js';
 import { UNIT_TYPES } from '../lib/presets.js';
 import { Card, DscrChip, signedClass } from './ui.jsx';
 import { InfoTip, Num } from './motion.jsx';
@@ -45,9 +45,10 @@ export default function HeroSummary({ deal, a, sale, base }) {
   const v = verdict(a);
   const VIcon = TONE_ICONS[v.tone];
   const type = UNIT_TYPES.find((u) => u.key === deal.unitType);
+  const link = safeHttpUrl(deal.listingUrl);
 
   return (
-    <Card className="relative overflow-hidden">
+    <Card id="sec-summary" className="relative overflow-hidden">
       {/* Ambient glow keyed to the verdict. */}
       <div aria-hidden className={`pointer-events-none absolute -top-40 -right-24 size-[28rem] rounded-full bg-radial ${TONE_GLOW[v.tone]} to-transparent to-70% blur-2xl`} />
 
@@ -55,6 +56,26 @@ export default function HeroSummary({ deal, a, sale, base }) {
         <div className="min-w-0">
           <p className="eyebrow">{deal.status === 'owned' ? 'Owned property' : 'Deal analysis'}</p>
           <h2 className="mt-1.5 truncate text-2xl font-semibold tracking-tight text-zinc-950 sm:text-[34px] sm:leading-tight dark:text-white">{deal.name}</h2>
+          {(deal.address || link) && (
+            <p className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-600 dark:text-zinc-400">
+              {deal.address && (
+                <span className="inline-flex min-w-0 items-center gap-1.5">
+                  <MapPin className="size-3.5 shrink-0" aria-hidden />
+                  <span className="truncate">{deal.address}</span>
+                </span>
+              )}
+              {link && (
+                <a
+                  href={link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 font-medium text-emerald-700 hover:underline focus-visible:outline-2 focus-visible:outline-emerald-500 dark:text-emerald-300"
+                >
+                  View listing <ExternalLink className="size-3.5" aria-hidden />
+                </a>
+              )}
+            </p>
+          )}
           <div className="mt-3 flex flex-wrap gap-1.5">
             {deal.example && <MetaPill>Example deal: edit it or add your own</MetaPill>}
             <MetaPill>{money(a.price)}</MetaPill>
@@ -100,7 +121,7 @@ export default function HeroSummary({ deal, a, sale, base }) {
           value={
             <>
               <Num value={a.netCashFlow} format={(v) => money(v, { signed: true })} />
-              <span className="ml-1 text-sm font-medium tracking-normal text-zinc-400 sm:text-base dark:text-zinc-500">/mo</span>
+              <span className="ml-1 text-sm font-medium tracking-normal text-zinc-500 sm:text-base dark:text-zinc-400">/mo</span>
             </>
           }
           valueClass={signedClass(a.netCashFlow)}

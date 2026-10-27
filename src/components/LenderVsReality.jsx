@@ -35,7 +35,7 @@ function WaterfallRow({ label, amount, rent, kind }) {
 export default function LenderVsReality({ a }) {
   const haircut = a.grossRent - a.lenderRent;
   return (
-    <Card delay={140} className="@container">
+    <Card id="sec-lender" delay={140} className="@container">
       <CardHeader icon={Scale} title="Lender math vs. real-world math" subtitle="Lenders approve on PITIA. Your bank account also pays for OpEx." />
       <div className="grid gap-6 p-5 @2xl:grid-cols-2">
         <div>

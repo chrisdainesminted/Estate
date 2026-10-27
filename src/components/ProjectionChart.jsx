@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { BarChart3, Table2, TrendingUp } from 'lucide-react';
+import { BarChart3, Landmark, Table2, TrendingUp } from 'lucide-react';
 import { Bar, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { chartTheme, niceScale } from '../lib/chartTheme.js';
+import { loanSchedule } from '../lib/finance.js';
 import { compactMoney, money } from '../lib/format.js';
 import { Card, CardHeader, Segmented, Stat, signedClass } from './ui.jsx';
 import { CHART_ANIMATE } from './motion.jsx';
@@ -44,8 +45,9 @@ function ProjectionTooltip({ active, payload, label, theme, series }) {
   );
 }
 
-export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
+export default function ProjectionChart({ rows, a, deal, dark, appreciationPct }) {
   const [view, setView] = useState('chart');
+  const schedule = useMemo(() => loanSchedule(deal, rows.length), [deal, rows.length]);
   const theme = chartTheme(dark);
   const y10 = rows[rows.length - 1];
   const hasRefi = rows.some((r) => r.cumRefiCosts > 0);
@@ -68,7 +70,7 @@ export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
   }, [rows]);
 
   return (
-    <Card delay={180} className="@container">
+    <Card id="sec-projection" delay={180} className="@container">
       <CardHeader
         icon={TrendingUp}
         title={`${years}-year wealth projection`}
@@ -82,6 +84,7 @@ export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
             options={[
               { value: 'chart', label: 'Chart', icon: BarChart3 },
               { value: 'table', label: 'Table', icon: Table2 },
+              { value: 'loan', label: 'Loan', icon: Landmark },
             ]}
           />
         }
@@ -145,9 +148,46 @@ export default function ProjectionChart({ rows, a, dark, appreciationPct }) {
               </ResponsiveContainer>
             </div>
           </>
-        ) : (
-          <div className="overflow-x-auto">
+        ) : view === 'loan' ? (
+          <div tabIndex={0} role="region" aria-label="Loan schedule" className="thin-scroll overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500">
             <table className="w-full min-w-[640px] text-sm">
+              <caption className="sr-only">Loan payments by year</caption>
+              <thead>
+                <tr className="eyebrow">
+                  {['Year', 'Payments', 'Interest', 'Principal', 'Balance at year end', 'Note'].map((h, i) => (
+                    <th key={h} className={`py-1.5 pr-3 font-medium ${i === 0 || i === 5 ? 'text-left' : 'text-right'}`}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="tabular">
+                {schedule.map((r) => (
+                  <tr key={r.year} className="border-t border-hairline text-zinc-700 dark:text-zinc-300">
+                    <td className="py-2 pr-3">{r.year}</td>
+                    <td className="py-2 pr-3 text-right">{money(r.payment)}</td>
+                    <td className="py-2 pr-3 text-right">{money(r.interest)}</td>
+                    <td className="py-2 pr-3 text-right">{money(r.principal)}</td>
+                    <td className="py-2 pr-3 text-right font-medium text-zinc-900 dark:text-white">{money(r.balance)}</td>
+                    <td className="py-2 text-left text-xs text-emerald-700 dark:text-emerald-300">{r.note}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="tabular">
+                <tr className="border-t border-zinc-300 font-semibold text-zinc-900 dark:border-zinc-600 dark:text-white">
+                  <td className="py-2 pr-3">Total</td>
+                  <td className="py-2 pr-3 text-right">{money(schedule.reduce((s, r) => s + r.payment, 0))}</td>
+                  <td className="py-2 pr-3 text-right">{money(schedule.reduce((s, r) => s + r.interest, 0))}</td>
+                  <td className="py-2 pr-3 text-right">{money(schedule.reduce((s, r) => s + r.principal, 0))}</td>
+                  <td colSpan={2} />
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        ) : (
+          <div tabIndex={0} role="region" aria-label="Projection by year" className="thin-scroll overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500">
+            <table className="w-full min-w-[640px] text-sm">
+              <caption className="sr-only">Projection by year</caption>
               <thead>
                 <tr className="eyebrow">
                   {['Year', 'Annual cash flow', 'Cum. cash flow', 'Cum. paydown', 'Appreciation', 'Total return', 'Property value', 'Loan balance', 'Equity'].map((h) => (

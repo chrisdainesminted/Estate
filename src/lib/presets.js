@@ -46,6 +46,9 @@ export const DEFAULT_DEAL = {
   refiRate: 7.25,
   refiTermYears: 30,
   refiCostPct: 2,
+  address: '',
+  listingUrl: '',
+  notes: '',
 };
 
 export const PRESET_DEALS = [

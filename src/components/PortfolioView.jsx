@@ -63,8 +63,9 @@ function CashFlowChart({ owned, dark, onOpen }) {
   const maxChars = narrow ? 13 : 22;
   const mode = dark ? 'dark' : 'light';
   const data = [...owned]
-    .sort((p, q) => q.a.netCashFlow - p.a.netCashFlow)
-    .map((x) => ({ id: x.deal.id, name: x.deal.name, cf: x.a.netCashFlow, dscr: x.a.dscr }));
+    .map((x) => ({ x, now: estimateToday(x.deal) }))
+    .sort((p, q) => q.now.netCashFlow - p.now.netCashFlow)
+    .map(({ x, now }) => ({ id: x.deal.id, name: x.deal.name, cf: now.netCashFlow, dscr: now.dscr }));
   const minHeight = Math.max(data.length * 46 + 36, 200);
 
   // Grows to fill the card when the neighbouring card is taller.
@@ -115,7 +116,7 @@ function ImpactRow({ label, tip, before, after, fmt, betterWhen = 'higher' }) {
       <span className="tabular flex items-center gap-2">
         <span className="text-zinc-500 dark:text-zinc-400">{fmt(before)}</span>
         <ArrowRight className="size-3.5 text-zinc-400" aria-hidden />
-        <span className={`font-semibold ${good ? 'text-emerald-700 dark:text-emerald-400' : bad ? 'text-red-600 dark:text-red-400' : 'text-zinc-900 dark:text-white'}`}>
+        <span className={`font-semibold ${good ? 'text-emerald-700 dark:text-emerald-400' : bad ? 'text-red-700 dark:text-red-400' : 'text-zinc-900 dark:text-white'}`}>
           {fmt(after)}
         </span>
       </span>
@@ -190,8 +191,10 @@ function PropertiesTable({ owned, onOpen }) {
           </thead>
           <tbody className="tabular">
             {owned.map((x) => {
-              const v = verdict(x.a);
               const today = estimateToday(x.deal);
+              // Verdict on today's numbers: the payment may have changed since purchase.
+              const v = verdict({ ...x.a, netCashFlow: today.netCashFlow, status: today.status, lenderApprovedButNegative: today.lenderApprovedButNegative });
+              const coc = x.a.cashInvested > 0 ? (today.netCashFlow * 12) / x.a.cashInvested : 0;
               return (
                 <tr key={x.deal.id} className="border-t border-hairline transition hover:bg-zinc-950/[0.025] dark:hover:bg-white/[0.03]">
                   <td className="py-3 pr-4 pl-6">
@@ -205,12 +208,12 @@ function PropertiesTable({ owned, onOpen }) {
                   </td>
                   <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-300">{x.a.units}</td>
                   <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-300">{money(x.a.grossRent)}</td>
-                  <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-300">{money(x.a.pitia)}</td>
-                  <td className={`px-4 py-3 text-right font-semibold ${signedClass(x.a.netCashFlow)}`}>{money(x.a.netCashFlow, { signed: true })}</td>
+                  <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-300">{money(today.pitia)}</td>
+                  <td className={`px-4 py-3 text-right font-semibold ${signedClass(today.netCashFlow)}`}>{money(today.netCashFlow, { signed: true })}</td>
                   <td className="px-4 py-3 text-right">
-                    <DscrChip status={x.a.status} dscr={x.a.dscr} size="sm" />
+                    <DscrChip status={today.status} dscr={today.dscr} size="sm" />
                   </td>
-                  <td className={`px-4 py-3 text-right ${signedClass(x.a.coc)}`}>{percent(x.a.coc)}</td>
+                  <td className={`px-4 py-3 text-right ${signedClass(coc)}`}>{percent(coc)}</td>
                   <td className="px-4 py-3 text-right text-zinc-900 dark:text-white">{money(today.equity)}</td>
                   <td className="py-3 pr-6 pl-4 text-right">
                     <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ring-1 ring-inset ${TONE_CLASSES[v.tone]}`}>{v.label}</span>
@@ -282,7 +285,7 @@ export default function PortfolioView({ owned, prospects, dark, onOpen, onMarkOw
           <Kpi icon={Wallet} label="Net cash flow" short="Cash flow" tip="netCashFlow" sub={<Num value={p.annualCashFlow} format={(v) => `${money(v, { signed: true })}/yr across the portfolio`} />}>
             <span className={signedClass(p.netCashFlow)}>
               <Num value={p.netCashFlow} format={(v) => money(v, { signed: true })} />
-              <span className="ml-1 text-sm font-medium tracking-normal text-zinc-400 sm:text-base dark:text-zinc-500">/mo</span>
+              <span className="ml-1 text-sm font-medium tracking-normal text-zinc-500 sm:text-base dark:text-zinc-400">/mo</span>
             </span>
           </Kpi>
           <Kpi icon={Gauge} label="Global DSCR" short="DSCR" tip="globalDscr" sub={<DscrChip status={p.status} size="sm" />}>
@@ -313,7 +316,7 @@ export default function PortfolioView({ owned, prospects, dark, onOpen, onMarkOw
             <Stat label="Monthly rent" value={money(p.grossRent)} sub={`${money(p.pitia)} PITIA`} tip="pitia" />
             <Stat label="Operating costs" value={money(p.opex)} sub="per month" tip="opex" />
             <Stat label="Reserves to hold" value={money(p.reserves)} sub="lender requirement" tip="reserves" />
-            <Stat label="If all sold yr 10" value={money(p.year10Profit, { signed: true })} sub="profit after costs" tip="profitIfSold" />
+            <Stat label="If all sold in 10 yrs" value={money(p.year10Proceeds)} sub="cash after costs and payoffs" tip="saleProceeds" />
           </div>
         </Card>
         <div className="lg:col-span-5">

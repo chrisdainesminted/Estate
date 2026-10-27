@@ -208,7 +208,7 @@ function CompareChart({ items, dark }) {
   );
 }
 
-const iconBtn = 'rounded-md p-1 text-zinc-400 transition hover:bg-zinc-950/5 hover:text-zinc-700 dark:hover:bg-white/10 dark:hover:text-zinc-200';
+const iconBtn = 'rounded-md p-1 text-zinc-500 transition dark:text-zinc-400 hover:bg-zinc-950/5 hover:text-zinc-700 dark:hover:bg-white/10 dark:hover:text-zinc-200';
 const stickyCell = 'max-lg:sticky max-lg:left-0 max-lg:z-10 max-lg:bg-(--glass-strong) max-lg:backdrop-blur-xl';
 
 export default function ComparisonMatrix({ items, activeId, onEdit, onDuplicate, onRemove, onAdd, canAdd, dark, adjusted }) {
@@ -261,7 +261,7 @@ export default function ComparisonMatrix({ items, activeId, onEdit, onDuplicate,
                       <button
                         type="button"
                         onClick={() => onRemove(x.deal.id)}
-                        className="rounded-md p-1 text-zinc-400 transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
+                        className="rounded-md p-1 text-zinc-500 transition dark:text-zinc-400 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
                         aria-label={`Remove ${x.deal.name} from comparison`}
                         title="Remove from comparison (keeps the deal)"
                       >

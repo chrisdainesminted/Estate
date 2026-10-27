@@ -6,13 +6,17 @@ import {
   estimateToday,
   irr,
   isNeutralAdjustment,
+  loanSchedule,
   monthlyPI,
   maxOffer,
   portfolioSummary,
+  positionAt,
   prepayRate,
   projectDeal,
   refiAnalysis,
   saleAnalysis,
+  stressGrid,
+  taxSnapshot,
 } from './finance.js';
 import { dscrStatus, verdict } from './dscr.js';
 import { PRESET_DEALS, PRESET_OWNED } from './presets.js';
@@ -348,7 +352,7 @@ describe('dealsToCsv', () => {
     expect(lines).toHaveLength(6);
     const cols = lines[0].split(',').length;
     lines.forEach((l) => expect(l.split(',').length).toBe(cols));
-    expect(lines[1].startsWith('$250k Single-Family,Prospect,')).toBe(true);
+    expect(lines[1].startsWith('$250k Single-Family,,Prospect,')).toBe(true); // name, (no address), status
   });
 
   it('quotes names containing commas and quotes', () => {
@@ -508,5 +512,130 @@ describe('cash-on-cash after a refinance', () => {
     const r = refiAnalysis({ ...base, arv: 300000, rentPerUnit: 3200 });
     expect(r.cashLeft).toBeGreaterThan(0);
     expect(r.cocAfter).toBeCloseTo((r.netCashFlow * 12) / r.cashLeft, 10);
+  });
+});
+
+describe('today for owned properties', () => {
+  it('uses the amortizing payment once an interest-only period has ended', () => {
+    const d = { ...PRESET_OWNED[0], ioYears: 2, yearsOwned: 3 };
+    const t = estimateToday(d);
+    const a = analyzeDeal(d);
+    expect(a.interestOnly).toBe(true);
+    expect(t.payment).toBeCloseTo(monthlyPI(255000, 4.75, 28), 6); // IO for 2 of 30 years, then 28 to amortize
+    expect(t.payment).toBeGreaterThan(a.pi);
+    expect(t.netCashFlow).toBeCloseTo(a.grossRent * 0.77 - (t.payment + a.taxes + a.insurance + a.hoa), 6);
+  });
+
+  it('a prospect today is the deal at purchase', () => {
+    const t = estimateToday(PRESET_DEALS[0]);
+    const a = analyzeDeal(PRESET_DEALS[0]);
+    expect(t.pitia).toBeCloseTo(a.pitia, 6);
+    expect(t.netCashFlow).toBeCloseTo(a.netCashFlow, 6);
+    expect(t.lenderApprovedButNegative).toBe(true);
+  });
+
+  it('projects the portfolio ten years from today, not from purchase', () => {
+    const d = PRESET_OWNED[1]; // owned 5 years
+    const p = portfolioSummary([{ deal: d, a: analyzeDeal(d) }]);
+    const later = positionAt(d, 60 + 120);
+    expect(p.year10Equity).toBeCloseTo(later.equity, 6);
+    expect(later.value).toBeCloseTo(215000 * 1.03 ** 15, 4);
+    expect(p.year10Proceeds).toBeCloseTo(later.value * 0.93 - later.balance, 4);
+  });
+});
+
+describe('taxSnapshot', () => {
+  const sfh = PRESET_DEALS[0];
+  const tax = { rate: 32, landPct: 20, useLosses: false };
+
+  it('depreciates the building share over 27.5 years', () => {
+    const t = taxSnapshot(sfh, tax);
+    expect(t.basis).toBeCloseTo((250000 + 7500) * 0.8, 6);
+    expect(t.depreciation).toBeCloseTo(206000 / 27.5, 6);
+  });
+
+  it('deducts operating costs, interest and depreciation but not the CapEx reserve', () => {
+    const t = taxSnapshot(sfh, tax);
+    const a = analyzeDeal(sfh);
+    expect(t.rentCollected).toBeCloseTo(2100 * 12 * 0.95, 6);
+    expect(t.operating).toBeCloseTo((168 + 105 + 250 + 125) * 12, 6);
+    expect(t.taxable).toBeCloseTo(t.rentCollected - t.operating - a.year1Interest - t.depreciation, 6);
+  });
+
+  it('carries a loss forward unless you can use it', () => {
+    const kept = taxSnapshot(sfh, tax);
+    expect(kept.taxable).toBeLessThan(0);
+    expect(kept.taxDue).toBe(0);
+    expect(kept.carryForward).toBeCloseTo(-kept.taxable, 6);
+    expect(kept.afterTaxCashFlow).toBeCloseTo(analyzeDeal(sfh).annualCashFlow, 6);
+    const used = taxSnapshot(sfh, { ...tax, useLosses: true });
+    expect(used.taxDue).toBeCloseTo(used.taxable * 0.32, 6);
+    expect(used.afterTaxCashFlow).toBeCloseTo(analyzeDeal(sfh).annualCashFlow - used.taxable * 0.32, 6);
+    expect(used.carryForward).toBe(0);
+  });
+
+  it('taxes a profit and credits depreciation for the tax it avoids', () => {
+    const rich = { ...PRESET_DEALS[2], rentPerUnit: 2200 };
+    const t = taxSnapshot(rich, tax);
+    expect(t.taxable).toBeGreaterThan(t.depreciation); // profitable even after depreciation
+    expect(t.taxDue).toBeCloseTo(t.taxable * 0.32, 6);
+    expect(t.depreciationSaves).toBeCloseTo(t.depreciation * 0.32, 6);
+  });
+});
+
+describe('stressGrid', () => {
+  it('has the saved deal at its center and gets worse with higher rates and lower rent', () => {
+    const deal = PRESET_DEALS[1];
+    const g = stressGrid(deal);
+    const center = g[3][2];
+    expect(center.rentPct).toBe(0);
+    expect(center.rateDelta).toBe(0);
+    expect(center.netCashFlow).toBeCloseTo(analyzeDeal(deal).netCashFlow, 6);
+    expect(g[3][6].netCashFlow).toBeLessThan(center.netCashFlow);
+    expect(g[0][2].netCashFlow).toBeLessThan(center.netCashFlow);
+    expect(g[6][0].dscr).toBeGreaterThan(center.dscr);
+  });
+});
+
+describe('loanSchedule', () => {
+  it('adds up to the payments and notes interest-only and the refinance', () => {
+    const deal = { ...PRESET_DEALS[0], ioYears: 5 };
+    const s = loanSchedule(deal, 10);
+    expect(s[0].principal).toBe(0);
+    expect(s[0].note).toBe('Interest only');
+    expect(s[5].note).toBe('Payments rise: principal starts');
+    expect(s[5].payment).toBeGreaterThan(s[4].payment);
+    s.forEach((y) => expect(y.payment).toBeCloseTo(y.interest + y.principal, 6));
+    const refi = loanSchedule({ ...PRESET_DEALS[0], refiEnabled: true, refiYear: 2, arv: 300000, refiLtv: 75, refiRate: 7, refiTermYears: 30, refiCostPct: 2 }, 10);
+    expect(refi[1].note).toMatch(/^Refinanced at year end/);
+    expect(refi[2].balance).toBeGreaterThan(refi[0].balance);
+  });
+});
+
+describe('safeHttpUrl', () => {
+  it('keeps http(s) links and adds https to bare domains', async () => {
+    const { safeHttpUrl } = await import('./format.js');
+    expect(safeHttpUrl('https://www.zillow.com/homedetails/1')).toBe('https://www.zillow.com/homedetails/1');
+    expect(safeHttpUrl('redfin.com/home/2')).toBe('https://redfin.com/home/2');
+  });
+  it('refuses scripts, data and empty values', async () => {
+    const { safeHttpUrl } = await import('./format.js');
+    expect(safeHttpUrl('javascript:alert(1)')).toBeNull();
+    expect(safeHttpUrl('data:text/html,hi')).toBeNull();
+    expect(safeHttpUrl('  ')).toBeNull();
+  });
+});
+
+describe('breakevenRate', () => {
+  it('finds the rate where cash flow is zero', async () => {
+    const { breakevenRate } = await import('./finance.js');
+    const deal = PRESET_DEALS[2]; // cash-flowing fourplex at 7%
+    const r = breakevenRate(deal);
+    expect(r).toBeGreaterThan(7);
+    expect(analyzeDeal({ ...deal, rate: r }).netCashFlow).toBeCloseTo(0, 4);
+  });
+  it('is null when the deal loses money even at 0%', async () => {
+    const { breakevenRate } = await import('./finance.js');
+    expect(breakevenRate({ ...PRESET_DEALS[0], rentPerUnit: 600 })).toBeNull();
   });
 });

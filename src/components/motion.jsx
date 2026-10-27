@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Info } from 'lucide-react';
 import { GLOSSARY } from '../lib/glossary.js';
@@ -49,10 +49,13 @@ export function Num({ value, format }) {
 /**
  * Small (i) button with a plain-English explanation. Rendered in a portal
  * with fixed positioning so scroll containers and tables never clip it.
+ * A mouse previews it on hover; a tap, click or keyboard focus opens it, and
+ * Escape, a tap elsewhere, scrolling or leaving with the mouse closes it.
  */
 export function InfoTip({ k, className = '' }) {
   const entry = GLOSSARY[k];
   const btn = useRef(null);
+  const descId = useId();
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState(null);
 
@@ -68,45 +71,56 @@ export function InfoTip({ k, className = '' }) {
   useEffect(() => {
     if (!open) return undefined;
     const close = () => setOpen(false);
+    const onKey = (e) => e.key === 'Escape' && close();
+    // Touch browsers don't always move focus on a tap, so blur alone can't close it.
+    const onDown = (e) => !btn.current?.contains(e.target) && close();
     window.addEventListener('scroll', close, true);
     window.addEventListener('resize', close);
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onDown);
     return () => {
       window.removeEventListener('scroll', close, true);
       window.removeEventListener('resize', close);
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onDown);
     };
   }, [open]);
 
   if (!entry) return null;
-  const id = `tip-${k}`;
   return (
     <>
       <button
         ref={btn}
         type="button"
         aria-label={`What is ${entry.term}?`}
-        aria-describedby={open ? id : undefined}
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
+        aria-describedby={descId}
+        onPointerEnter={(e) => e.pointerType === 'mouse' && setOpen(true)}
+        onPointerLeave={(e) => e.pointerType === 'mouse' && setOpen(false)}
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
-        onClick={() => setOpen((o) => !o)}
-        className={`inline-grid size-4 shrink-0 place-items-center rounded-full align-middle text-zinc-400 transition hover:text-emerald-600 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:text-zinc-500 dark:hover:text-emerald-400 ${className}`}
+        // Opens rather than toggles: a tap also fires focus, which would undo a toggle.
+        onClick={() => setOpen(true)}
+        className={`inline-grid size-4 shrink-0 place-items-center rounded-full align-middle text-zinc-500/80 transition hover:text-emerald-600 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:text-zinc-500 dark:hover:text-emerald-400 ${className}`}
       >
         <Info className="size-3.5" aria-hidden />
       </button>
+      {/* Screen readers get the explanation as the button's description, open or not. */}
+      <span id={descId} hidden>
+        {entry.body}
+      </span>
       {open &&
         pos &&
         createPortal(
           <div
-            id={id}
-            role="tooltip"
+            aria-hidden
             className="glass-strong pointer-events-none fixed z-[100] w-[272px] rounded-2xl px-3.5 py-3 text-left text-xs leading-relaxed normal-case tracking-normal text-zinc-600 dark:text-zinc-300"
             style={{ left: pos.left, top: pos.top, transform: `translate(-50%, ${pos.below ? '0' : '-100%'})` }}
           >
             <div className="mb-0.5 font-semibold text-zinc-900 dark:text-white">{entry.term}</div>
             {entry.body}
           </div>,
-          document.body,
+          // Inside <main> (see App) so tips sit in a landmark; body outside the app.
+          document.getElementById('tip-layer') ?? document.body,
         )}
     </>
   );

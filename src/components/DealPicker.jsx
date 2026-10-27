@@ -69,7 +69,7 @@ export default function DealPicker({ items, activeId, onSelect, onNew }) {
 
   const current = items.find((x) => x.deal.id === activeId) ?? items[0];
   const q = query.trim().toLowerCase();
-  const shown = q ? items.filter((x) => x.deal.name.toLowerCase().includes(q)) : items;
+  const shown = q ? items.filter((x) => `${x.deal.name} ${x.deal.address ?? ''}`.toLowerCase().includes(q)) : items;
   const pick = (id) => {
     onSelect(id);
     setOpen(false);
@@ -83,7 +83,7 @@ export default function DealPicker({ items, activeId, onSelect, onNew }) {
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full min-w-0 items-center gap-2.5 rounded-xl bg-white/60 py-1.5 pr-2.5 pl-2 text-left ring-1 ring-zinc-950/10 transition ring-inset hover:bg-white/90 md:w-72 dark:bg-white/[0.06] dark:ring-white/10 dark:hover:bg-white/10"
+        className="flex w-full min-w-0 items-center gap-2.5 rounded-xl bg-white/60 py-1.5 pr-2.5 pl-2 text-left ring-1 ring-zinc-950/10 transition ring-inset hover:bg-white/90 md:w-72 lg:w-60 xl:w-72 dark:bg-white/[0.06] dark:ring-white/10 dark:hover:bg-white/10"
       >
         <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-zinc-950 text-white dark:bg-white dark:text-zinc-950">
           <Home className="size-3.5" aria-hidden />

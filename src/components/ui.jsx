@@ -150,7 +150,7 @@ export function NumberField({ id, label, tip, value, onChange, prefix, suffix, m
         {label}
       </FieldLabel>
       <div className="field flex items-center">
-        {prefix && <span className="pl-3 text-sm text-zinc-400 dark:text-zinc-500">{prefix}</span>}
+        {prefix && <span className="pl-3 text-sm text-zinc-500 dark:text-zinc-400">{prefix}</span>}
         <input
           id={id}
           type="text"
@@ -171,7 +171,7 @@ export function NumberField({ id, label, tip, value, onChange, prefix, suffix, m
           }}
           className={`tabular w-full min-w-0 bg-transparent px-3 py-2.5 outline-none ${fieldText}`}
         />
-        {suffix && <span className="pr-3 text-sm whitespace-nowrap text-zinc-400 dark:text-zinc-500">{suffix}</span>}
+        {suffix && <span className="pr-3 text-sm whitespace-nowrap text-zinc-500 dark:text-zinc-400">{suffix}</span>}
       </div>
       {hint && <p className="tabular mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">{hint}</p>}
     </div>
@@ -207,7 +207,7 @@ export function Stat({ label, value, sub, tip, className = '' }) {
 /** Green/red text for signed money values, plus the sign so color is never the only cue. */
 export function signedClass(v) {
   if (v > 0.005) return 'text-emerald-700 dark:text-emerald-400';
-  if (v < -0.005) return 'text-red-600 dark:text-red-400';
+  if (v < -0.005) return 'text-red-700 dark:text-red-400';
   return 'text-zinc-700 dark:text-zinc-300';
 }
 
@@ -273,5 +273,14 @@ export function ExampleTag() {
     <span className="shrink-0 rounded-md bg-zinc-950/[0.06] px-1.5 py-px text-[10px] font-semibold tracking-wide text-zinc-500 uppercase dark:bg-white/10 dark:text-zinc-400">
       Example
     </span>
+  );
+}
+
+/** Placeholder while a section's code loads. */
+export function SkeletonCard({ className = 'h-96' }) {
+  return (
+    <div className={`glass overflow-hidden rounded-3xl ${className}`} aria-hidden>
+      <div className="skeleton h-full w-full" />
+    </div>
   );
 }

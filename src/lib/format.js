@@ -29,3 +29,15 @@ export function ratio(v) {
   if (!Number.isFinite(v)) return '∞';
   return v.toFixed(2);
 }
+
+/** A link the page may render: http(s) only, so a pasted javascript: or data: URL never becomes clickable. */
+export function safeHttpUrl(value) {
+  const s = String(value ?? '').trim();
+  if (!s) return null;
+  try {
+    const u = new URL(/^[a-z][a-z0-9+.-]*:/i.test(s) ? s : `https://${s}`);
+    return u.protocol === 'http:' || u.protocol === 'https:' ? u.href : null;
+  } catch {
+    return null;
+  }
+}
