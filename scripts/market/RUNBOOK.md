@@ -5,25 +5,25 @@ The scheduled "Bedrock Thunder Bay listings" task follows this every morning. It
 - Bedrock page: https://claude.ai/artifact/5KH4ZZHoZ8CvCKF5CXutGJ
 - Saved feed: collection `data/users/me`, document `thunderbay` (private to the owner)
 - Owner's library and settings: collection `data/users/me`, document `bedrock` (read it; never write it)
+- The run's tool, published with the page: `tools/bedrock-market.mjs` (a bundle of `scripts/market/cli.mjs`; `merge` and `score` below). This file is published beside it as `tools/RUNBOOK.md`, so a run needs no copy of the repository.
 
 ## Rules
 
-- Change nothing except the `thunderbay` document. Don't edit, commit or push the repository, and never write the `bedrock` document.
+- Change nothing except the `thunderbay` document. Don't edit, commit or push any repository, and never write the `bedrock` document.
 - Use web search only. Don't scrape REALTOR.ca or any other site. (This environment can't open web pages anyway.)
 - Only properties in the City of Thunder Bay that are for sale now. Skip places for rent, sold or leased listings, vacant land and commercial-only property.
 - Record only what a source states, and leave a field out rather than guess. Rents are current rents only: leave a unit's rent `null` if it's vacant or the figure is the agent's estimate of market rent.
 
 ## Steps
 
-1. **Set up.** From the repository root:
+1. **Set up.**
 
    ```bash
-   git fetch -q origin claude/quirky-keller-4kxgar && git checkout -q FETCH_HEAD   # if this fails, stay on the default branch
    RUN=$(mktemp -d)
    TODAY=$(TZ=America/Toronto date +%F)
    ```
 
-   Load the `ArtifactData` tool with ToolSearch (`select:ArtifactData`).
+   Load the `Artifact` and `ArtifactData` tools with ToolSearch if they aren't loaded. Get the tool: Artifact `read` with the page URL and path `tools/bedrock-market.mjs`, and call the saved file `$TOOL`. (With the repository checked out, `node scripts/market/cli.mjs` is the same tool.)
 
 2. **Read what's saved.**
    - ArtifactData `get` with the page URL, collection `data/users/me`, doc_id `thunderbay`, out_dir `$RUN/prev`. Note the `version` it reports. If there's no such document, this is the first run.
@@ -65,7 +65,7 @@ The scheduled "Bedrock Thunder Bay listings" task follows this every morning. It
 5. **Merge.**
 
    ```bash
-   node scripts/market/merge.mjs "$PREV" "$RUN/found.json" --today "$TODAY" --note "<one line, e.g. 10 searches, 2 thin>" > "$RUN/next.json"
+   node "$TOOL" merge "$PREV" "$RUN/found.json" --today "$TODAY" --note "<one line, e.g. 10 searches, 2 thin>" > "$RUN/next.json"
    ```
 
 6. **Save.** ArtifactData `set` with collection `data/users/me`, doc_id `thunderbay`, file_path `$RUN/next.json`, and `if_version` set to the version from step 2 (leave it out only on the first run). If the save fails because the version changed, re-read the feed (step 2), then redo steps 5 and 6 once.
@@ -73,7 +73,7 @@ The scheduled "Bedrock Thunder Bay listings" task follows this every morning. It
 7. **Score.**
 
    ```bash
-   node scripts/market/score.mjs "$RUN/next.json" "$SETTINGS"   # leave $SETTINGS off if there wasn't one
+   node "$TOOL" score "$RUN/next.json" "$SETTINGS"   # leave $SETTINGS off if there wasn't one
    ```
 
 8. **Report.** Your final message becomes the phone notification, so keep it short.
