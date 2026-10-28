@@ -1,0 +1,10 @@
+// Cloudflare serves the built site in dist/ as a static-assets Worker.
+// "name" must match the project's name in the Cloudflare dashboard.
+{
+  "name": "bedrock",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}
