@@ -99,6 +99,8 @@ export function cleanListing(raw) {
   if (!address || !price || price < 10000) return null;
   const units = Math.min(Math.max(Math.round(positive(raw.units) ?? 1), 1), 500);
   const perUnit = (arr, fn) => (Array.isArray(arr) && arr.length ? arr.slice(0, units).map(fn) : null);
+  // A single bedroom count means every unit has that many.
+  const beds = typeof raw.beds === 'number' ? Array(units).fill(raw.beds) : raw.beds;
   const mls = text(raw.mls, 24).toUpperCase().replace(/[^A-Z0-9]/g, '');
   const year = Math.round(Number(raw.yearBuilt));
   return {
@@ -108,7 +110,7 @@ export function cleanListing(raw) {
     url: safeHttpUrl(raw.url),
     source: text(raw.source, 60) || null,
     units,
-    beds: perUnit(raw.beds, bedrooms),
+    beds: perUnit(beds, bedrooms),
     rents: perUnit(raw.rents, positive),
     grossRent: positive(raw.grossRent),
     price,

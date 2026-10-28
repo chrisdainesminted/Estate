@@ -44,6 +44,10 @@ describe('cleanListing', () => {
     expect(cleanListing({ address: '1 Main St', price: 300000, url: 'javascript:alert(1)' }).url).toBeNull();
   });
 
+  it('reads a single bedroom count as every unit having that many', () => {
+    expect(cleanListing({ address: '1 Main St', price: 300000, units: 3, beds: 2 }).beds).toEqual([2, 2, 2]);
+  });
+
   it('keeps bachelor units (0 bedrooms)', () => {
     expect(cleanListing({ address: '1 Main St', price: 300000, units: 2, beds: [0, 1] }).beds).toEqual([0, 1]);
   });

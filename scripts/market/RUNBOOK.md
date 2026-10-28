@@ -50,11 +50,11 @@ The scheduled "Bedrock Thunder Bay listings" task follows this every morning. It
    |---|---|---|
    | `mls` | string | MLS® number if stated, e.g. `TB2602251` or `X13684758` |
    | `address` | string | **Required.** Street address, e.g. `228 Archibald Street S` |
-   | `url` | string | The listing page the result came from |
+   | `url` | string | The listing page link from the search result. Include it whenever the result has one. |
    | `source` | string | Site name, e.g. `rew.ca` |
    | `price` | number | **Required.** Asking price in dollars |
    | `units` | number | Rental units: a house is 1; a house with a legal basement suite is 2 |
-   | `beds` | number[] | Bedrooms per unit, in order, if stated (0 = bachelor) |
+   | `beds` | number[] | Bedrooms for each unit, in order, e.g. `[2, 2, 1]`, if stated (0 = bachelor) |
    | `rents` | (number \| null)[] | Current monthly rent per unit, same order; `null` where unknown or vacant |
    | `grossRent` | number | Total current monthly rent, only when stated as a total (an annual figure ÷ 12) |
    | `taxes` | number | Annual property tax, if stated |
