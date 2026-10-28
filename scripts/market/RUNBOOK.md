@@ -12,6 +12,8 @@ The scheduled "Bedrock Thunder Bay listings" task follows this every morning. It
 - Change nothing except the `thunderbay` document. Don't edit, commit or push any repository, and never write the `bedrock` document.
 - Use web search only. Don't scrape REALTOR.ca or any other site. (This environment can't open web pages anyway.)
 - Only properties in the City of Thunder Bay that are for sale now. Skip places for rent, sold or leased listings, vacant land and commercial-only property.
+- **Only real listings.** Every listing needs a link to its own listing page, copied exactly from a search result: a page whose address shows the property's street number and street, on a listing site such as REALTOR.ca, REW, Zolo, RE/MAX, Royal LePage, Century 21, Coldwell Banker, Square Yards or OnePercent. Never type, build or adjust a link, and never use a search, area or neighbourhood page. If no result links to the property's own page, leave the property out. The merge tool turns away anything without one.
+- Leave out anything the results show as sold, conditionally sold, expired, terminated or off the market, and anything whose sources disagree on the asking price.
 - Record only what a source states, and leave a field out rather than guess. Rents are current rents only: leave a unit's rent `null` if it's vacant or the figure is the agent's estimate of market rent.
 
 ## Steps
@@ -42,7 +44,7 @@ The scheduled "Bedrock Thunder Bay listings" task follows this every morning. It
    9. Thunder Bay ON new listing this week house for sale
    10. Thunder Bay ON price reduced house for sale
 
-   Then search the address of up to five saved listings whose `lastSeen` is seven or more days old, to check whether they're still for sale (and catch any that sold).
+   Then confirm saved listings: search the address of every saved listing whose `lastSeen` is three or more days old (oldest first, up to 12). If a result still shows its listing page for sale, include it in `found.json` like any other. If it shows the property sold, include it with status `sold`; if there's no for-sale page for it any more, include it with status `gone`. A listing that isn't confirmed for seven days drops off on its own.
 
 4. **Write `$RUN/found.json`**: a JSON array with one object for each listing found today, including ones already saved, so their dates and prices update.
 
@@ -50,7 +52,7 @@ The scheduled "Bedrock Thunder Bay listings" task follows this every morning. It
    |---|---|---|
    | `mls` | string | MLS® number if stated, e.g. `TB2602251` or `X13684758` |
    | `address` | string | **Required.** Street address, e.g. `228 Archibald Street S` |
-   | `url` | string | The listing page link from the search result. Include it whenever the result has one. |
+   | `url` | string | **Required** (except for `sold` or `gone`). The link to the property's own listing page, copied exactly from the search result. Never type or build one. |
    | `source` | string | Site name, e.g. `rew.ca` |
    | `price` | number | **Required.** Asking price in dollars |
    | `units` | number | Rental units: a house is 1; a house with a legal basement suite is 2 |
@@ -60,7 +62,7 @@ The scheduled "Bedrock Thunder Bay listings" task follows this every morning. It
    | `taxes` | number | Annual property tax, if stated |
    | `yearBuilt` | number | If stated |
    | `highlights` | string | One short line: condition, who pays utilities, tenancy facts (200 characters at most) |
-   | `status` | string | `active`, `conditional` (sold subject to conditions) or `sold` |
+   | `status` | string | `active`, `conditional` (sold subject to conditions), `sold`, or `gone` (a saved listing with no for-sale page any more) |
 
 5. **Merge.**
 

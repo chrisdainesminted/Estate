@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRight, Check, ChevronDown, ExternalLink, Eye, EyeOff, Radar, RotateCcw, SlidersHorizontal, Target, TrendingDown } from 'lucide-react';
-import { DEFAULT_MARKET, LISTING_TYPES, MARKET, SORTS, droppedInLatestRun, isNew, rankListings, typeOf } from '../lib/market.js';
+import { DEFAULT_MARKET, LISTING_TYPES, MARKET, SORTS, droppedInLatestRun, isNew, listingPageUrl, rankListings, siteName, typeOf } from '../lib/market.js';
 import { listingSentence } from '../lib/explain.js';
-import { money, percent, safeHttpUrl } from '../lib/format.js';
+import { money, percent } from '../lib/format.js';
 import { Button, Card, CardHeader, DscrChip, NumberField, SelectField, SkeletonCard, signedClass } from '../components/ui.jsx';
 import { InfoTip } from '../components/motion.jsx';
 
@@ -61,10 +61,22 @@ function Metric({ label, tip, children, sub }) {
   );
 }
 
+/** "today", "yesterday" or "Oct 26", for a YYYY-MM-DD date. */
+function dayLabel(isoDate) {
+  if (!isoDate) return null;
+  const d = new Date(`${isoDate}T12:00:00`);
+  const daysAgo = Math.round((new Date().setHours(12, 0, 0, 0) - d.getTime()) / 86400000);
+  if (daysAgo === 0) return 'today';
+  if (daysAgo === 1) return 'yesterday';
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
 function ListingRow({ s, rank, feed, imported, hidden, onAnalyze, onHide, onUnhide }) {
   const [open, setOpen] = useState(false);
   const l = s.listing;
-  const link = safeHttpUrl(l.url);
+  const link = listingPageUrl(l.url, l.address);
+  const site = siteName(link);
+  const confirmed = l.lastSeen ? `Confirmed for sale ${dayLabel(l.lastSeen)} on ${site}` : null;
   const drop = droppedInLatestRun(l, feed) ? s.drop : 0;
   const room = Number.isFinite(s.offer.price) ? s.offer.price - s.a.price : null;
   const headingId = `listing-${l.id}`;
@@ -125,7 +137,7 @@ function ListingRow({ s, rank, feed, imported, hidden, onAnalyze, onHide, onUnhi
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-xl px-2 py-1.5 text-sm font-medium text-emerald-700 transition hover:bg-emerald-500/10 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:text-emerald-300"
                 >
-                  View listing <ExternalLink className="size-3.5" aria-hidden />
+                  View on {site} <ExternalLink className="size-3.5" aria-hidden />
                   <span className="sr-only">(opens in a new tab)</span>
                 </a>
               )}
@@ -145,7 +157,9 @@ function ListingRow({ s, rank, feed, imported, hidden, onAnalyze, onHide, onUnhi
             {open && (
               <div id={detailsId} className="mt-3 border-t border-hairline pt-3">
                 {l.highlights && <p className="text-sm text-zinc-600 dark:text-zinc-400">{l.highlights}</p>}
-                {more.length > 0 && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{more.join(' · ')}</p>}
+                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                  {[...more, confirmed].filter(Boolean).join(' · ')}
+                </p>
                 <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-5">
                   <Metric label="Cash flow / door" tip="netCashFlow" sub="a month, after every cost">
                     <span className={signedClass(s.perDoor)}>{money(s.perDoor, { signed: true })}</span>
@@ -262,7 +276,8 @@ export default function ListingsView({ feedState, market, targets, importedIds, 
   const [editing, setEditing] = useState(false);
   const [showAll, setShowAll] = useState(false);
 
-  const active = useMemo(() => (feed?.listings ?? []).filter((l) => (l.status ?? 'active') === 'active'), [feed]);
+  // For sale, with a page of its own to check it against (rankListings applies the same rule).
+  const active = useMemo(() => (feed?.listings ?? []).filter((l) => (l.status ?? 'active') === 'active' && listingPageUrl(l.url, l.address)), [feed]);
   const ranked = useMemo(() => rankListings(active, market, targets, { sort, showHidden }), [active, market, targets, sort, showHidden]);
   const hiddenSet = useMemo(() => new Set(market.hidden), [market.hidden]);
   const visible = ranked.filter((s) => !hiddenSet.has(s.listing.id));
@@ -296,7 +311,8 @@ export default function ListingsView({ feedState, market, targets, importedIds, 
         </p>
         {run && (
           <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-            Updated {when(run.at)} · {active.length} listings · {freshCount} new · {dropCount} price {dropCount === 1 ? 'drop' : 'drops'}
+            Updated {when(run.at)} · {active.length} listings, each linked to its own listing page and confirmed for sale in the last week · {freshCount} new ·{' '}
+            {dropCount} price {dropCount === 1 ? 'drop' : 'drops'}
           </p>
         )}
       </div>
@@ -418,8 +434,9 @@ export default function ListingsView({ feedState, market, targets, importedIds, 
           )}
 
           <p className="px-1 text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-            Found by searching public listing sites, so some listings will be missing and details can lag. Not from REALTOR.ca or the MLS® system directly.
-            Rents marked estimated come from your rent table. Confirm everything with the listing agent before you make an offer.
+            Found by searching public listing sites, so some listings will be missing. Each one links to its own listing page and was confirmed for sale by a
+            search in the last week; listings that can’t be confirmed drop off. Search results can lag a few days, and this isn’t from REALTOR.ca or the MLS®
+            system directly. Rents marked estimated come from your rent table. Confirm everything with the listing agent before you make an offer.
           </p>
         </>
       )}

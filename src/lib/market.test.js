@@ -5,12 +5,14 @@ import {
   INSURANCE_MIN,
   addressKey,
   cleanListing,
+  listingPageUrl,
   listingRent,
   listingToDeal,
   mergeFeed,
   normalizeMarket,
   rankListings,
   scoreListing,
+  siteName,
   standouts,
 } from './market.js';
 
@@ -44,12 +46,48 @@ describe('cleanListing', () => {
     expect(cleanListing({ address: '1 Main St', price: 300000, url: 'javascript:alert(1)' }).url).toBeNull();
   });
 
+  it('keeps a link only when it is that property’s own page', () => {
+    expect(cleanListing({ address: '334 Pearl Street', price: 489900, url: 'https://www.rew.ca/properties/areas/thunder-bay-on/type/multifamily' }).url).toBeNull();
+  });
+
   it('reads a single bedroom count as every unit having that many', () => {
     expect(cleanListing({ address: '1 Main St', price: 300000, units: 3, beds: 2 }).beds).toEqual([2, 2, 2]);
   });
 
   it('keeps bachelor units (0 bedrooms)', () => {
     expect(cleanListing({ address: '1 Main St', price: 300000, units: 2, beds: [0, 1] }).beds).toEqual([0, 1]);
+  });
+});
+
+describe('listingPageUrl', () => {
+  it('accepts pages that name the property', () => {
+    for (const [url, address] of [
+      ['https://www.rew.ca/properties/334-pearl-street-thunder-bay-on', '334 Pearl Street'],
+      ['https://www.realtor.ca/real-estate/29965121/129-mckellar-st-n-thunder-bay', '129 McKellar Street N'],
+      ['https://ontario.onepercentrealty.com/properties/1551518178/THUNDER_BAY-65_Kenogami_Ave._N.', '65 Kenogami Avenue N'],
+      ['https://www.squareyards.ca/sale/on/thunder-bay/westfort/234-amelia-st-street-e', '234 Amelia Street E'],
+      ['https://coldwellbanker.ca/listing/ON/Thunder-Bay/2219-Arthur-St-E-P7E-5P3/232504325', '2219 Arthur Street E'],
+      ['https://www.rew.ca/properties/302-165-court-street-n-thunder-bay-on', '302-165 Court Street N'],
+    ]) {
+      expect(listingPageUrl(url, address)).toBe(url);
+    }
+  });
+
+  it('turns away search pages, area pages and other properties', () => {
+    expect(listingPageUrl('https://www.rew.ca/properties/areas/thunder-bay-on/type/multifamily', '334 Pearl Street')).toBeNull();
+    expect(listingPageUrl('https://www.redfin.ca/on/thunder-bay/vickers-park', '440 Archibald Street S')).toBeNull();
+    expect(listingPageUrl('https://www.keyhomes.ca/property/ontario/thunder-bay/29812012', '397 Empire Avenue')).toBeNull();
+    expect(listingPageUrl('https://www.rew.ca/properties/345-ray-boulevard-thunder-bay-on', '325 Ray Boulevard')).toBeNull();
+    expect(listingPageUrl('https://www.rew.ca/properties/1334-pearl-street-thunder-bay-on', '334 Pearl Street')).toBeNull();
+    expect(listingPageUrl(null, '334 Pearl Street')).toBeNull();
+  });
+});
+
+describe('siteName', () => {
+  it('names the site a link goes to', () => {
+    expect(siteName('https://www.rew.ca/properties/334-pearl-street-thunder-bay-on')).toBe('REW');
+    expect(siteName('https://ontario.onepercentrealty.com/properties/1/THUNDER_BAY-65_Kenogami')).toBe('OnePercent');
+    expect(siteName('https://listings.example.com/1-main-st')).toBe('listings.example.com');
   });
 });
 
@@ -101,9 +139,10 @@ describe('listingToDeal', () => {
 
 describe('scoreListing and rankListings', () => {
   const targets = { dscr: 1.25, cashFlowPerDoor: 200, coc: 8, useDscr: true, useCashFlow: true, useCoc: true };
-  const cheap = cleanListing({ address: '10 Cheap St', price: 180000, units: 2, rents: [1500, 1500], taxes: 2400 });
-  const pricey = cleanListing({ address: '20 Dear St', price: 650000, units: 2, rents: [1500, 1500], taxes: 6000 });
-  const house = cleanListing({ address: '30 House Rd', price: 250000, units: 1, taxes: 3000 });
+  const page = (slug) => `https://www.rew.ca/properties/${slug}-thunder-bay-on`;
+  const cheap = cleanListing({ address: '10 Cheap St', price: 180000, units: 2, rents: [1500, 1500], taxes: 2400, url: page('10-cheap-street') });
+  const pricey = cleanListing({ address: '20 Dear St', price: 650000, units: 2, rents: [1500, 1500], taxes: 6000, url: page('20-dear-street') });
+  const house = cleanListing({ address: '30 House Rd', price: 250000, units: 1, taxes: 3000, url: page('30-house-road') });
 
   it('scores cash flow per door and checks every target via the max offer', () => {
     const s = scoreListing(cheap, DEFAULT_MARKET, targets);
@@ -121,10 +160,14 @@ describe('scoreListing and rankListings', () => {
     expect(rankListings([pricey, house, cheap], { ...DEFAULT_MARKET, hidden: [cheap.id] }, targets)).toHaveLength(2);
     expect(rankListings([{ ...cheap, status: 'conditional' }], DEFAULT_MARKET, targets)).toHaveLength(0);
   });
+
+  it('leaves out anything without a page of its own, as an older saved feed may hold', () => {
+    expect(rankListings([{ ...cheap, url: null }, { ...house, url: 'https://www.redfin.ca/on/thunder-bay/fort-william' }], DEFAULT_MARKET, targets)).toHaveLength(0);
+  });
 });
 
 describe('mergeFeed', () => {
-  const day1 = mergeFeed(null, [triplex, { address: '65 Kenogami Ave N', price: 329900, units: 2 }], { today: '2026-10-28', now: 1 }).feed;
+  const day1 = mergeFeed(null, [triplex, { address: '65 Kenogami Ave N', price: 329900, units: 2, url: 'https://ontario.onepercentrealty.com/properties/1551518178/THUNDER_BAY-65_Kenogami_Ave._N.' }], { today: '2026-10-28', now: 1 }).feed;
 
   it('starts a feed with first-seen dates and price history', () => {
     expect(day1.listings).toHaveLength(2);
@@ -133,7 +176,7 @@ describe('mergeFeed', () => {
   });
 
   it('records price cuts, keeps first-seen dates and never erases known facts', () => {
-    const { feed, stats } = mergeFeed(day1, [{ mls: 'X13684758', address: '228 Archibald St S', price: 509900, units: 3 }], { today: '2026-10-30', now: 2 });
+    const { feed, stats } = mergeFeed(day1, [{ mls: 'X13684758', address: '228 Archibald St S', price: 509900, units: 3, url: triplex.url }], { today: '2026-10-30', now: 2 });
     const l = feed.listings.find((x) => x.id === 'X13684758');
     expect(stats).toMatchObject({ found: 1, added: 0, seenAgain: 1, priceDrops: 1 });
     expect(l.firstSeen).toBe('2026-10-28');
@@ -144,18 +187,30 @@ describe('mergeFeed', () => {
   });
 
   it('matches by address when one site gives an MLS number and another does not', () => {
-    const { feed, stats } = mergeFeed(day1, [{ mls: 'TB2601767', address: '65 Kenogami Avenue North, Thunder Bay', price: 329900, units: 2 }], { today: '2026-10-29' });
+    const { feed, stats } = mergeFeed(day1, [{ mls: 'TB2601767', address: '65 Kenogami Avenue North, Thunder Bay', price: 329900, units: 2, url: 'https://ontario.onepercentrealty.com/properties/1551518178/THUNDER_BAY-65_Kenogami_Ave._N.' }], { today: '2026-10-29' });
     expect(stats.added).toBe(0);
     expect(feed.listings).toHaveLength(2);
     expect(feed.listings.find((x) => x.address.startsWith('65')).mls).toBe('TB2601767');
   });
 
-  it('drops listings reported sold or unseen for three weeks', () => {
+  it('drops listings reported sold or gone, or not confirmed for a week', () => {
     const sold = mergeFeed(day1, [{ ...triplex, status: 'sold' }], { today: '2026-10-29' }).feed;
     expect(sold.listings.map((l) => l.id)).not.toContain('X13684758');
-    const later = mergeFeed(day1, [], { today: '2026-11-25' });
+    // "gone" needs no link: the recheck found no page for it.
+    const gone = mergeFeed(day1, [{ address: '65 Kenogami Ave N', price: 329900, status: 'gone' }], { today: '2026-10-29' }).feed;
+    expect(gone.listings.map((l) => l.address)).toEqual([triplex.address]);
+    expect(mergeFeed(day1, [], { today: '2026-11-04' }).feed.listings).toHaveLength(2);
+    const later = mergeFeed(day1, [], { today: '2026-11-05' });
     expect(later.feed.listings).toHaveLength(0);
     expect(later.stats.removed).toBe(2);
+  });
+
+  it('turns away listings without a page of their own, and drops saved ones that have none', () => {
+    const { feed, stats } = mergeFeed(day1, [{ address: '440 Archibald Street S', price: 299900 }, { address: '1 Main St', price: 1 }], { today: '2026-10-29' });
+    expect(stats).toMatchObject({ found: 0, added: 0, rejected: 2 });
+    expect(feed.listings).toHaveLength(2);
+    const old = { ...day1, listings: [...day1.listings, { id: 'addr-282', address: '282 Algoma Street N', price: 549900, units: 1, url: null, lastSeen: '2026-10-28' }] };
+    expect(mergeFeed(old, [], { today: '2026-10-29' }).feed.listings.map((l) => l.address)).not.toContain('282 Algoma Street N');
   });
 
   it('keeps the last 14 runs', () => {
@@ -168,7 +223,7 @@ describe('mergeFeed', () => {
 describe('standouts', () => {
   it('flags listings that beat every target and are new or cheaper in the latest run', () => {
     const targets = { dscr: 1.1, cashFlowPerDoor: 50, coc: 4, useDscr: true, useCashFlow: true, useCoc: true };
-    const good = { address: '10 Cheap St', price: 180000, units: 2, rents: [1500, 1500], taxes: 2400 };
+    const good = { address: '10 Cheap St', price: 180000, units: 2, rents: [1500, 1500], taxes: 2400, url: 'https://www.rew.ca/properties/10-cheap-street-thunder-bay-on' };
     const day1 = mergeFeed(null, [good], { today: '2026-10-28' }).feed;
     expect(standouts(day1, DEFAULT_MARKET, targets)).toHaveLength(1);
     const day2 = mergeFeed(day1, [good], { today: '2026-10-29' }).feed;

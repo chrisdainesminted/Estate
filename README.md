@@ -113,8 +113,8 @@ wrangler.jsonc            Cloudflare config for the website (serves dist/)
 A scheduled task runs every morning at about 6 am Eastern in a fresh cloud session and follows `scripts/market/RUNBOOK.md`:
 
 1. Read the saved feed (`data/users/<owner>/thunderbay`) and the owner's settings from the page's database.
-2. Search the web for Thunder Bay listings (no page scraping) and write what each result states to `found.json`.
-3. `node scripts/market/merge.mjs prev.json found.json --today YYYY-MM-DD > next.json` keeps first-seen dates, records price changes, and drops listings unseen for three weeks or reported sold.
+2. Search the web for Thunder Bay listings (no page scraping) and write what each result states to `found.json`. Only real listings count: each needs the link to its own listing page, copied from the search result (its address names the street number and street), and anything shown sold, expired or with conflicting prices is left out. Saved listings are searched again every few days to confirm they're still for sale.
+3. `node scripts/market/merge.mjs prev.json found.json --today YYYY-MM-DD > next.json` keeps first-seen dates, records price changes, turns away any listing without its own page, and drops listings not confirmed for a week or reported sold or gone.
 4. Save `next.json` back with a version check, then `node scripts/market/score.mjs next.json bedrock.json` ranks everything and lists standouts for the phone notification.
 
 The page does the full analysis live, so changing an assumption re-ranks the list straight away.

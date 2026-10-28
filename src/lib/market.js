@@ -89,7 +89,65 @@ export function addressKey(address) {
   return s.replace(/\s+/g, ' ').trim();
 }
 
-const STATUSES = ['active', 'conditional', 'sold'];
+// "gone": a saved listing whose recheck finds no for-sale page any more.
+const STATUSES = ['active', 'conditional', 'sold', 'gone'];
+const OFF_MARKET = new Set(['sold', 'gone']);
+
+/**
+ * The listing's own page, or null. A real listing link names the property:
+ * its street number and street appear in the address of the page. Search
+ * results, area pages and links to some other property don't.
+ */
+export function listingPageUrl(url, address) {
+  const safe = safeHttpUrl(url);
+  if (!safe) return null;
+  const tokens = String(address ?? '')
+    .toLowerCase()
+    .replace(/[.,#']/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+  const at = tokens.findIndex((t) => /^\d+[a-z]?(-\d+[a-z]?)?$/.test(t));
+  if (at < 0) return null;
+  // "302-165 Court St" is unit 302 at number 165; "12A" is number 12.
+  const number = tokens[at].split('-').pop().replace(/[a-z]$/, '');
+  const street = tokens.slice(at + 1).find((t) => /^[a-z]{3,}$/.test(t));
+  let page;
+  try {
+    const u = new URL(safe);
+    page = decodeURIComponent(u.pathname + u.search).toLowerCase();
+  } catch {
+    return null;
+  }
+  const hasNumber = new RegExp(`(^|[^0-9])${number}([^0-9]|$)`).test(page);
+  return hasNumber && (!street || page.includes(street)) ? safe : null;
+}
+
+const SITE_NAMES = {
+  'rew.ca': 'REW',
+  'realtor.ca': 'REALTOR.ca',
+  'zolo.ca': 'Zolo',
+  'royallepage.ca': 'Royal LePage',
+  'remax.ca': 'RE/MAX',
+  'c21.ca': 'Century 21',
+  'coldwellbanker.ca': 'Coldwell Banker',
+  'onepercentrealty.com': 'OnePercent',
+  'honestdoor.com': 'HonestDoor',
+  'squareyards.ca': 'Square Yards',
+  'zoocasa.com': 'Zoocasa',
+  'wahi.com': 'Wahi',
+  'point2homes.com': 'Point2',
+  'redfin.ca': 'Redfin',
+  'housesigma.com': 'HouseSigma',
+};
+
+/** A short name for the site a listing link goes to, from the link itself. */
+export function siteName(url) {
+  const safe = safeHttpUrl(url);
+  if (!safe) return null;
+  const host = new URL(safe).hostname.replace(/^www\./, '');
+  const key = Object.keys(SITE_NAMES).find((d) => host === d || host.endsWith(`.${d}`));
+  return key ? SITE_NAMES[key] : host;
+}
 
 /** Check one listing as the run reported it; null when it has no address or price. */
 export function cleanListing(raw) {
@@ -107,7 +165,7 @@ export function cleanListing(raw) {
     id: mls || `addr-${addressKey(address).replace(/ /g, '-')}`,
     mls: mls || null,
     address,
-    url: safeHttpUrl(raw.url),
+    url: listingPageUrl(raw.url, address),
     source: text(raw.source, 60) || null,
     units,
     beds: perUnit(beds, bedrooms),
@@ -224,7 +282,8 @@ export function rankListings(listings, market, targets, { types, hidden, showHid
   const hide = new Set(hidden ?? m.hidden);
   const order = (SORTS[sort] ?? SORTS.perDoor).compare;
   return (Array.isArray(listings) ? listings : [])
-    .filter((l) => (l.status ?? 'active') === 'active' && want.has(typeOf(l.units)) && (showHidden || !hide.has(l.id)))
+    // Only listings with a page of their own: an older saved feed may hold some without.
+    .filter((l) => (l.status ?? 'active') === 'active' && listingPageUrl(l.url, l.address) && want.has(typeOf(l.units)) && (showHidden || !hide.has(l.id)))
     .map((l) => scoreListing(l, m, targets))
     .filter((s) => !onlyMeets || s.meets)
     .sort((x, y) => order(x, y) || y.perDoor - x.perDoor);
@@ -245,20 +304,34 @@ const addDays = (isoDate, n) => new Date(Date.parse(`${isoDate}T00:00:00Z`) + n 
  * Fold one run's findings into the saved feed. A listing seen again keeps
  * its first-seen date and gains a price-history entry if its price moved;
  * fields the run didn't find never erase known ones. Search misses
- * listings on some days, so one is dropped only after `keepDays` unseen,
- * or as soon as a run reports it sold.
+ * listings on some days, so one is dropped only after `keepDays` without
+ * being confirmed, or as soon as a run reports it sold or gone. A listing
+ * without a link to its own page is turned away: nobody could check it.
  */
-export function mergeFeed(prev, found, { today, now = Date.now(), keepDays = 21, note = '' } = {}) {
+export function mergeFeed(prev, found, { today, now = Date.now(), keepDays = 7, note = '' } = {}) {
   const old = Array.isArray(prev?.listings) ? prev.listings : [];
   const merged = new Map(old.map((l) => [l.id, { ...l }]));
   const byAddress = new Map(old.map((l) => [addressKey(l.address), l.id]));
-  const stats = { found: 0, added: 0, seenAgain: 0, priceDrops: 0, priceRises: 0, removed: 0 };
+  const stats = { found: 0, added: 0, seenAgain: 0, priceDrops: 0, priceRises: 0, removed: 0, rejected: 0 };
 
   for (const raw of Array.isArray(found) ? found : []) {
     const f = cleanListing(raw);
-    if (!f) continue;
-    stats.found += 1;
+    if (!f) {
+      stats.rejected += 1;
+      continue;
+    }
     const id = merged.has(f.id) ? f.id : byAddress.get(addressKey(f.address));
+    // Sold or gone needs no link: it only takes a saved listing off the list.
+    if (OFF_MARKET.has(f.status)) {
+      if (id) merged.set(id, { ...merged.get(id), status: f.status, lastSeen: today });
+      continue;
+    }
+    // Everything else must link to its own listing page, or nobody can check it's real.
+    if (!f.url) {
+      stats.rejected += 1;
+      continue;
+    }
+    stats.found += 1;
     if (id) {
       const cur = merged.get(id);
       const history = Array.isArray(cur.priceHistory) && cur.priceHistory.length ? [...cur.priceHistory] : [{ date: cur.firstSeen ?? today, price: cur.price }];
@@ -277,9 +350,10 @@ export function mergeFeed(prev, found, { today, now = Date.now(), keepDays = 21,
     }
   }
 
+  // Off the list: sold or gone, not confirmed for a week, or no page of its own.
   const cutoff = addDays(today, -keepDays);
   const listings = [...merged.values()].filter((l) => {
-    const keep = String(l.lastSeen ?? today) >= cutoff && l.status !== 'sold';
+    const keep = String(l.lastSeen ?? today) >= cutoff && !OFF_MARKET.has(l.status) && Boolean(listingPageUrl(l.url, l.address));
     if (!keep) stats.removed += 1;
     return keep;
   });

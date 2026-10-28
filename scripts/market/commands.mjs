@@ -23,7 +23,7 @@ export function runMerge(argv) {
   const { feed, stats } = mergeFeed(prev, found, { today, note: typeof flags.note === 'string' ? flags.note : '' });
 
   process.stdout.write(`${JSON.stringify(feed)}\n`);
-  console.error(`merged ${today}: ${JSON.stringify(stats)} -> ${feed.listings.length} listings in the feed (${found.length - stats.found} rejected as incomplete)`);
+  console.error(`merged ${today}: ${JSON.stringify(stats)} -> ${feed.listings.length} listings in the feed (${stats.rejected} turned away: no link to the listing's own page, or no address or price)`);
 }
 
 /** score <feed.json> [bedrock.json] [--json]: rank the feed and list the standouts. */
