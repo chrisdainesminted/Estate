@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
-import { AlertTriangle, CalendarClock, DoorOpen, PiggyBank, Repeat, ShoppingCart, Sprout, Wallet } from 'lucide-react';
+import { AlertTriangle, CalendarClock, LineChart, Repeat, ShoppingCart, Sprout } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { simulateGrowth } from '../lib/growth.js';
 import { chartTheme, niceScale } from '../lib/chartTheme.js';
 import { compactMoney, money } from '../lib/format.js';
-import { Card, CardHeader, NumberField, Segmented, SelectField, signedClass } from './ui.jsx';
+import { Card, CardHeader, KpiTile, NumberField, Segmented, SelectField, signedClass } from './ui.jsx';
 import { CHART_ANIMATE, Num } from './motion.jsx';
+import { Section } from './Section.jsx';
 
 const YEARS = 10;
 
@@ -15,18 +16,11 @@ function monthLabel(m) {
 }
 const yearOf = (m) => new Date().getFullYear() + Math.floor((new Date().getMonth() + m) / 12);
 
-function Kpi({ icon: Icon, label, short, children, sub }) {
-  return (
-    <div className="border-hairline p-5 sm:p-7 max-lg:odd:border-r max-lg:[&:nth-child(-n+2)]:border-b lg:[&:not(:last-child)]:border-r">
-      <dt className="eyebrow flex items-center gap-1.5">
-        <Icon className="size-3.5 shrink-0" aria-hidden />
-        <span className="truncate sm:hidden">{short ?? label}</span>
-        <span className="truncate max-sm:hidden">{label}</span>
-      </dt>
-      <dd className="mt-3 text-[28px] leading-none font-semibold tracking-tight text-zinc-900 sm:text-[40px] dark:text-white">{children}</dd>
-      <dd className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">{sub}</dd>
-    </div>
-  );
+/** "Aug 2028, Feb 2032 and Nov 2035", or the first few and a count. */
+function whenList(purchases) {
+  const names = purchases.map((p) => (p.month === 0 ? 'now' : monthLabel(p.month)));
+  const shown = names.length > 4 ? [...names.slice(0, 3), `${names.length - 3} more`] : names;
+  return shown.length > 1 ? `${shown.slice(0, -1).join(', ')} and ${shown[shown.length - 1]}` : shown[0];
 }
 
 function MiniTooltip({ active, payload, fmt, label: title }) {
@@ -132,21 +126,36 @@ export default function PlanView({ owned, deals, plan, onPlan, dark, onOpen }) {
           </span>
         </div>
         <dl className="relative mt-6 grid grid-cols-2 border-t border-hairline lg:grid-cols-4">
-          <Kpi icon={ShoppingCart} label="Next purchase" short="Next buy" sub={next ? `${money(next.cashInvested)} in + ${money(next.reserves)} reserves` : 'Add cash or savings, or pick a cheaper deal'}>
-            {next ? (next.month === 0 ? 'Now' : `${next.month} mo`) : '—'}
-          </Kpi>
-          <Kpi icon={DoorOpen} label="Doors in 10 years" short="Doors, yr 10" sub={`${sim.start.doors} today, +${doorsAdded} from ${sim.purchases.length} purchases`}>
-            <Num value={sim.end.doors} format={(v) => Math.round(v).toString()} />
-          </Kpi>
-          <Kpi icon={Wallet} label="Cash flow in 10 years" short="Cash flow, yr 10" sub={`${money(sim.start.monthlyCashFlow, { signed: true })}/mo today`}>
-            <span className={signedClass(sim.end.monthlyCashFlow)}>
-              <Num value={sim.end.monthlyCashFlow} format={(v) => money(v, { signed: true })} />
-              <span className="ml-1 text-sm font-medium tracking-normal text-zinc-500 sm:text-base dark:text-zinc-400">/mo</span>
-            </span>
-          </Kpi>
-          <Kpi icon={PiggyBank} label="Equity in 10 years" short="Equity, yr 10" sub={`${compactMoney(sim.start.equity)} today · ${compactMoney(sim.end.cash)} cash on hand`}>
-            <Num value={sim.end.equity} format={(v) => compactMoney(v)} />
-          </Kpi>
+          <KpiTile
+            label="Next purchase"
+            value={next ? (next.month === 0 ? 'Now' : `${next.month} ${next.month === 1 ? 'month' : 'months'}`) : '—'}
+            meaning={
+              next
+                ? `When your cash first covers the next one: ${money(next.cashInvested)} to buy, plus ${money(next.reserves)} kept for the lender.`
+                : 'Your cash never covers another purchase. Add cash or savings, or pick a cheaper deal.'
+            }
+          />
+          <KpiTile
+            label="Doors in 10 years"
+            value={<Num value={sim.end.doors} format={(v) => Math.round(v).toString()} />}
+            meaning={`${sim.start.doors} today, plus ${doorsAdded} from ${sim.purchases.length} ${sim.purchases.length === 1 ? 'purchase' : 'purchases'}.`}
+          />
+          <KpiTile
+            label="Cash flow in 10 years"
+            value={
+              <>
+                <Num value={sim.end.monthlyCashFlow} format={(v) => money(v, { signed: true })} />
+                <span className="ml-1 text-sm font-medium tracking-normal text-zinc-500 dark:text-zinc-400">/mo</span>
+              </>
+            }
+            valueClass={signedClass(sim.end.monthlyCashFlow)}
+            meaning={`What all your rentals would bring in each month by then, ${sim.end.monthlyCashFlow >= sim.start.monthlyCashFlow ? 'up' : 'down'} from ${money(sim.start.monthlyCashFlow, { signed: true })} today.`}
+          />
+          <KpiTile
+            label="Equity in 10 years"
+            value={<Num value={sim.end.equity} format={(v) => compactMoney(v)} />}
+            meaning={`What you’d own after the loans by then, from ${compactMoney(sim.start.equity)} today. Plus ${compactMoney(sim.end.cash)} in cash.`}
+          />
         </dl>
       </Card>
 
@@ -223,20 +232,28 @@ export default function PlanView({ owned, deals, plan, onPlan, dark, onOpen }) {
           </div>
         </Card>
 
-        <div className="min-w-0 space-y-6 lg:col-span-8 xl:col-span-9">
-          <Card delay={140}>
-            <CardHeader icon={Sprout} title="Ten years at a glance" subtitle="Each measure on its own scale. Steps are purchases." />
+        <div className="min-w-0 space-y-3 lg:col-span-8 xl:col-span-9">
+          <Section id="plan-charts" icon={LineChart} title="Ten years at a glance" meaning="Doors, monthly cash flow and equity, month by month. Each step up is a purchase." subtitle="Each measure is on its own scale.">
             <div className="grid gap-6 p-6 md:grid-cols-3">
               <MiniChart data={sim.monthly} dataKey="doors" title="Doors" fmt={(v) => Math.round(v).toString()} dark={dark} step />
               <MiniChart data={sim.monthly} dataKey="monthlyCashFlow" title="Cash flow /mo" fmt={compactMoney} dark={dark} step />
               <MiniChart data={sim.monthly} dataKey="equity" title="Equity" fmt={compactMoney} dark={dark} />
             </div>
-          </Card>
+          </Section>
 
-          <Card delay={200}>
-            <CardHeader icon={ShoppingCart} title="Purchases" subtitle={sim.purchases.length ? `${sim.purchases.length} over ten years.` : 'None yet: cash never covers a purchase plus reserves.'} />
+          <Section
+            id="plan-purchases"
+            icon={ShoppingCart}
+            title="Purchases"
+            value={sim.purchases.length ? `${sim.purchases.length} in ten years` : null}
+            meaning={
+              sim.purchases.length
+                ? `${whenList(sim.purchases).replace(/^./, (c) => c.toUpperCase())}: each bought as soon as your cash covers it.`
+                : 'None yet: your cash never covers a purchase plus the lender’s reserves.'
+            }
+          >
             {sim.purchases.length > 0 && (
-              <div tabIndex={0} role="region" aria-label="Purchases" className="thin-scroll max-h-96 overflow-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500">
+              <div tabIndex={0} role="region" aria-label="Purchases table" className="thin-scroll max-h-96 overflow-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500">
                 <table className="w-full min-w-[620px] text-sm">
                   <thead className="sticky top-0 bg-(--glass-strong) backdrop-blur-xl">
                     <tr className="eyebrow">
@@ -262,11 +279,15 @@ export default function PlanView({ owned, deals, plan, onPlan, dark, onOpen }) {
                 </table>
               </div>
             )}
-          </Card>
+          </Section>
 
-          <Card delay={260}>
-            <CardHeader icon={CalendarClock} title="Year by year" subtitle="End of each year. Reserves are cash you keep but can’t spend." />
-            <div tabIndex={0} role="region" aria-label="Year by year" className="thin-scroll overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500">
+          <Section
+            id="plan-years"
+            icon={CalendarClock}
+            title="Year by year"
+            meaning="Doors, cash flow, equity and cash at the end of each year. Reserves are cash you keep but can’t spend."
+          >
+            <div tabIndex={0} role="region" aria-label="Year-by-year table" className="thin-scroll overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500">
               <table className="w-full min-w-[620px] text-sm">
                 <thead>
                   <tr className="eyebrow">
@@ -291,7 +312,7 @@ export default function PlanView({ owned, deals, plan, onPlan, dark, onOpen }) {
                 </tbody>
               </table>
             </div>
-          </Card>
+          </Section>
         </div>
       </div>
     </div>

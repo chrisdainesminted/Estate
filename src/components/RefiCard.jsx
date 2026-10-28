@@ -1,7 +1,9 @@
 import { AlertTriangle, Repeat } from 'lucide-react';
+import { refiMeaning } from '../lib/explain.js';
 import { money, percent, ratio } from '../lib/format.js';
-import { Card, CardHeader, DscrChip, Stat, signedClass } from './ui.jsx';
+import { DscrChip, Stat, signedClass } from './ui.jsx';
 import { InfoTip, Num } from './motion.jsx';
+import { Section } from './Section.jsx';
 
 function Step({ label, value, op, strong, tip }) {
   return (
@@ -21,8 +23,16 @@ export default function RefiCard({ refi, a, deal }) {
   const yrs = `${refi.year} ${refi.year === 1 ? 'year' : 'years'}`;
   const lenderNo = refi.dscr < 1;
   return (
-    <Card id="sec-refi" delay={200} className="@container overflow-hidden">
-      <CardHeader icon={Repeat} title={`Cash-out refinance after ${yrs}`} subtitle={`${Number(deal.refiLtv)}% of the value at that point, at ${Number(deal.refiRate)}% over ${deal.refiTermYears} years.`} />
+    <Section
+      id="sec-refi"
+      icon={Repeat}
+      title={`Cash-out refinance after ${yrs}`}
+      value={refi.cashOut >= 0 ? `${money(refi.cashOut)} out` : `${money(-refi.cashOut)} in`}
+      valueClass={signedClass(refi.cashOut)}
+      meaning={refiMeaning(refi, a)}
+      subtitle={`${Number(deal.refiLtv)}% of the value at that point, at ${Number(deal.refiRate)}% over ${deal.refiTermYears} years.`}
+      className="overflow-hidden"
+    >
       <div className="grid gap-8 p-6 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <div>
           <Step label={`Value after ${yrs}`} value={money(refi.value)} />
@@ -76,6 +86,6 @@ export default function RefiCard({ refi, a, deal }) {
           )}
         </div>
       </div>
-    </Card>
+    </Section>
   );
 }

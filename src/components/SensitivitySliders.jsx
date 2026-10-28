@@ -1,7 +1,9 @@
 import { Check, FlaskConical, RotateCcw } from 'lucide-react';
+import { whatIfSummary } from '../lib/explain.js';
 import { money, percent, ratio } from '../lib/format.js';
 import { isNeutralAdjustment } from '../lib/finance.js';
-import { Button, Card, CardHeader, Segmented, signedClass } from './ui.jsx';
+import { Button, Segmented, signedClass } from './ui.jsx';
+import { Section } from './Section.jsx';
 
 function Slider({ id, label, min, max, step, value, onChange, display, note, ticks, origin = min }) {
   // Fill the track between the origin (0 for deltas, min otherwise) and the thumb.
@@ -70,34 +72,40 @@ export default function SensitivitySliders({ deal, adj, setAdj, scope, setScope,
   ];
 
   return (
-    <Card id="sec-whatif" delay={100} className="@container h-full">
-      <CardHeader
-        icon={FlaskConical}
-        title="What-if sensitivity"
-        subtitle="Stress-test the deal without changing its saved inputs."
-        actions={
-          <>
-            {compareCount > 1 && (
-              <Segmented
-                size="sm"
-                label="Apply what-if to"
-                value={scope}
-                onChange={setScope}
-                options={[
-                  { value: 'active', label: 'This deal' },
-                  { value: 'compare', label: `All ${compareCount} compared` },
-                ]}
-              />
-            )}
-            <Button variant="ghost" onClick={() => setAdj({ rateDelta: 0, downPct: null, rentPct: 0 })} disabled={neutral}>
-              <RotateCcw className="size-3.5" aria-hidden /> Reset
-            </Button>
-            <Button variant="primary" onClick={onApply} disabled={neutral}>
-              <Check className="size-3.5" aria-hidden /> Apply to {all ? `${compareCount} deals` : 'deal'}
-            </Button>
-          </>
-        }
-      />
+    <Section
+      id="sec-whatif"
+      icon={FlaskConical}
+      title="Try a what-if"
+      value={neutral ? null : `${money(what.netCashFlow, { signed: true })}/mo`}
+      valueClass={signedClass(what.netCashFlow)}
+      meaning={
+        neutral
+          ? 'Try a different interest rate, down payment or rent. Your saved deal doesn’t change.'
+          : `${whatIfSummary(deal, adj) ?? 'Testing new numbers.'} Apply it to save it, or reset.`
+      }
+      actions={
+        <>
+          {compareCount > 1 && (
+            <Segmented
+              size="sm"
+              label="Apply what-if to"
+              value={scope}
+              onChange={setScope}
+              options={[
+                { value: 'active', label: 'This deal' },
+                { value: 'compare', label: `All ${compareCount} compared` },
+              ]}
+            />
+          )}
+          <Button variant="ghost" onClick={() => setAdj({ rateDelta: 0, downPct: null, rentPct: 0 })} disabled={neutral}>
+            <RotateCcw className="size-3.5" aria-hidden /> Reset
+          </Button>
+          <Button variant="primary" onClick={onApply} disabled={neutral}>
+            <Check className="size-3.5" aria-hidden /> Apply to {all ? `${compareCount} deals` : 'deal'}
+          </Button>
+        </>
+      }
+    >
       <div className="grid gap-6 p-5 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="space-y-5">
           <Slider
@@ -169,6 +177,6 @@ export default function SensitivitySliders({ deal, adj, setAdj, scope, setScope,
           )}
         </div>
       </div>
-    </Card>
+    </Section>
   );
 }

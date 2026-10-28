@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, ArrowRight, Check, ExternalLink, Eye, EyeOff, Radar, RotateCcw, SlidersHorizontal, Target, TrendingDown } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Check, ChevronDown, ExternalLink, Eye, EyeOff, Radar, RotateCcw, SlidersHorizontal, Target, TrendingDown } from 'lucide-react';
 import { DEFAULT_MARKET, LISTING_TYPES, MARKET, SORTS, droppedInLatestRun, isNew, rankListings, typeOf } from '../lib/market.js';
+import { listingSentence } from '../lib/explain.js';
 import { money, percent, safeHttpUrl } from '../lib/format.js';
 import { Button, Card, CardHeader, DscrChip, NumberField, SelectField, SkeletonCard, signedClass } from '../components/ui.jsx';
 import { InfoTip } from '../components/motion.jsx';
@@ -8,6 +9,8 @@ import { InfoTip } from '../components/motion.jsx';
 const KIND = { 1: 'House', 2: 'Duplex', 3: 'Triplex', 4: 'Fourplex' };
 const RENT_TEXT = { stated: 'Rents as listed', mixed: 'Some rents estimated', estimated: 'Rents estimated' };
 const STALE_AFTER = 36 * 3600 * 1000;
+// The best few show first; the rest are a tap away.
+const FIRST_PAGE = 10;
 
 function when(at) {
   if (!Number.isFinite(at)) return null;
@@ -59,32 +62,42 @@ function Metric({ label, tip, children, sub }) {
 }
 
 function ListingRow({ s, rank, feed, imported, hidden, onAnalyze, onHide, onUnhide }) {
+  const [open, setOpen] = useState(false);
   const l = s.listing;
   const link = safeHttpUrl(l.url);
   const drop = droppedInLatestRun(l, feed) ? s.drop : 0;
   const room = Number.isFinite(s.offer.price) ? s.offer.price - s.a.price : null;
   const headingId = `listing-${l.id}`;
-  const facts = [KIND[l.units] ?? `${l.units} units`, l.units > 1 && l.units <= 4 && `${l.units} units`, l.yearBuilt && `built ${l.yearBuilt}`, l.mls && `MLS® ${l.mls}`].filter(Boolean);
+  const detailsId = `listing-${l.id}-details`;
+  const facts = [KIND[l.units] ?? `${l.units} units`, l.units > 1 && l.units <= 4 && `${l.units} units`, money(s.a.price)].filter(Boolean);
+  const more = [l.yearBuilt && `Built ${l.yearBuilt}`, l.mls && `MLS® ${l.mls}`].filter(Boolean);
+  const badges = s.meets || isNew(l, feed) || drop > 0 || hidden;
 
   return (
     <li>
-      <article aria-labelledby={headingId} className={`glass rise rounded-3xl p-5 sm:p-6 ${hidden ? 'outline-1 outline-zinc-400/60 outline-dashed' : ''}`}>
-        <div className="flex gap-4">
+      <article aria-labelledby={headingId} className={`glass rise rounded-3xl p-4 sm:p-5 ${hidden ? 'outline-1 outline-zinc-400/60 outline-dashed' : ''}`}>
+        <div className="flex gap-3 sm:gap-4">
           <span
             aria-hidden
-            className="tabular hidden size-9 shrink-0 place-items-center rounded-full bg-zinc-950/[0.05] text-sm font-semibold text-zinc-600 sm:grid dark:bg-white/[0.07] dark:text-zinc-300"
+            className="tabular hidden size-8 shrink-0 place-items-center rounded-full bg-zinc-950/[0.05] text-sm font-semibold text-zinc-600 sm:grid dark:bg-white/[0.07] dark:text-zinc-300"
           >
             {rank}
           </span>
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+            <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h3 id={headingId} className="text-base font-semibold tracking-tight text-zinc-950 dark:text-white">
                   {l.address}
                 </h3>
-                <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{facts.join(' · ')}</p>
+                <p className="tabular mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{facts.join(' · ')}</p>
               </div>
-              <div className="flex flex-wrap gap-1.5">
+              <p className="shrink-0 text-right">
+                <span className={`tabular block text-lg leading-tight font-semibold ${signedClass(s.perDoor)}`}>{money(s.perDoor, { signed: true })}</span>
+                <span className="block text-[11px] text-zinc-500 dark:text-zinc-400">per door a month</span>
+              </p>
+            </div>
+            {badges && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
                 {s.meets && (
                   <Badge tone="green" icon={Check}>
                     Beats your targets
@@ -98,29 +111,11 @@ function ListingRow({ s, rank, feed, imported, hidden, onAnalyze, onHide, onUnhi
                 )}
                 {hidden && <Badge tone="gray">Hidden</Badge>}
               </div>
-            </div>
-            {l.highlights && <p className="mt-2 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-400">{l.highlights}</p>}
+            )}
+            <p className="mt-2 text-sm leading-snug text-zinc-700 dark:text-zinc-300">{listingSentence(s)}</p>
 
-            <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-5">
-              <Metric label="Cash flow / door" tip="netCashFlow" sub="a month, after every cost">
-                <span className={`text-xl ${signedClass(s.perDoor)}`}>{money(s.perDoor, { signed: true })}</span>
-              </Metric>
-              <Metric label="Asking" sub={`${money(s.a.price / s.a.units)} per door`}>
-                {money(s.a.price)}
-              </Metric>
-              <Metric label="Lender DSCR" tip="dscr">
-                <DscrChip status={s.a.status} dscr={s.a.dscr} size="sm" />
-              </Metric>
-              <Metric label="Cash-on-cash" tip="coc" sub={`on ${money(s.a.cashInvested)}`}>
-                <span className={signedClass(s.a.coc)}>{percent(s.a.coc, 1)}</span>
-              </Metric>
-              <Metric label="Your max offer" tip="maxOffer" sub={room == null ? 'no targets set' : room >= 0 ? `${money(room)} of room` : `${money(-room)} over your max`}>
-                {room == null ? '—' : money(s.offer.price)}
-              </Metric>
-            </dl>
-
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <Button variant="primary" onClick={() => onAnalyze(l)}>
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <Button variant="primary" className="px-2.5 py-1.5" onClick={() => onAnalyze(l)}>
                 {imported ? 'Open deal' : 'Analyze'} <ArrowRight className="size-4" aria-hidden />
               </Button>
               {link && (
@@ -128,7 +123,7 @@ function ListingRow({ s, rank, feed, imported, hidden, onAnalyze, onHide, onUnhi
                   href={link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-500/10 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:text-emerald-300"
+                  className="inline-flex items-center gap-1.5 rounded-xl px-2 py-1.5 text-sm font-medium text-emerald-700 transition hover:bg-emerald-500/10 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:text-emerald-300"
                 >
                   View listing <ExternalLink className="size-3.5" aria-hidden />
                   <span className="sr-only">(opens in a new tab)</span>
@@ -136,19 +131,56 @@ function ListingRow({ s, rank, feed, imported, hidden, onAnalyze, onHide, onUnhi
               )}
               <button
                 type="button"
-                onClick={() => (hidden ? onUnhide(l) : onHide(l))}
-                aria-label={hidden ? `Show ${l.address} again` : `Hide ${l.address}`}
-                title={hidden ? 'Show again' : 'Hide this listing'}
-                className="rounded-xl p-2 text-zinc-500 transition hover:bg-zinc-950/5 hover:text-zinc-800 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-zinc-100"
+                aria-expanded={open}
+                aria-controls={open ? detailsId : undefined}
+                onClick={() => setOpen((v) => !v)}
+                className="inline-flex items-center gap-1 rounded-xl px-2 py-1.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-950/5 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white"
               >
-                {hidden ? <Eye className="size-4" aria-hidden /> : <EyeOff className="size-4" aria-hidden />}
+                Details
+                <ChevronDown className={`size-4 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
+                <span className="sr-only">for {l.address}</span>
               </button>
-              <span className="ml-auto flex items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400">
-                {RENT_TEXT[s.rentSource]}
-                {s.taxesEstimated && ', taxes estimated'}
-                <InfoTip k="listingRents" />
-              </span>
             </div>
+
+            {open && (
+              <div id={detailsId} className="mt-3 border-t border-hairline pt-3">
+                {l.highlights && <p className="text-sm text-zinc-600 dark:text-zinc-400">{l.highlights}</p>}
+                {more.length > 0 && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{more.join(' · ')}</p>}
+                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-5">
+                  <Metric label="Cash flow / door" tip="netCashFlow" sub="a month, after every cost">
+                    <span className={signedClass(s.perDoor)}>{money(s.perDoor, { signed: true })}</span>
+                  </Metric>
+                  <Metric label="Asking" sub={`${money(s.a.price / s.a.units)} per door`}>
+                    {money(s.a.price)}
+                  </Metric>
+                  <Metric label="Lender DSCR" tip="dscr">
+                    <DscrChip status={s.a.status} dscr={s.a.dscr} size="sm" />
+                  </Metric>
+                  <Metric label="Cash-on-cash" tip="coc" sub={`on ${money(s.a.cashInvested)}`}>
+                    <span className={signedClass(s.a.coc)}>{percent(s.a.coc, 1)}</span>
+                  </Metric>
+                  <Metric label="Your max offer" tip="maxOffer" sub={room == null ? 'no targets set' : room >= 0 ? `${money(room)} of room` : `${money(-room)} over your max`}>
+                    {room == null ? '—' : money(s.offer.price)}
+                  </Metric>
+                </dl>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                  <p className="flex items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                    {RENT_TEXT[s.rentSource]}
+                    {s.taxesEstimated && ', taxes estimated'}
+                    <InfoTip k="listingRents" />
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => (hidden ? onUnhide(l) : onHide(l))}
+                    className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-medium text-zinc-600 transition hover:bg-zinc-950/5 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white"
+                  >
+                    {hidden ? <Eye className="size-3.5" aria-hidden /> : <EyeOff className="size-3.5" aria-hidden />}
+                    {hidden ? 'Show this listing again' : 'Hide this listing'}
+                    <span className="sr-only"> ({l.address})</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </article>
@@ -228,6 +260,7 @@ export default function ListingsView({ feedState, market, targets, importedIds, 
   const [onlyMeets, setOnlyMeets] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   const active = useMemo(() => (feed?.listings ?? []).filter((l) => (l.status ?? 'active') === 'active'), [feed]);
   const ranked = useMemo(() => rankListings(active, market, targets, { sort, showHidden }), [active, market, targets, sort, showHidden]);
@@ -257,10 +290,9 @@ export default function ListingsView({ feedState, market, targets, importedIds, 
         <p className="eyebrow">
           Listings · {MARKET.city}, {MARKET.region}
         </p>
-        <h2 className="mt-1.5 text-3xl font-semibold tracking-tight text-zinc-950 sm:text-4xl dark:text-white">Today’s best rentals</h2>
-        <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-          Every morning Claude searches public listing sites for Thunder Bay properties for sale. Each one runs through your numbers under Ontario rules,
-          ranked by cash flow per door after every cost.
+        <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-zinc-950 sm:text-3xl dark:text-white">Today’s best rentals</h2>
+        <p className="mt-1.5 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
+          Thunder Bay properties for sale, found each morning and run through your numbers under Ontario rules. Most cash per door first.
         </p>
         {run && (
           <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
@@ -302,9 +334,9 @@ export default function ListingsView({ feedState, market, targets, importedIds, 
                 { label: 'In the latest update', value: `${freshCount} new`, sub: `${dropCount} price ${dropCount === 1 ? 'drop' : 'drops'}` },
                 { label: 'Typical asking price', value: money(median(visible.map((s) => s.a.price))), sub: `${money(median(visible.map((s) => s.a.price / s.a.units)))} per door` },
               ].map((t, i) => (
-                <div key={t.label} className={`min-w-0 p-5 sm:p-6 ${i % 2 ? 'border-l border-hairline' : ''} ${i >= 2 ? 'border-t border-hairline @3xl:border-t-0 @3xl:border-l' : ''}`}>
+                <div key={t.label} className={`min-w-0 p-4 sm:p-5 ${i % 2 ? 'border-l border-hairline' : ''} ${i >= 2 ? 'border-t border-hairline @3xl:border-t-0 @3xl:border-l' : ''}`}>
                   <dt className="eyebrow">{t.label}</dt>
-                  <dd className={`tabular mt-1.5 text-2xl font-semibold tracking-tight text-zinc-950 dark:text-white ${t.cls ?? ''}`}>{t.value}</dd>
+                  <dd className={`tabular mt-1 text-xl font-semibold tracking-tight text-zinc-950 dark:text-white ${t.cls ?? ''}`}>{t.value}</dd>
                   {t.sub && <dd className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">{t.sub}</dd>}
                 </div>
               ))}
@@ -356,8 +388,8 @@ export default function ListingsView({ feedState, market, targets, importedIds, 
           {editing && <Assumptions market={market} onMarket={onMarket} />}
 
           {shown.length > 0 ? (
-            <ol className="space-y-4" aria-label="Listings, best first">
-              {shown.map((s, i) => (
+            <ol className="space-y-3" aria-label="Listings, best first">
+              {(showAll ? shown : shown.slice(0, FIRST_PAGE)).map((s, i) => (
                 <ListingRow
                   key={s.listing.id}
                   s={s}
@@ -375,6 +407,14 @@ export default function ListingsView({ feedState, market, targets, importedIds, 
             <Notice title={active.length ? 'Nothing matches these filters' : 'No listings saved yet'}>
               {active.length ? 'Turn on more property types, or show every listing instead of only the ones that beat your targets.' : 'The next morning run will fill this in.'}
             </Notice>
+          )}
+
+          {!showAll && shown.length > FIRST_PAGE && (
+            <div className="flex justify-center">
+              <Button onClick={() => setShowAll(true)}>
+                Show all {shown.length} listings <ChevronDown className="size-4" aria-hidden />
+              </Button>
+            </div>
           )}
 
           <p className="px-1 text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">

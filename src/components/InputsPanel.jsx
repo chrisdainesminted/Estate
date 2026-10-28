@@ -266,7 +266,7 @@ export default function InputsPanel({ deal, a, onChange, onDuplicate, onDelete }
         </div>
         <div className="col-span-2 grid grid-cols-2 gap-2">
           <Derived label="Loan" value={money(a.loanAmount)} />
-          <Derived label="LTV" value={percent(a.ltv, 1)} />
+          <Derived label="Loan-to-value" value={percent(a.ltv, 1)} />
         </div>
       </Section>
 
@@ -282,7 +282,7 @@ export default function InputsPanel({ deal, a, onChange, onDuplicate, onDelete }
           max={24}
           step={1}
           decimals={0}
-          hint={`${money(a.reserves)} of PITIA`}
+          hint={`${money(a.reserves)} kept in the bank`}
         />
         <div className="col-span-2 grid gap-2">
           <Derived label="Cash invested (down + closing + rehab)" value={money(a.cashInvested)} />
@@ -290,7 +290,7 @@ export default function InputsPanel({ deal, a, onChange, onDuplicate, onDelete }
         </div>
       </Section>
 
-      <Section icon={Hammer} title="Value-add & refinance">
+      <Section icon={Hammer} title="Value-add & refinance" collapsible defaultOpen={Number(deal.arv) > 0 || Boolean(deal.refiEnabled)}>
         <div className="col-span-2">
           <NumberField
             id={id('arv')}
@@ -350,16 +350,16 @@ export default function InputsPanel({ deal, a, onChange, onDuplicate, onDelete }
           step={10}
           decimals={0}
         />
-        <Derived label="PITIA" value={`${money(a.pitia)}/mo`} />
+        <Derived label="Loan, taxes & insurance (PITIA)" value={`${money(a.pitia)}/mo`} />
       </Section>
 
-      <Section icon={Wrench} title="Operating expenses (% of rent)">
-        <NumberField id={id('mgmt')} label="Property management" suffix="%" value={deal.mgmtPct} onChange={set('mgmtPct')} max={50} step={0.5} hint={`${money(a.opex.management)}/mo`} />
-        <NumberField id={id('maint')} label="Maintenance & repairs" suffix="%" value={deal.maintPct} onChange={set('maintPct')} max={50} step={0.5} hint={`${money(a.opex.maintenance)}/mo`} />
-        <NumberField id={id('vac')} label="Vacancy reserve" suffix="%" value={deal.vacancyPct} onChange={set('vacancyPct')} max={50} step={0.5} hint={`${money(a.opex.vacancy)}/mo`} />
-        <NumberField id={id('capex')} label="CapEx reserve" suffix="%" value={deal.capexPct} onChange={set('capexPct')} max={50} step={0.5} hint={`${money(a.opex.capex)}/mo`} />
+      <Section icon={Wrench} title="Running costs (% of rent)">
+        <NumberField id={id('mgmt')} label="Property management" suffix="%" value={deal.mgmtPct} onChange={set('mgmtPct')} max={50} step={0.5} hint={`${money(a.opex.management)}/mo to a manager`} />
+        <NumberField id={id('maint')} label="Maintenance & repairs" suffix="%" value={deal.maintPct} onChange={set('maintPct')} max={50} step={0.5} hint={`${money(a.opex.maintenance)}/mo for repairs`} />
+        <NumberField id={id('vac')} label="Vacancy reserve" suffix="%" value={deal.vacancyPct} onChange={set('vacancyPct')} max={50} step={0.5} hint={`${money(a.opex.vacancy)}/mo for empty months`} />
+        <NumberField id={id('capex')} label="CapEx reserve" suffix="%" value={deal.capexPct} onChange={set('capexPct')} max={50} step={0.5} hint={`${money(a.opex.capex)}/mo for big replacements`} />
         <div className="col-span-2">
-          <Derived label={`Total OpEx (${opexPct.toFixed(1)}% of rent)`} value={`${money(a.opex.total)}/mo`} />
+          <Derived label={`Running costs (${opexPct.toFixed(1)}% of rent)`} value={`${money(a.opex.total)}/mo`} />
         </div>
       </Section>
 

@@ -1,7 +1,9 @@
 import { DoorOpen } from 'lucide-react';
+import { saleMeaning } from '../lib/explain.js';
 import { money, percent } from '../lib/format.js';
-import { Card, CardHeader, Stat, signedClass } from './ui.jsx';
+import { Stat, signedClass } from './ui.jsx';
 import { InfoTip, Num } from './motion.jsx';
+import { Section } from './Section.jsx';
 
 function Step({ label, value, op, strong, tip }) {
   return (
@@ -20,8 +22,16 @@ function Step({ label, value, op, strong, tip }) {
 export default function ExitCard({ sale, deal }) {
   const multiple = Number.isFinite(sale.equityMultiple) ? `${sale.equityMultiple.toFixed(2)}×` : '—';
   return (
-    <Card id="sec-exit" delay={220} className="@container overflow-hidden">
-      <CardHeader icon={DoorOpen} title={`If you sell in year ${sale.year}`} subtitle={`After ${Number(deal.sellingCostPct) || 0}% selling costs${sale.prepayPenalty > 0 ? ', the prepayment penalty' : ''} and paying off the loan.`} />
+    <Section
+      id="sec-exit"
+      icon={DoorOpen}
+      title={`If you sell in year ${sale.year}`}
+      value={money(sale.profit, { signed: true })}
+      valueClass={signedClass(sale.profit)}
+      meaning={saleMeaning(sale)}
+      subtitle={`After ${Number(deal.sellingCostPct) || 0}% selling costs${sale.prepayPenalty > 0 ? ', the prepayment penalty' : ''} and paying off the loan.`}
+      className="overflow-hidden"
+    >
       <div className="grid gap-8 p-6 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <div>
           <Step label="Sale price" value={money(sale.salePrice)} />
@@ -63,6 +73,6 @@ export default function ExitCard({ sale, deal }) {
           </div>
         </div>
       </div>
-    </Card>
+    </Section>
   );
 }

@@ -1,6 +1,9 @@
 import { Scale } from 'lucide-react';
+import { DSCR_BANDS } from '../lib/dscr.js';
+import { BAND_MEANINGS, rentFlowMeaning } from '../lib/explain.js';
 import { money, percent, ratio } from '../lib/format.js';
-import { Card, CardHeader, DscrChip, Stat, signedClass } from './ui.jsx';
+import { DscrChip, Stat, signedClass } from './ui.jsx';
+import { Section } from './Section.jsx';
 
 function Line({ label, value, strong, muted, indent }) {
   return (
@@ -35,8 +38,15 @@ function WaterfallRow({ label, amount, rent, kind }) {
 export default function LenderVsReality({ a }) {
   const haircut = a.grossRent - a.lenderRent;
   return (
-    <Card id="sec-lender" delay={140} className="@container">
-      <CardHeader icon={Scale} title="Lender math vs. real-world math" subtitle="Lenders approve on PITIA. Your bank account also pays for OpEx." />
+    <Section
+      id="sec-lender"
+      icon={Scale}
+      title="Where the rent goes"
+      value={`${money(a.netCashFlow, { signed: true })}/mo`}
+      valueClass={signedClass(a.netCashFlow)}
+      meaning={rentFlowMeaning(a)}
+      subtitle="Lenders approve on the loan payment, taxes and insurance (PITIA). Your bank account also pays the running costs."
+    >
       <div className="grid gap-6 p-5 @2xl:grid-cols-2">
         <div>
           <h3 className="mb-2 eyebrow">What the lender sees</h3>
@@ -48,12 +58,28 @@ export default function LenderVsReality({ a }) {
           <Line label="Insurance" value={money(a.insurance, { cents: true })} indent />
           <Line label="HOA" value={money(a.hoa, { cents: true })} indent />
           <Line label="PITIA" value={money(a.pitia, { cents: true })} strong />
-          <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-well px-3 py-2.5 ">
+          <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-well px-3 py-2.5">
             <span className="text-sm text-zinc-600 dark:text-zinc-300">
               DSCR = {money(a.lenderRent)} ÷ {money(a.pitia)}
             </span>
             <DscrChip status={a.status} dscr={a.dscr} size="sm" />
           </div>
+          <dl className="mt-3 grid gap-0.5 text-xs" aria-label="How lenders read DSCR">
+            {DSCR_BANDS.map((b) => (
+              <div
+                key={b.key}
+                className={`grid grid-cols-[auto_5.5rem_minmax(0,1fr)] items-baseline gap-2 rounded-lg px-2 py-1 ${
+                  b.key === a.status.key ? 'bg-white/70 text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white' : 'text-zinc-500 dark:text-zinc-400'
+                }`}
+              >
+                <span className="size-2 translate-y-[-1px] rounded-sm" style={{ background: b.color }} aria-hidden />
+                <dt className="tabular">{b.short}</dt>
+                <dd>
+                  <span className="font-medium">{b.label}.</span> {BAND_MEANINGS[b.key]}
+                </dd>
+              </div>
+            ))}
+          </dl>
         </div>
 
         <div>
@@ -78,6 +104,6 @@ export default function LenderVsReality({ a }) {
         <Stat label="Breakeven rent" tip="breakevenRent" value={`${money(a.breakevenRent / a.units)}/unit`} sub="net cash flow = $0" />
         <Stat label="Rent for 1.20 DSCR" tip="rentFor120" value={`${money(a.rentForDscr120 / a.units)}/unit`} sub={`current ${ratio(a.dscr)}`} />
       </div>
-    </Card>
+    </Section>
   );
 }

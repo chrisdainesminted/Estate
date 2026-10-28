@@ -1,30 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Briefcase, Building, CheckCircle2, Gauge, LineChart, Percent, PiggyBank, ShoppingCart, Wallet, XCircle } from 'lucide-react';
+import { ArrowRight, Briefcase, Building, CheckCircle2, LineChart, ShoppingCart, XCircle } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { estimateToday, portfolioSummary } from '../lib/finance.js';
 import { BAND_CLASSES, TONE_CLASSES, verdict } from '../lib/dscr.js';
 import { chartTheme } from '../lib/chartTheme.js';
+import { cocMeaning, equityMeaning, portfolioCashMeaning, portfolioDscrMeaning } from '../lib/explain.js';
 import { compactMoney, money, percent, ratio } from '../lib/format.js';
-import { Button, Card, CardHeader, DscrChip, ExampleTag, SelectField, Stat, signedClass } from './ui.jsx';
+import { Button, Card, CardHeader, DscrChip, ExampleTag, KpiTile, SelectField, Stat, signedClass } from './ui.jsx';
 import { CHART_ANIMATE, InfoTip, Num } from './motion.jsx';
+import { Section } from './Section.jsx';
 
 const POS = { light: '#059669', dark: '#34d399' };
 const NEG = { light: '#dc2626', dark: '#f87171' };
-
-function Kpi({ icon: Icon, label, short, tip, children, sub }) {
-  return (
-    <div className="border-hairline p-5 sm:p-7 max-lg:odd:border-r max-lg:[&:nth-child(-n+2)]:border-b lg:[&:not(:last-child)]:border-r">
-      <dt className="eyebrow flex items-center gap-1.5">
-        <Icon className="size-3.5 shrink-0" aria-hidden />
-        <span className="truncate sm:hidden">{short ?? label}</span>
-        <span className="truncate max-sm:hidden">{label}</span>
-        {tip && <InfoTip k={tip} />}
-      </dt>
-      <dd className="mt-3 text-[28px] leading-none font-semibold tracking-tight sm:text-[40px]">{children}</dd>
-      <dd className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">{sub}</dd>
-    </div>
-  );
-}
 
 function CashFlowTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
@@ -54,6 +41,17 @@ function useNarrow() {
     return () => mq.removeEventListener('change', on);
   }, []);
   return narrow;
+}
+
+/** Best and worst property by today's cash flow, in one sentence. */
+function cashFlowRanking(owned) {
+  const ranked = owned.map((x) => ({ name: x.deal.name, cf: estimateToday(x.deal).netCashFlow })).sort((p, q) => q.cf - p.cf);
+  if (!ranked.length) return null;
+  const best = ranked[0];
+  const worst = ranked[ranked.length - 1];
+  const each = (r) => `${money(r.cf, { signed: true })}/mo`;
+  if (ranked.length === 1) return `${best.name}: ${each(best)} after the loan payment and running costs.`;
+  return `${best.name} brings in the most (${each(best)}); ${worst.name} the least (${each(worst)}).`;
 }
 
 function CashFlowChart({ owned, dark, onOpen }) {
@@ -131,8 +129,17 @@ function ImpactCard({ owned, prospects, onOpen, onMarkOwned }) {
   const after = useMemo(() => (pick ? portfolioSummary([...owned, pick]) : null), [owned, pick]);
 
   return (
-    <Card delay={160} className="flex h-full flex-col">
-      <CardHeader icon={ShoppingCart} title="What if you buy it?" subtitle="See how a prospect changes the whole portfolio." />
+    <Section
+      id="pf-impact"
+      icon={ShoppingCart}
+      title="What if you buy it?"
+      meaning={
+        pick
+          ? `Buying “${pick.deal.name}” would move your monthly cash flow from ${money(before.netCashFlow, { signed: true })} to ${money(after.netCashFlow, { signed: true })}.`
+          : 'Add a prospect to see how buying it would change your totals.'
+      }
+      subtitle="See how a prospect changes the whole portfolio."
+    >
       {!pick ? (
         <p className="p-6 text-sm text-zinc-500 dark:text-zinc-400">Add a prospect from the deal menu to see its impact here.</p>
       ) : (
@@ -170,7 +177,7 @@ function ImpactCard({ owned, prospects, onOpen, onMarkOwned }) {
           </div>
         </div>
       )}
-    </Card>
+    </Section>
   );
 }
 
@@ -282,34 +289,45 @@ export default function PortfolioView({ owned, prospects, dark, onOpen, onMarkOw
         </div>
 
         <dl className="relative mt-6 grid grid-cols-2 border-t border-hairline lg:grid-cols-4">
-          <Kpi icon={Wallet} label="Net cash flow" short="Cash flow" tip="netCashFlow" sub={<Num value={p.annualCashFlow} format={(v) => `${money(v, { signed: true })}/yr across the portfolio`} />}>
-            <span className={signedClass(p.netCashFlow)}>
-              <Num value={p.netCashFlow} format={(v) => money(v, { signed: true })} />
-              <span className="ml-1 text-sm font-medium tracking-normal text-zinc-500 sm:text-base dark:text-zinc-400">/mo</span>
-            </span>
-          </Kpi>
-          <Kpi icon={Gauge} label="Global DSCR" short="DSCR" tip="globalDscr" sub={<DscrChip status={p.status} size="sm" />}>
-            <span className={BAND_CLASSES[p.status.key].text}>
-              <Num value={p.dscr} format={ratio} />
-            </span>
-          </Kpi>
-          <Kpi icon={Percent} label="Cash-on-cash" short="CoC" tip="coc" sub={`On ${money(p.cashInvested)} invested`}>
-            <span className={signedClass(p.coc)}>
-              <Num value={p.coc} format={(v) => percent(v)} />
-            </span>
-          </Kpi>
-          <Kpi icon={PiggyBank} label="Equity today" short="Equity" tip="equity" sub={`Projected ${compactMoney(p.year10Equity)} in 10 years`}>
-            <span className="text-zinc-900 dark:text-white">
-              <Num value={p.equity} format={(v) => money(v)} />
-            </span>
-          </Kpi>
+          <KpiTile
+            label="Monthly cash flow"
+            tip="netCashFlow"
+            value={
+              <>
+                <Num value={p.netCashFlow} format={(v) => money(v, { signed: true })} />
+                <span className="ml-1 text-sm font-medium tracking-normal text-zinc-500 dark:text-zinc-400">/mo</span>
+              </>
+            }
+            valueClass={signedClass(p.netCashFlow)}
+            meaning={portfolioCashMeaning(p)}
+          />
+          <KpiTile
+            label="Lender check (DSCR)"
+            tip="globalDscr"
+            value={<Num value={p.dscr} format={ratio} />}
+            valueClass={BAND_CLASSES[p.status.key].text}
+            extra={
+              <dd className="mt-2">
+                <DscrChip status={p.status} size="sm" />
+              </dd>
+            }
+            meaning={portfolioDscrMeaning(p)}
+          />
+          <KpiTile label="Cash-on-cash return" tip="coc" value={<Num value={p.coc} format={(v) => percent(v)} />} valueClass={signedClass(p.coc)} meaning={cocMeaning(p)} />
+          <KpiTile
+            label="Equity today"
+            tip="equity"
+            value={<Num value={p.equity} format={(v) => money(v)} />}
+            meaning={`${equityMeaning(p)} Projected ${compactMoney(p.year10Equity)} in 10 years.`}
+          />
         </dl>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-12">
-        <Card delay={80} className="flex flex-col lg:col-span-7">
-          <CardHeader icon={LineChart} title="Cash flow by property" subtitle="Monthly, after PITIA and operating expenses. Click a bar to open it." />
-          <div className="min-h-0 flex-1 p-6">
+      <PropertiesTable owned={owned} onOpen={onOpen} />
+
+      <div className="space-y-3">
+        <Section id="pf-cashflow" icon={LineChart} title="Cash flow by property" meaning={cashFlowRanking(owned)} subtitle="Monthly, after the loan payment and running costs. Tap a bar to open that property.">
+          <div className="p-6">
             <CashFlowChart owned={owned} dark={dark} onOpen={onOpen} />
           </div>
           <div className="grid grid-cols-2 gap-4 border-t border-hairline px-6 py-5 sm:grid-cols-4">
@@ -318,13 +336,9 @@ export default function PortfolioView({ owned, prospects, dark, onOpen, onMarkOw
             <Stat label="Reserves to hold" value={money(p.reserves)} sub="lender requirement" tip="reserves" />
             <Stat label="If all sold in 10 yrs" value={money(p.year10Proceeds)} sub="cash after costs and payoffs" tip="saleProceeds" />
           </div>
-        </Card>
-        <div className="lg:col-span-5">
-          <ImpactCard owned={owned} prospects={prospects} onOpen={onOpen} onMarkOwned={onMarkOwned} />
-        </div>
+        </Section>
+        <ImpactCard owned={owned} prospects={prospects} onOpen={onOpen} onMarkOwned={onMarkOwned} />
       </div>
-
-      <PropertiesTable owned={owned} onOpen={onOpen} />
     </div>
   );
 }

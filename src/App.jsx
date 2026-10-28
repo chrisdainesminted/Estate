@@ -8,7 +8,6 @@ import {
   Copy,
   FileSpreadsheet,
   FileText,
-  Gauge,
   HardDrive,
   Home,
   LayoutDashboard,
@@ -35,8 +34,8 @@ import { analyzeDeal, applyAdjustments, isNeutralAdjustment, maxOffer, projectDe
 import { money, ratio } from './lib/format.js';
 import { DEFAULT_DEAL, MAX_COMPARE, switchRules } from './lib/presets.js';
 import { listingToDeal, rankListings } from './lib/market.js';
+import { whatIfSummary } from './lib/explain.js';
 import HeroSummary from './components/HeroSummary.jsx';
-import DscrGauge from './components/DscrGauge.jsx';
 import InputsPanel from './components/InputsPanel.jsx';
 import LenderVsReality from './components/LenderVsReality.jsx';
 import SensitivitySliders from './components/SensitivitySliders.jsx';
@@ -52,9 +51,10 @@ import DealMemo from './components/DealMemo.jsx';
 import CommandPalette, { shortcutLabel } from './components/CommandPalette.jsx';
 import Sheet from './components/Sheet.jsx';
 import Welcome from './components/Welcome.jsx';
+import { SectionsContext, useSectionsState } from './components/Section.jsx';
 import Logo, { LogoMark } from './components/Logo.jsx';
 import { useToast } from './components/toast.jsx';
-import { Button, Card, CardHeader, ConfirmButton, Segmented, SkeletonCard } from './components/ui.jsx';
+import { Button, ConfirmButton, Segmented, SkeletonCard } from './components/ui.jsx';
 
 // Views and charts load on demand so the first screen arrives quickly.
 const PortfolioView = lazy(() => import('./components/PortfolioView.jsx'));
@@ -75,21 +75,22 @@ const VIEWS = [
   { value: 'listings', label: 'Listings', icon: Radar },
 ];
 
-// Analyze sections the command palette can jump to.
+// Analyze sections the command palette can jump to. The detail sections fold
+// down to one line; jumping to one opens it.
 const SECTIONS = [
-  { id: 'sec-summary', label: 'Summary' },
-  { id: 'sec-inputs', label: 'Deal inputs' },
-  { id: 'sec-dscr', label: 'Lender DSCR gauge' },
-  { id: 'sec-whatif', label: 'What-if sensitivity' },
-  { id: 'sec-stress', label: 'Stress test' },
-  { id: 'sec-offer', label: 'Max offer price' },
-  { id: 'sec-lender', label: 'Lender math vs. real-world math' },
-  { id: 'sec-projection', label: '10-year projection and loan schedule' },
-  { id: 'sec-refi', label: 'Cash-out refinance' },
-  { id: 'sec-exit', label: 'If you sell in year 10' },
-  { id: 'sec-tax', label: 'Taxes' },
-  { id: 'sec-opinion', label: 'Second opinion from Claude' },
+  { id: 'sec-summary', label: 'Summary', keywords: 'verdict dscr cash flow' },
+  { id: 'sec-inputs', label: 'Deal inputs', keywords: 'edit' },
+  { id: 'sec-lender', label: 'Where the rent goes', keywords: 'lender math real world pitia opex dscr gauge cap rate breakeven', folds: true },
+  { id: 'sec-offer', label: 'Most you should pay', keywords: 'max offer price targets', folds: true },
+  { id: 'sec-whatif', label: 'Try a what-if', keywords: 'sensitivity sliders rate down payment rent', folds: true },
+  { id: 'sec-stress', label: 'Stress test', keywords: 'grid rent rate', folds: true },
+  { id: 'sec-projection', label: '10-year outlook and loan schedule', keywords: 'projection wealth chart equity', folds: true },
+  { id: 'sec-refi', label: 'Cash-out refinance', keywords: 'brrrr', folds: true },
+  { id: 'sec-exit', label: 'If you sell in year 10', keywords: 'sale exit profit irr', folds: true },
+  { id: 'sec-tax', label: 'Taxes', keywords: 'depreciation cca', folds: true },
+  { id: 'sec-opinion', label: 'Second opinion from Claude', keywords: 'review ai', folds: true },
 ];
+const DETAIL_IDS = SECTIONS.filter((x) => x.folds).map((x) => x.id);
 
 function build(deal, targets, adjusted = false) {
   const rows = projectDeal(deal, YEARS);
@@ -155,6 +156,8 @@ export default function App() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const marketFeed = useMarket();
+  const sections = useSectionsState();
+  const { setOpen: openSection } = sections;
 
   const neutral = isNeutralAdjustment(adj);
   const effectiveScope = compare.length > 1 ? scope : 'active';
@@ -267,9 +270,10 @@ export default function App() {
     [marketFeed, market, targets],
   );
 
-  // Jump to an Analyze section; on phones the inputs open in their sheet.
+  // Jump to an Analyze section, opening it first; on phones the inputs open in their sheet.
   const jump = useCallback(
     (id) => {
+      if (DETAIL_IDS.includes(id)) openSection(id, true);
       const go = (tries = 0) => {
         if (id === 'sec-inputs' && !isDesktop) {
           setSheetOpen(true);
@@ -279,12 +283,13 @@ export default function App() {
         if (el) el.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
         else if (tries < 12) setTimeout(() => go(tries + 1), 100); // lazy sections may still be loading
       };
-      if (view !== 'analyze') {
-        setView('analyze');
-        setTimeout(() => go(), 50);
-      } else go();
+      // Scroll once the view (or the newly opened section) has rendered: a page
+      // that's still folded may be too short to bring the section to the top.
+      if (view !== 'analyze') setView('analyze');
+      if (view !== 'analyze' || DETAIL_IDS.includes(id)) setTimeout(() => go(), 50);
+      else go();
     },
-    [view, setView, isDesktop],
+    [view, setView, isDesktop, openSection],
   );
 
   // Ctrl/⌘ K opens the command palette from anywhere.
@@ -365,10 +370,13 @@ export default function App() {
           setAdj(NO_ADJ);
         },
       },
-      ...SECTIONS.map((s) => ({ id: `jump-${s.id}`, group: 'Jump to section', label: s.label, icon: s.id === 'sec-opinion' ? Sparkles : ListTree, keywords: 'section scroll analyze', run: () => jump(s.id) })),
+      ...SECTIONS.map((s) => ({ id: `jump-${s.id}`, group: 'Jump to section', label: s.label, icon: s.id === 'sec-opinion' ? Sparkles : ListTree, keywords: `section scroll analyze ${s.keywords}`, run: () => jump(s.id) })),
     ];
     return list;
   }, [baseItems, topListings, analyzeListing, active, inCompare, compare.length, exports, dark, toggle, neutral, deals.length, newDeal, duplicateDeal, deleteDeal, jump, openDeal, lib, toast, setView, withUndo]);
+
+  // "Open all" ignores the second opinion, which only shows inside Claude.
+  const allOpen = DETAIL_IDS.filter((id) => id !== 'sec-opinion' && (id !== 'sec-refi' || current.refi)).every((id) => sections.isOpen(id));
 
   const sliders = (
     <SensitivitySliders
@@ -395,7 +403,7 @@ export default function App() {
   );
 
   return (
-    <>
+    <SectionsContext.Provider value={sections}>
       <div className="relative min-h-screen print:hidden">
         <div aria-hidden className="app-backdrop">
           <div className="app-grid" />
@@ -510,7 +518,14 @@ export default function App() {
           {view === 'analyze' && (
             <>
               <Welcome onNewDeal={newDeal} />
-              <HeroSummary deal={current.deal} a={a} sale={current.sale} base={neutral ? null : base.a} />
+              <HeroSummary
+                deal={current.deal}
+                a={a}
+                sale={current.sale}
+                base={neutral ? null : base.a}
+                targets={targets}
+                whatIf={neutral ? null : { text: whatIfSummary(active, adj) ?? 'Testing new numbers.', onReset: () => setAdj(NO_ADJ), onApply: applyWhatIf }}
+              />
 
               <div className="grid gap-6 lg:grid-cols-12">
                 {isDesktop && (
@@ -519,25 +534,26 @@ export default function App() {
                   </aside>
                 )}
 
-                <div className="min-w-0 space-y-6 lg:col-span-8 xl:col-span-9">
-                  <div className="grid gap-6 xl:grid-cols-3">
-                    <Card id="sec-dscr" delay={60} className="flex flex-col xl:col-span-1">
-                      <CardHeader icon={Gauge} title="Lender DSCR" subtitle={a.interestOnly ? 'Rent ÷ PITIA (interest-only payment)' : 'Gross rent ÷ PITIA'} />
-                      <div className="grid flex-1 place-items-center p-6">
-                        <DscrGauge a={a} />
-                      </div>
-                    </Card>
-                    <div className="xl:col-span-2">{sliders}</div>
+                <div className="min-w-0 space-y-3 lg:col-span-8 xl:col-span-9">
+                  <div className="flex items-end justify-between gap-3 px-1 pt-1">
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                      <span className="block text-sm font-semibold text-zinc-900 dark:text-white">The details</span>
+                      Each line sums up one part of the deal. Open it to see how the number adds up.
+                    </p>
+                    <Button variant="ghost" className="shrink-0 px-2.5 py-1.5 text-xs" onClick={() => sections.setMany(DETAIL_IDS, !allOpen)}>
+                      {allOpen ? 'Close all' : 'Open all'}
+                    </Button>
                   </div>
-                  <StressTestCard deal={active} adj={adj} onPick={(p) => setAdj((x) => ({ ...x, ...p }))} />
+                  <LenderVsReality a={a} />
                   <MaxOfferCard
                     deal={current.deal}
                     targets={targets}
                     onTargets={(patch) => lib.updateSettings('targets', patch)}
                     onUsePrice={(price) => withUndo(`Price set to ${money(price)}`, () => lib.updateDeal(active.id, { price }))}
                   />
-                  <LenderVsReality a={a} />
-                  <Suspense fallback={<SkeletonCard className="h-[30rem]" />}>
+                  {sliders}
+                  <StressTestCard deal={active} adj={adj} onPick={(p) => setAdj((x) => ({ ...x, ...p }))} />
+                  <Suspense fallback={<SkeletonCard className="h-20" />}>
                     <ProjectionChart rows={current.rows} a={a} deal={current.deal} dark={dark} appreciationPct={Number(current.deal.appreciationPct)} />
                   </Suspense>
                   {current.refi && <RefiCard refi={current.refi} a={a} deal={current.deal} />}
@@ -586,6 +602,6 @@ export default function App() {
 
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} commands={commands} />}
       <DealMemo item={current} />
-    </>
+    </SectionsContext.Provider>
   );
 }

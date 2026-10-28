@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
 import { ArrowDownToLine, Target } from 'lucide-react';
 import { maxOffer } from '../lib/finance.js';
+import { offerMeaning } from '../lib/explain.js';
 import { money, percent } from '../lib/format.js';
-import { Button, Card, CardHeader, NumberField } from './ui.jsx';
+import { Button, NumberField } from './ui.jsx';
 import { InfoTip, Num } from './motion.jsx';
+import { Section } from './Section.jsx';
 
 function TargetRow({ id, on, onToggle, children }) {
   return (
@@ -28,12 +30,14 @@ export default function MaxOfferCard({ deal, targets, onTargets, onUsePrice }) {
   const maxBar = Math.max(...m.limits.filter((l) => Number.isFinite(l.price)).map((l) => l.price), asking, 1);
 
   return (
-    <Card id="sec-offer" delay={120} className="@container">
-      <CardHeader
-        icon={Target}
-        title="Max offer price"
-        subtitle="The most you can pay and still hit your targets. Rent, taxes, insurance and rehab stay as entered."
-      />
+    <Section
+      id="sec-offer"
+      icon={Target}
+      title="Most you should pay"
+      value={m.price == null || !m.feasible ? null : Number.isFinite(m.price) ? money(m.price) : 'No limit'}
+      meaning={offerMeaning(m, asking)}
+      subtitle="The highest price that still hits every target you switch on. Rent, taxes, insurance and rehab stay as entered."
+    >
       <div className="grid gap-6 p-6 @3xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <div className="grid content-start gap-2">
           <span className="eyebrow mb-1">Your targets</span>
@@ -121,6 +125,6 @@ export default function MaxOfferCard({ deal, targets, onTargets, onUsePrice }) {
           )}
         </div>
       </div>
-    </Card>
+    </Section>
   );
 }

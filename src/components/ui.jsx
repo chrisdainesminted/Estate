@@ -208,6 +208,29 @@ export function Stat({ label, value, sub, tip, className = '' }) {
   );
 }
 
+/**
+ * A headline number in a 2×2 (phones) or 1×4 (desktop) grid, with a plain
+ * sentence saying what it means. `base` shows the saved value during a what-if.
+ */
+export function KpiTile({ label, tip, value, valueClass, meaning, extra, base }) {
+  return (
+    <div className="border-hairline p-4 sm:p-5 max-lg:odd:border-r max-lg:[&:nth-child(-n+2)]:border-b lg:[&:not(:last-child)]:border-r">
+      <dt className="flex items-center gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+        {label}
+        {tip && <InfoTip k={tip} />}
+      </dt>
+      <dd className={`mt-1.5 text-[26px] leading-none font-semibold tracking-tight sm:text-[32px] ${valueClass || 'text-zinc-900 dark:text-white'}`}>{value}</dd>
+      {extra}
+      <dd className="mt-2 text-xs leading-snug text-zinc-600 dark:text-zinc-400">{meaning}</dd>
+      {base && (
+        <dd className="tabular mt-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
+          Before what-if: <span className="font-medium text-zinc-700 dark:text-zinc-200">{base}</span>
+        </dd>
+      )}
+    </div>
+  );
+}
+
 /** Green/red text for signed money values, plus the sign so color is never the only cue. */
 export function signedClass(v) {
   if (v > 0.005) return 'text-emerald-700 dark:text-emerald-400';

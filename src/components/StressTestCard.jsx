@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react';
 import { Grid3x3 } from 'lucide-react';
 import { analyzeDeal, breakevenRate, stressGrid } from '../lib/finance.js';
 import { DSCR_BANDS } from '../lib/dscr.js';
-import { money, percent, ratio } from '../lib/format.js';
-import { Card, CardHeader, Segmented } from './ui.jsx';
+import { stressSentence } from '../lib/explain.js';
+import { money, ratio } from '../lib/format.js';
+import { Segmented } from './ui.jsx';
+import { Section } from './Section.jsx';
 
 const POS = [5, 150, 105]; // emerald-600
 const NEG = [220, 38, 38]; // red-600
@@ -31,36 +33,28 @@ export default function StressTestCard({ deal, adj, onPick }) {
   const a = useMemo(() => analyzeDeal(base), [base]);
   const maxAbs = Math.max(...grid.flat().map((c) => Math.abs(c.netCashFlow)));
   const beRate = useMemo(() => breakevenRate(base), [base]);
-  const beRentDrop = a.grossRent > 0 ? a.breakevenRent / a.grossRent - 1 : 0;
   const rateHeads = grid[0];
 
-  const summary =
-    a.netCashFlow < 0
-      ? `At today’s ${Number(base.rate)}% this deal already loses money. It needs ${percent(beRentDrop, 1, { signed: true })} rent${beRate != null ? ` or a rate under ${beRate.toFixed(2)}%` : ''} to break even.`
-      : `Cash flow holds until rent falls ${percent(-beRentDrop, 1)}${beRate != null ? `, or the rate climbs to ${beRate.toFixed(2)}%` : ''}.`;
-
   return (
-    <Card id="sec-stress" delay={110}>
-      <CardHeader
-        icon={Grid3x3}
-        title="Stress test"
-        subtitle="Rent and rate moving together. Click a cell to try it as your what-if."
-        actions={
-          <Segmented
-            size="sm"
-            label="Stress test measure"
-            value={metric}
-            onChange={setMetric}
-            options={[
-              { value: 'cashFlow', label: 'Cash flow' },
-              { value: 'dscr', label: 'DSCR' },
-            ]}
-          />
-        }
-      />
-      <div className="px-6 pt-5">
-        <p className="text-sm text-zinc-700 dark:text-zinc-300">{summary}</p>
-      </div>
+    <Section
+      id="sec-stress"
+      icon={Grid3x3}
+      title="Stress test"
+      meaning={stressSentence(a, base.rate, beRate)}
+      subtitle="Rent and rate moving together. Tap a cell to try it as your what-if."
+      actions={
+        <Segmented
+          size="sm"
+          label="Stress test measure"
+          value={metric}
+          onChange={setMetric}
+          options={[
+            { value: 'cashFlow', label: 'Cash flow' },
+            { value: 'dscr', label: 'DSCR' },
+          ]}
+        />
+      }
+    >
       <div className="thin-scroll overflow-x-auto p-4 sm:p-6">
         <table className="tabular w-full min-w-[600px] border-separate border-spacing-1 text-sm">
           <caption className="sr-only">
@@ -133,6 +127,6 @@ export default function StressTestCard({ deal, adj, onPick }) {
           <span className="ml-auto">Outlined: your current what-if. Dotted: the deal as saved.</span>
         </p>
       </div>
-    </Card>
+    </Section>
   );
 }

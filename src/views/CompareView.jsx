@@ -7,8 +7,8 @@ export default function CompareView({ items, compare, slotOf, compared, sliders,
     <>
       <div className="rise px-1 pt-2">
         <p className="eyebrow">Compare</p>
-        <h2 className="mt-1.5 text-3xl font-semibold tracking-tight text-zinc-950 sm:text-4xl dark:text-white">Which door pays you?</h2>
-        <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
+        <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-zinc-950 sm:text-3xl dark:text-white">Which door pays you?</h2>
+        <p className="mt-1.5 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
           Up to {MAX_COMPARE} deals underwritten side by side: what the lender approves, what actually lands in your account, and what each one is worth
           when you sell.
         </p>

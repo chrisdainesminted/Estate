@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
 import { Landmark } from 'lucide-react';
 import { taxSnapshot } from '../lib/finance.js';
+import { taxMeaning } from '../lib/explain.js';
 import { money, percent } from '../lib/format.js';
-import { Card, CardHeader, NumberField, Segmented, Stat, signedClass } from './ui.jsx';
+import { NumberField, Segmented, Stat, signedClass } from './ui.jsx';
 import { InfoTip, Num } from './motion.jsx';
+import { Section } from './Section.jsx';
 
 function Step({ label, value, op, strong, tip }) {
   return (
@@ -34,16 +36,20 @@ export default function TaxCard({ deal, tax, onTax }) {
     : { label: `Tax at ${percent(t.rate, 0)}`, value: money(t.taxDue), cls: 'text-zinc-900 dark:text-white' };
 
   return (
-    <Card id="sec-tax" delay={240} className="@container overflow-hidden">
-      <CardHeader
-        icon={Landmark}
-        title="Taxes, year 1"
-        subtitle={
-          ca
-            ? 'Capital cost allowance can shelter your rental income from tax. Canadian rules, simplified.'
-            : 'Depreciation turns part of your cash flow into a paper loss. US rules, simplified.'
-        }
-      />
+    <Section
+      id="sec-tax"
+      icon={Landmark}
+      title="Taxes in year 1"
+      value={`${money(t.afterTaxCashFlow / 12, { signed: true })}/mo after tax`}
+      valueClass={signedClass(t.afterTaxCashFlow)}
+      meaning={taxMeaning(t)}
+      subtitle={
+        ca
+          ? 'Capital cost allowance can shelter your rental income from tax. Canadian rules, simplified.'
+          : 'Depreciation turns part of your cash flow into a paper loss. US rules, simplified.'
+      }
+      className="overflow-hidden"
+    >
       <div className="grid gap-8 p-6 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <div>
           <div className="mb-4 grid grid-cols-2 gap-3">
@@ -106,6 +112,6 @@ export default function TaxCard({ deal, tax, onTax }) {
           </p>
         </div>
       </div>
-    </Card>
+    </Section>
   );
 }

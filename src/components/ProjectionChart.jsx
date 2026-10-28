@@ -2,10 +2,12 @@ import { useMemo, useState } from 'react';
 import { BarChart3, Landmark, Table2, TrendingUp } from 'lucide-react';
 import { Bar, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { chartTheme, niceScale } from '../lib/chartTheme.js';
+import { outlookMeaning } from '../lib/explain.js';
 import { loanSchedule } from '../lib/finance.js';
 import { compactMoney, money } from '../lib/format.js';
-import { Card, CardHeader, Segmented, Stat, signedClass } from './ui.jsx';
+import { Segmented, Stat, signedClass } from './ui.jsx';
 import { CHART_ANIMATE } from './motion.jsx';
+import { Section } from './Section.jsx';
 
 const SERIES = [
   { key: 'cumCashFlow', label: 'Cumulative cash flow' },
@@ -70,25 +72,27 @@ export default function ProjectionChart({ rows, a, deal, dark, appreciationPct }
   }, [rows]);
 
   return (
-    <Card id="sec-projection" delay={180} className="@container">
-      <CardHeader
-        icon={TrendingUp}
-        title={`${years}-year wealth projection`}
-        subtitle={`Cumulative cash flow + principal paydown + ${appreciationPct}% annual appreciation, before selling costs.`}
-        actions={
-          <Segmented
-            size="sm"
-            label="Projection view"
-            value={view}
-            onChange={setView}
-            options={[
-              { value: 'chart', label: 'Chart', icon: BarChart3 },
-              { value: 'table', label: 'Table', icon: Table2 },
-              { value: 'loan', label: 'Loan', icon: Landmark },
-            ]}
-          />
-        }
-      />
+    <Section
+      id="sec-projection"
+      icon={TrendingUp}
+      title={`${years}-year outlook`}
+      value={money(y10.totalReturn, { signed: true })}
+      valueClass={signedClass(y10.totalReturn)}
+      meaning={outlookMeaning(years, appreciationPct)}
+      actions={
+        <Segmented
+          size="sm"
+          label="Projection view"
+          value={view}
+          onChange={setView}
+          options={[
+            { value: 'chart', label: 'Chart', icon: BarChart3 },
+            { value: 'table', label: 'Table', icon: Table2 },
+            { value: 'loan', label: 'Loan', icon: Landmark },
+          ]}
+        />
+      }
+    >
 
       <div className="p-5">
         {view === 'chart' ? (
@@ -224,6 +228,6 @@ export default function ProjectionChart({ rows, a, deal, dark, appreciationPct }
         <Stat label="Loan balance" value={money(y10.balance)} sub={`from ${money(a.loanAmount)}`} />
         <Stat label="Equity" tip="equity" value={money(y10.equity)} sub="value − balance" />
       </div>
-    </Card>
+    </Section>
   );
 }

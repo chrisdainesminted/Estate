@@ -5,6 +5,8 @@ import { TONE_CLASSES, verdict } from '../lib/dscr.js';
 import { compactMoney, money, percent } from '../lib/format.js';
 import { MAX_COMPARE } from '../lib/presets.js';
 import { Button, Card, CardHeader, DscrChip, signedClass } from './ui.jsx';
+import { Section } from './Section.jsx';
+import { compareSummary } from '../lib/explain.js';
 import { CHART_ANIMATE, InfoTip } from './motion.jsx';
 
 const pctOf = (v) => percent(v, 2);
@@ -238,6 +240,18 @@ export default function ComparisonMatrix({ items, activeId, onEdit, onDuplicate,
             )
           }
         />
+        {items.length > 1 && (
+          <ul className="grid gap-1.5 border-b border-hairline px-5 py-4 text-sm text-zinc-700 sm:px-6 dark:text-zinc-300" aria-label="In short">
+            {compareSummary(items).map((line) => (
+              <li key={line.key} className="flex gap-2">
+                <Trophy className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+                <span>
+                  <strong className="font-semibold text-zinc-900 dark:text-white">{line.name}</strong> {line.text}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
         <div className="thin-scroll overflow-x-auto">
           <table className="w-full min-w-[560px] text-sm">
             <thead>
@@ -328,16 +342,17 @@ export default function ComparisonMatrix({ items, activeId, onEdit, onDuplicate,
         </div>
       </Card>
 
-      <Card delay={200}>
-        <CardHeader
-          icon={TrendingUp}
-          title="Profit if you sell, by year"
-          subtitle="Cash flow + sale price − selling costs − loan payoff − cash invested. Where a line crosses $0 is the earliest year a sale breaks even."
-        />
+      <Section
+        id="cmp-profit"
+        icon={TrendingUp}
+        title="Profit if you sell, by year"
+        meaning="What each deal would leave you with if sold in any year. Where a line crosses $0 is the earliest a sale breaks even."
+        subtitle="Cash flow + sale price − selling costs − loan payoff − cash invested."
+      >
         <div className="p-6">
           <CompareChart items={items} dark={dark} />
         </div>
-      </Card>
+      </Section>
     </div>
   );
 }

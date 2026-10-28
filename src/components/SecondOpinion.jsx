@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { MessageSquareText, RefreshCw, Sparkles, Square } from 'lucide-react';
 import { capability } from '../lib/runtime.js';
 import { buildOpinionPrompt, parseOpinion } from '../lib/opinion.js';
-import { Button, Card, CardHeader } from './ui.jsx';
+import { Button } from './ui.jsx';
+import { Section } from './Section.jsx';
 
 // Codes after which the feature hides for this visit (the viewer said no,
 // or Claude isn't available to them here).
@@ -75,24 +76,31 @@ export default function SecondOpinion({ item, targets }) {
   const blocks = parseOpinion(state.text);
 
   return (
-    <Card id="sec-opinion" delay={260} className="relative overflow-hidden">
+    <Section
+      id="sec-opinion"
+      icon={Sparkles}
+      title="Second opinion"
+      meaning={
+        busy
+          ? 'Claude is reading the numbers…'
+          : state.phase === 'done' && blocks.length > 0
+            ? 'Claude’s review is ready: a verdict, the risks and what to double-check.'
+            : 'Ask Claude to check this deal’s numbers and assumptions, like an underwriter would.'
+      }
+      className="relative overflow-hidden"
+      actions={
+        busy ? (
+          <Button onClick={() => ctl.current?.abort()}>
+            <Square className="size-3.5" aria-hidden /> Stop
+          </Button>
+        ) : state.phase === 'done' ? (
+          <Button onClick={() => ask(true)}>
+            <RefreshCw className="size-3.5" aria-hidden /> Ask again
+          </Button>
+        ) : null
+      }
+    >
       <div aria-hidden className="pointer-events-none absolute -top-32 -right-20 size-80 rounded-full bg-radial from-violet-400/20 via-sky-300/10 to-transparent to-70% blur-2xl" />
-      <CardHeader
-        icon={Sparkles}
-        title="Second opinion"
-        subtitle="Claude reviews this deal’s numbers and assumptions, like an underwriter would."
-        actions={
-          busy ? (
-            <Button onClick={() => ctl.current?.abort()}>
-              <Square className="size-3.5" aria-hidden /> Stop
-            </Button>
-          ) : state.phase === 'done' ? (
-            <Button onClick={() => ask(true)}>
-              <RefreshCw className="size-3.5" aria-hidden /> Ask again
-            </Button>
-          ) : null
-        }
-      />
       <div className="relative p-6">
         {state.phase === 'idle' ? (
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -145,6 +153,6 @@ export default function SecondOpinion({ item, targets }) {
           </div>
         )}
       </div>
-    </Card>
+    </Section>
   );
 }
