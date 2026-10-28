@@ -87,6 +87,7 @@ export default function HeroSummary({ deal, a, sale, base }) {
               {Number(deal.rate).toFixed(3).replace(/0$/, '')}% · {deal.termYears}-yr
             </MetaPill>
             <MetaPill>{money(a.grossRent)}/mo rent</MetaPill>
+            {deal.country === 'ca' && <MetaPill>Ontario rules</MetaPill>}
             {a.interestOnly && <MetaPill>Interest-only {a.ioYears} yrs</MetaPill>}
             {sale && Number.isFinite(sale.irr) && <MetaPill>{percent(sale.irr, 1)} IRR if sold yr {sale.year}</MetaPill>}
           </div>

@@ -7,6 +7,50 @@ import { dscrStatus } from './dscr.js';
 const pct = (v) => (Number(v) || 0) / 100;
 const num = (v) => Number(v) || 0;
 
+/** Deals follow US conventions unless marked Canadian (Ontario). */
+export const isCanada = (deal) => deal?.country === 'ca';
+
+/**
+ * The rate to run monthly loan math on. Canadian fixed-rate mortgages
+ * compound semi-annually, so a quoted 5% is converted to the monthly-
+ * compounded rate with the same effect (about 4.949%).
+ */
+export function loanRate(ratePct, deal) {
+  const r = num(ratePct);
+  if (!isCanada(deal) || r <= 0) return r;
+  return 1200 * (Math.pow(1 + r / 200, 1 / 6) - 1);
+}
+
+/**
+ * Ontario land transfer tax: marginal bands on the purchase price. Thunder
+ * Bay adds no municipal tax (Toronto does). Above $2M the top band is 2.5%
+ * only for land with one or two single-family homes.
+ */
+export function ontarioLandTransferTax(price, units = 1) {
+  const p = Math.max(num(price), 0);
+  const bands = [
+    [55000, 0.005],
+    [250000, 0.01],
+    [400000, 0.015],
+    [2000000, 0.02],
+    [Infinity, units <= 2 ? 0.025 : 0.02],
+  ];
+  let tax = 0;
+  let floor = 0;
+  for (const [cap, rate] of bands) {
+    if (p <= floor) break;
+    tax += (Math.min(p, cap) - floor) * rate;
+    floor = cap;
+  }
+  return tax;
+}
+
+/** Closing costs at a given price: the deal's % plus, in Ontario, land transfer tax. */
+export function closingCostsAt(deal, price) {
+  const units = Math.max(Math.round(num(deal.units)), 1);
+  return price * pct(deal.closingPct) + (isCanada(deal) ? ontarioLandTransferTax(price, units) : 0);
+}
+
 /** Monthly principal & interest payment. Falls back to straight-line when the rate is 0. */
 export function monthlyPI(principal, annualRatePct, termYears) {
   const P = num(principal);
@@ -117,7 +161,7 @@ export function loanTimeline(deal, months) {
   const loan = Math.max(price - price * pct(deal.downPct), 0);
   const refiMonth = refiMonthFor(deal, months + 1);
   const firstLen = refiMonth ?? months;
-  const rows = amortize(loan, deal.rate, deal.termYears, Math.min(firstLen, months), deal.ioYears).map((r) => ({ ...r, loanAge: r.month }));
+  const rows = amortize(loan, loanRate(deal.rate, deal), deal.termYears, Math.min(firstLen, months), deal.ioYears).map((r) => ({ ...r, loanAge: r.month }));
   if (refiMonth == null || refiMonth > months) return { rows, refi: null };
 
   const value = startingValue(deal) * Math.pow(1 + pct(deal.appreciationPct), refiMonth / 12);
@@ -135,7 +179,7 @@ export function loanTimeline(deal, months) {
     costs,
     cashOut: newLoan - oldBalance - penalty - costs,
   };
-  const second = amortize(newLoan, deal.refiRate, deal.refiTermYears, months - refiMonth, 0);
+  const second = amortize(newLoan, loanRate(deal.refiRate, deal), deal.refiTermYears, months - refiMonth, 0);
   second.forEach((r, i) => rows.push({ ...r, month: refiMonth + i + 1, loanAge: i + 1 }));
   return { rows, refi };
 }
@@ -151,7 +195,9 @@ export function analyzeDeal(deal) {
   const downPayment = price * pct(deal.downPct);
   const loanAmount = Math.max(price - downPayment, 0);
   const ltv = price > 0 ? loanAmount / price : 0;
-  const closingCosts = price * pct(deal.closingPct);
+  const units = Math.max(Math.round(num(deal.units)), 1);
+  const landTransferTax = isCanada(deal) ? ontarioLandTransferTax(price, units) : 0;
+  const closingCosts = closingCostsAt(deal, price);
   const cashToClose = downPayment + closingCosts;
   const rehab = Math.max(num(deal.rehabCost), 0);
   // Everything you actually spend: the denominator for cash-on-cash and IRR.
@@ -159,16 +205,16 @@ export function analyzeDeal(deal) {
 
   // Lenders qualify interest-only DSCR loans on the interest-only payment.
   const ioMonths = ioMonthsFor(deal.termYears, deal.ioYears);
-  const schedule12 = amortize(loanAmount, deal.rate, deal.termYears, 12, deal.ioYears);
+  const rate = loanRate(deal.rate, deal);
+  const schedule12 = amortize(loanAmount, rate, deal.termYears, 12, deal.ioYears);
   const pi = schedule12[0]?.payment ?? 0;
-  const amortizingPI = ioMonths > 0 ? monthlyPI(loanAmount, deal.rate, num(deal.termYears) - ioMonths / 12) : pi;
+  const amortizingPI = ioMonths > 0 ? monthlyPI(loanAmount, rate, num(deal.termYears) - ioMonths / 12) : pi;
   const taxes = num(deal.taxesAnnual) / 12;
   const insurance = num(deal.insuranceAnnual) / 12;
   const hoa = num(deal.hoaMonthly);
   const fixedCosts = taxes + insurance + hoa;
   const pitia = pi + fixedCosts;
 
-  const units = Math.max(Math.round(num(deal.units)), 1);
   const grossRent = num(deal.rentPerUnit) * units;
   const lenderRent = grossRent * (1 - pct(deal.lenderHaircutPct));
   const dscr = pitia > 0 ? lenderRent / pitia : Infinity;
@@ -214,6 +260,7 @@ export function analyzeDeal(deal) {
     loanAmount,
     ltv,
     closingCosts,
+    landTransferTax,
     cashToClose,
     rehab,
     cashInvested,
@@ -335,7 +382,7 @@ export function refiAnalysis(deal, years = 10) {
   const yearsIn = refi.year;
   const rent = a.grossRent * Math.pow(1 + pct(deal.rentGrowthPct), yearsIn);
   const fixed = (a.taxes + a.insurance + a.hoa) * Math.pow(1 + pct(deal.expenseGrowthPct), yearsIn);
-  const payment = rows[refi.month]?.payment ?? monthlyPI(refi.newLoan, deal.refiRate, deal.refiTermYears);
+  const payment = rows[refi.month]?.payment ?? monthlyPI(refi.newLoan, loanRate(deal.refiRate, deal), deal.refiTermYears);
   const pitia = payment + fixed;
   const lenderRent = rent * (1 - pct(deal.lenderHaircutPct));
   const netCashFlow = rent * (1 - opexRate(deal)) - pitia;
@@ -482,8 +529,9 @@ export const DEFAULT_TARGETS = { dscr: 1.25, cashFlowPerDoor: 200, coc: 8, useDs
 /**
  * The highest purchase price that still meets every active target, solved
  * exactly: the loan, its payment and closing costs all scale linearly with
- * price, so each target gives a closed-form ceiling. Taxes, insurance, HOA,
- * rent and rehab are held as entered.
+ * price, so each target gives a closed-form ceiling. (Ontario's land
+ * transfer tax is banded, so there the cash-on-cash ceiling is found by
+ * bisection.) Taxes, insurance, HOA, rent and rehab are held as entered.
  *
  * targets: { dscr, cashFlowPerDoor ($/door/mo), coc (%), useDscr, useCashFlow, useCoc }
  */
@@ -495,7 +543,8 @@ export function maxOffer(deal, targets = DEFAULT_TARGETS) {
   const keep = 1 - opexRate(deal);
   const R = a.grossRent * keep - fixed; // monthly cash before the loan payment
   // Monthly payment per dollar of price (interest-only loans qualify on interest).
-  const perLoanDollar = a.interestOnly ? pct(deal.rate) / 12 : monthlyPI(1, deal.rate, deal.termYears);
+  const rate = loanRate(deal.rate, deal);
+  const perLoanDollar = a.interestOnly ? pct(rate) / 12 : monthlyPI(1, rate, deal.termYears);
   const q = (1 - d) * perLoanDollar;
 
   const ceiling = (numerator, denominator) => {
@@ -513,7 +562,20 @@ export function maxOffer(deal, targets = DEFAULT_TARGETS) {
   }
   if (targets.useCoc && num(targets.coc) > 0) {
     const C = pct(targets.coc);
-    limits.push({ key: 'coc', label: `${num(targets.coc)}% cash-on-cash`, price: ceiling(12 * R - C * a.rehab, 12 * q + C * s) });
+    let price = ceiling(12 * R - C * a.rehab, 12 * q + C * s);
+    if (isCanada(deal) && Number.isFinite(price) && price > 0) {
+      // Land transfer tax only adds cost, so the linear answer is an upper bound.
+      const meets = (x) => 12 * (R - q * x) - C * (d * x + closingCostsAt(deal, x) + a.rehab) >= 0;
+      let lo = 0;
+      let hi = price;
+      for (let i = 0; i < 60; i++) {
+        const mid = (lo + hi) / 2;
+        if (meets(mid)) lo = mid;
+        else hi = mid;
+      }
+      price = lo;
+    }
+    limits.push({ key: 'coc', label: `${num(targets.coc)}% cash-on-cash`, price });
   }
 
   if (!limits.length) return { limits, price: null, binding: null };
@@ -530,8 +592,12 @@ export function maxOffer(deal, targets = DEFAULT_TARGETS) {
 
 export const DEFAULT_TAX = { rate: 32, landPct: 20, useLosses: false };
 
+/** Canada: capital cost allowance on a rental building (Class 1). */
+export const CCA_RATE = 0.04;
+
 /**
- * Year-1 income tax picture for a rental, in the usual US shape.
+ * Year-1 income tax picture for a rental. US shape by default; Canadian
+ * deals use capital cost allowance instead (see the branch below).
  * Depreciation: residential property over 27.5 years, straight line, on the
  * building's share of price and closing costs plus the rehab. Deductions:
  * management, repairs, property tax, insurance, HOA, mortgage interest and
@@ -547,29 +613,59 @@ export function taxSnapshot(deal, tax = DEFAULT_TAX) {
   const land = Math.min(Math.max(pct(tax.landPct), 0), 1);
   const rate = Math.min(Math.max(pct(tax.rate), 0), 1);
   const basis = (a.price + a.closingCosts) * (1 - land) + a.rehab;
-  const depreciation = basis / 27.5;
   const rentCollected = a.grossRent * 12 * (1 - pct(deal.vacancyPct));
   const operating = (a.opex.management + a.opex.maintenance + a.taxes + a.insurance + a.hoa) * 12;
   const interest = a.year1Interest;
+  const common = {
+    basis,
+    rentCollected,
+    operating,
+    interest,
+    rate,
+    preTaxCashFlow: a.annualCashFlow,
+    preTaxCoc: a.coc,
+  };
+
+  if (isCanada(deal)) {
+    // CCA can bring rental income down to zero but can't create or deepen a
+    // loss. A loss from the other expenses does reduce tax on other income.
+    // Unclaimed CCA stays in the pool for later years.
+    const beforeCca = rentCollected - operating - interest;
+    const ccaAvailable = basis * CCA_RATE;
+    const cca = Math.min(ccaAvailable, Math.max(beforeCca, 0));
+    const taxable = beforeCca - cca;
+    const taxDue = taxable * rate;
+    const afterTaxCashFlow = a.annualCashFlow - taxDue;
+    return {
+      ...common,
+      rules: 'ca',
+      depreciation: cca,
+      ccaAvailable,
+      ccaUnused: ccaAvailable - cca,
+      taxable,
+      taxDue,
+      carryForward: 0,
+      depreciationSaves: cca * rate,
+      afterTaxCashFlow,
+      afterTaxCoc: a.cashInvested > 0 ? afterTaxCashFlow / a.cashInvested : 0,
+    };
+  }
+
+  const depreciation = basis / 27.5;
   const taxable = rentCollected - operating - interest - depreciation;
   // Tax on a year's rental income: a loss only helps if you can use it.
   const taxOn = (income) => (income > 0 || tax.useLosses ? income * rate : 0);
   const taxDue = taxOn(taxable); // negative = tax saved on other income
   const afterTaxCashFlow = a.annualCashFlow - taxDue;
   return {
-    basis,
+    ...common,
+    rules: 'us',
     depreciation,
-    rentCollected,
-    operating,
-    interest,
     taxable,
-    rate,
     taxDue,
     carryForward: taxable < 0 && !tax.useLosses ? -taxable : 0,
     depreciationSaves: taxOn(taxable + depreciation) - taxDue,
-    preTaxCashFlow: a.annualCashFlow,
     afterTaxCashFlow,
-    preTaxCoc: a.coc,
     afterTaxCoc: a.cashInvested > 0 ? afterTaxCashFlow / a.cashInvested : 0,
   };
 }

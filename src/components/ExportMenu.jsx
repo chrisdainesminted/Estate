@@ -49,7 +49,7 @@ export default function ExportMenu({ current, count, exports }) {
         className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-sm font-medium text-zinc-600 transition hover:bg-zinc-950/5 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white"
       >
         <Download className="size-4" aria-hidden />
-        <span className="max-xl:sr-only">Export</span>
+        <span className="max-[1400px]:sr-only">Export</span>
       </button>
       {open && (
         <div role="menu" className="glass-strong pop absolute top-full right-0 z-50 mt-2 w-72 rounded-2xl p-1.5">

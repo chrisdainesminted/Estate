@@ -1,5 +1,5 @@
 import { Building2, ChevronDown, Copy, Hammer, Landmark, MapPin, PencilRuler, Receipt, SlidersHorizontal, Trash2, Wallet, Wrench } from 'lucide-react';
-import { UNIT_TYPES } from '../lib/presets.js';
+import { UNIT_TYPES, switchRules } from '../lib/presets.js';
 import { money, percent } from '../lib/format.js';
 import { Card, CardHeader, FieldLabel, NumberField, Segmented, SelectField } from './ui.jsx';
 import { InfoTip } from './motion.jsx';
@@ -49,6 +49,7 @@ export default function InputsPanel({ deal, a, onChange, onDuplicate, onDelete }
   const id = (k) => `${deal.id}-${k}`;
   const set = (k) => (v) => onChange({ [k]: v });
   const opexPct = (Number(deal.mgmtPct) || 0) + (Number(deal.maintPct) || 0) + (Number(deal.vacancyPct) || 0) + (Number(deal.capexPct) || 0);
+  const ca = deal.country === 'ca';
 
   return (
     <Card id="sec-inputs">
@@ -105,6 +106,22 @@ export default function InputsPanel({ deal, a, onChange, onDuplicate, onDelete }
               <NumberField id={id('owned')} label="Years owned" value={deal.yearsOwned} onChange={set('yearsOwned')} max={40} step={1} decimals={1} />
             </div>
           )}
+          <div>
+            <span className="mb-1.5 flex items-center gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              Rules
+              <InfoTip k="rules" />
+            </span>
+            <Segmented
+              size="sm"
+              label="Rules"
+              value={ca ? 'ca' : 'us'}
+              onChange={(v) => onChange(switchRules(deal, v))}
+              options={[
+                { value: 'us', label: 'US' },
+                { value: 'ca', label: 'Canada' },
+              ]}
+            />
+          </div>
         </div>
       </div>
 
@@ -184,7 +201,17 @@ export default function InputsPanel({ deal, a, onChange, onDuplicate, onDelete }
 
       <Section icon={Landmark} title="Financing">
         <NumberField id={id('down')} label="Down payment" suffix="%" value={deal.downPct} onChange={set('downPct')} max={100} step={1} hint={money(a.downPayment)} />
-        <NumberField id={id('rate')} label="Interest rate" suffix="%" value={deal.rate} onChange={set('rate')} max={30} step={0.125} decimals={3} />
+        <NumberField
+          id={id('rate')}
+          label="Interest rate"
+          suffix="%"
+          value={deal.rate}
+          onChange={set('rate')}
+          max={30}
+          step={0.125}
+          decimals={3}
+          hint={ca ? 'Compounded semi-annually' : undefined}
+        />
         <div>
           <label htmlFor={id('term')} className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
             Amortization
@@ -195,14 +222,24 @@ export default function InputsPanel({ deal, a, onChange, onDuplicate, onDelete }
             onChange={(e) => onChange({ termYears: Number(e.target.value) })}
             className="field w-full px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100"
           >
-            {[10, 15, 20, 25, 30, 40].map((y) => (
+            {[...new Set([10, 15, 20, 25, 30, 35, 40, Number(deal.termYears)])].sort((p, q) => p - q).map((y) => (
               <option key={y} value={y}>
                 {y} years
               </option>
             ))}
           </select>
         </div>
-        <NumberField id={id('closing')} label="Closing costs" suffix="%" value={deal.closingPct} onChange={set('closingPct')} max={15} step={0.5} hint={money(a.closingCosts)} />
+        <NumberField
+          id={id('closing')}
+          label={ca ? 'Other closing costs' : 'Closing costs'}
+          tip={ca ? 'landTransferTax' : undefined}
+          suffix="%"
+          value={deal.closingPct}
+          onChange={set('closingPct')}
+          max={15}
+          step={0.5}
+          hint={ca ? `${money(a.closingCosts - a.landTransferTax)} + ${money(a.landTransferTax)} land transfer tax` : money(a.closingCosts)}
+        />
         <div className="col-span-2">
           <SelectField id={id('io')} label="Interest-only period" tip="interestOnly" value={a.ioYears} onChange={(e) => onChange({ ioYears: Number(e.target.value) })}>
             {[...new Set([0, 5, 7, 10, a.ioYears])]
@@ -299,10 +336,20 @@ export default function InputsPanel({ deal, a, onChange, onDuplicate, onDelete }
         )}
       </Section>
 
-      <Section icon={Receipt} title="Taxes, insurance & HOA">
+      <Section icon={Receipt} title={ca ? 'Taxes, insurance & utilities' : 'Taxes, insurance & HOA'}>
         <NumberField id={id('tax')} label="Property taxes" prefix="$" suffix="/yr" value={deal.taxesAnnual} onChange={set('taxesAnnual')} step={100} decimals={0} hint={`${money(a.taxes)}/mo`} />
         <NumberField id={id('ins')} label="Insurance" prefix="$" suffix="/yr" value={deal.insuranceAnnual} onChange={set('insuranceAnnual')} step={100} decimals={0} hint={`${money(a.insurance)}/mo`} />
-        <NumberField id={id('hoa')} label="HOA" prefix="$" suffix="/mo" value={deal.hoaMonthly} onChange={set('hoaMonthly')} step={10} decimals={0} />
+        <NumberField
+          id={id('hoa')}
+          label={ca ? 'Condo fees & utilities' : 'HOA'}
+          tip={ca ? 'utilities' : undefined}
+          prefix="$"
+          suffix="/mo"
+          value={deal.hoaMonthly}
+          onChange={set('hoaMonthly')}
+          step={10}
+          decimals={0}
+        />
         <Derived label="PITIA" value={`${money(a.pitia)}/mo`} />
       </Section>
 
@@ -338,7 +385,7 @@ export default function InputsPanel({ deal, a, onChange, onDuplicate, onDelete }
           onChange={set('sellingCostPct')}
           max={20}
           step={0.5}
-          hint="Agent fees, transfer tax, concessions"
+          hint={ca ? 'Agent commission, legal fees' : 'Agent fees, transfer tax, concessions'}
         />
       </Section>
     </Card>

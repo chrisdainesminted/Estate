@@ -639,3 +639,61 @@ describe('breakevenRate', () => {
     expect(breakevenRate({ ...PRESET_DEALS[0], rentPerUnit: 600 })).toBeNull();
   });
 });
+
+describe('Canadian rules', () => {
+  const ca = { ...PRESET_DEALS[1], country: 'ca', closingPct: 1 }; // $500k duplex, Ontario
+  const all = { dscr: 1.25, cashFlowPerDoor: 200, coc: 8, useDscr: true, useCashFlow: true, useCoc: true };
+
+  it('compounds the mortgage rate semi-annually', async () => {
+    const { loanRate } = await import('./finance.js');
+    // The standard Canadian figure for $400k at 5% over 25 years.
+    expect(monthlyPI(400000, loanRate(5, { country: 'ca' }), 25)).toBeCloseTo(2326.42, 2);
+    expect(loanRate(5, { country: 'us' })).toBe(5);
+    expect(analyzeDeal({ ...ca, price: 500000, downPct: 20, rate: 5, termYears: 25 }).pi).toBeCloseTo(2326.42, 2);
+  });
+
+  it('charges Ontario land transfer tax by band', async () => {
+    const { ontarioLandTransferTax } = await import('./finance.js');
+    expect(ontarioLandTransferTax(55000)).toBeCloseTo(275, 6);
+    expect(ontarioLandTransferTax(300000)).toBeCloseTo(2975, 6);
+    expect(ontarioLandTransferTax(404900)).toBeCloseTo(4573, 6);
+    expect(ontarioLandTransferTax(500000)).toBeCloseTo(6475, 6);
+    // The 2.5% band over $2M applies to one or two single-family homes only.
+    expect(ontarioLandTransferTax(2500000, 1)).toBeCloseTo(48975, 6);
+    expect(ontarioLandTransferTax(2500000, 3)).toBeCloseTo(46475, 6);
+  });
+
+  it('adds the tax to closing costs and cash invested', () => {
+    const a = analyzeDeal(ca);
+    expect(a.landTransferTax).toBeCloseTo(6475, 6);
+    expect(a.closingCosts).toBeCloseTo(5000 + 6475, 6);
+    expect(a.cashInvested).toBeCloseTo(125000 + 11475, 6);
+    expect(analyzeDeal(PRESET_DEALS[1]).landTransferTax).toBe(0);
+  });
+
+  it('still lands the max offer exactly on each target', () => {
+    const m = maxOffer({ ...ca, rentPerUnit: 2600 }, all);
+    const at = (key) => analyzeDeal({ ...ca, rentPerUnit: 2600, price: m.limits.find((l) => l.key === key).price });
+    expect(at('dscr').dscr).toBeCloseTo(1.25, 8);
+    expect(at('cashFlow').netCashFlow / 2).toBeCloseTo(200, 6);
+    expect(at('coc').coc).toBeCloseTo(0.08, 6);
+  });
+
+  it('caps CCA so it never creates or deepens a rental loss', () => {
+    const tax = { rate: 30, landPct: 20, useLosses: false };
+    const losing = taxSnapshot({ ...ca, rentPerUnit: 1500 }, tax);
+    expect(losing.rules).toBe('ca');
+    expect(losing.depreciation).toBe(0);
+    expect(losing.taxable).toBeLessThan(0);
+    // The loss itself still reduces tax on other income, whatever the US toggle says.
+    expect(losing.taxDue).toBeCloseTo(losing.taxable * 0.3, 6);
+    expect(losing.ccaUnused).toBeCloseTo(losing.ccaAvailable, 6);
+
+    const earning = taxSnapshot({ ...ca, rentPerUnit: 3400 }, tax);
+    const before = earning.rentCollected - earning.operating - earning.interest;
+    expect(earning.ccaAvailable).toBeCloseTo(earning.basis * 0.04, 6);
+    expect(earning.depreciation).toBeCloseTo(Math.min(earning.ccaAvailable, before), 6);
+    expect(earning.taxable).toBeCloseTo(before - earning.depreciation, 6);
+    expect(earning.taxable).toBeGreaterThanOrEqual(0);
+  });
+});

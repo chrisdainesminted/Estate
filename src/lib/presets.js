@@ -13,6 +13,7 @@ export const MAX_COMPARE = 3;
 
 export const DEFAULT_DEAL = {
   name: 'New Deal',
+  country: 'us', // 'us' | 'ca': whose mortgage, closing-cost and tax rules apply (ca = Ontario)
   price: 300000,
   downPct: 25,
   rate: 7,
@@ -111,6 +112,18 @@ export const PRESET_OWNED = [
     insuranceAnnual: 1400,
   },
 ];
+
+// Closing costs differ by country: the US figure covers transfer taxes, while
+// in Ontario the land transfer tax is worked out separately on top of ~1%.
+const CLOSING_DEFAULT = { us: 3, ca: 1 };
+
+/** Patch that switches a deal's rules, swapping a closing % still at the old country's default. */
+export function switchRules(deal, country) {
+  const from = deal.country === 'ca' ? 'ca' : 'us';
+  const patch = { country };
+  if (from !== country && Number(deal.closingPct) === CLOSING_DEFAULT[from]) patch.closingPct = CLOSING_DEFAULT[country];
+  return patch;
+}
 
 let counter = 0;
 export function newId() {

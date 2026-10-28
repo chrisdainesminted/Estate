@@ -171,7 +171,7 @@ export async function buildMemoPdf({ deal, a, rows, sale, refi, offer }) {
   y = Math.max(leftA, rightA) + 14;
   const leftB = section(m, y, 'Cash required', [
     ['Down payment', money(a.downPayment)],
-    ['Closing costs', money(a.closingCosts)],
+    [a.landTransferTax ? 'Closing incl. land transfer tax' : 'Closing costs', money(a.closingCosts)],
     ['Rehab', money(a.rehab)],
     ['Cash invested', money(a.cashInvested), true],
     [`Reserves (${Number(deal.reserveMonths) || 0} mo PITIA)`, money(a.reserves)],

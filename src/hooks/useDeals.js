@@ -3,15 +3,18 @@ import { DEFAULT_DEAL, MAX_COMPARE, PRESET_DEALS, PRESET_OWNED, makeDeal } from 
 import { capability } from '../lib/runtime.js';
 import { DEFAULT_TARGETS, DEFAULT_TAX } from '../lib/finance.js';
 import { DEFAULT_PLAN } from '../lib/growth.js';
+import { DEFAULT_MARKET, normalizeMarket } from '../lib/market.js';
 
-// Per-library settings that travel with the deals: offer targets and the growth plan.
-const DEFAULT_SETTINGS = { targets: DEFAULT_TARGETS, plan: DEFAULT_PLAN, tax: DEFAULT_TAX };
+// Per-library settings that travel with the deals: offer targets, the growth
+// plan, tax inputs and the assumptions used to underwrite daily listings.
+const DEFAULT_SETTINGS = { targets: DEFAULT_TARGETS, plan: DEFAULT_PLAN, tax: DEFAULT_TAX, market: DEFAULT_MARKET };
 
 function normalizeSettings(s) {
   return {
     targets: { ...DEFAULT_TARGETS, ...(s?.targets ?? {}) },
     plan: { ...DEFAULT_PLAN, ...(s?.plan ?? {}) },
     tax: { ...DEFAULT_TAX, ...(s?.tax ?? {}) },
+    market: normalizeMarket(s?.market),
   };
 }
 
@@ -199,6 +202,9 @@ export function useDeals() {
 
   const addDeal = useCallback(() => commit((s) => insert(s, makeDeal({ name: `Deal ${s.deals.length + 1}` }))), [commit]);
 
+  // A deal built elsewhere (a listing, or a new deal under Canadian rules).
+  const insertDeal = useCallback((fields) => commit((s) => insert(s, makeDeal({ name: `Deal ${s.deals.length + 1}`, ...fields }))), [commit]);
+
   const duplicateDeal = useCallback(
     (id) =>
       commit((s) => {
@@ -233,7 +239,7 @@ export function useDeals() {
     [commit],
   );
 
-  // section is 'targets' or 'plan'.
+  // section is 'targets', 'plan', 'tax' or 'market'.
   const updateSettings = useCallback(
     (section, patch) => commit((s) => ({ ...s, settings: { ...s.settings, [section]: { ...s.settings[section], ...patch } } })),
     [commit],
@@ -262,6 +268,7 @@ export function useDeals() {
     updateDeal,
     updateMany,
     addDeal,
+    insertDeal,
     duplicateDeal,
     removeDeal,
     toggleCompare,

@@ -117,4 +117,24 @@ export const GLOSSARY = {
     term: 'Equity',
     body: 'Estimated property value − loan balance. For owned properties, value and balance are rolled forward by years owned.',
   },
+  rules: {
+    term: 'US or Canadian rules',
+    body: 'Canadian rules compound the mortgage rate semi-annually, add Ontario land transfer tax to closing costs, and use capital cost allowance instead of US depreciation in the tax card.',
+  },
+  landTransferTax: {
+    term: 'Land transfer tax',
+    body: 'Ontario charges it on every purchase: 0.5% of the first $55,000, 1% up to $250,000, 1.5% up to $400,000 and 2% above that. Thunder Bay adds no city tax on top (Toronto does). It’s part of your cash to close.',
+  },
+  cca: {
+    term: 'Capital cost allowance (CCA)',
+    body: 'Canada’s version of depreciation. A rental building (Class 1) is written off at 4% a year on its declining balance; land isn’t. CCA can bring rental income down to zero but can’t create or increase a rental loss, and whatever you don’t claim stays available for later years.',
+  },
+  listingRents: {
+    term: 'Stated or estimated rents',
+    body: 'Stated rents are the current rents a listing gives. Where it doesn’t give one, Bedrock uses your rent table for that many bedrooms. Estimates can be off, so check them before you offer.',
+  },
+  utilities: {
+    term: 'Owner-paid utilities',
+    body: 'In many Thunder Bay multi-unit buildings the owner pays water and sometimes heat. Bedrock adds this amount per unit per month to listings with 2 or more units. Set it to 0 if tenants pay everything.',
+  },
 };

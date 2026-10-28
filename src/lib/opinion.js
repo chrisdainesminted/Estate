@@ -9,6 +9,7 @@ const pct1 = (v) => (Number.isFinite(v) ? Math.round(v * 1000) / 10 : null);
 export function opinionFacts({ deal, a, sale, refi, offer }, targets) {
   return {
     name: deal.name,
+    location: deal.country === 'ca' ? 'Canada (Ontario); mortgage compounded semi-annually' : 'United States',
     status: deal.status === 'owned' ? 'owned' : 'prospect',
     units: a.units,
     purchasePrice: r0(a.price),
@@ -18,6 +19,7 @@ export function opinionFacts({ deal, a, sale, refi, offer }, targets) {
     termYears: Number(deal.termYears),
     interestOnlyYears: a.ioYears,
     closingCostPct: Number(deal.closingPct),
+    landTransferTax: a.landTransferTax ? r0(a.landTransferTax) : null,
     rehab: r0(a.rehab),
     afterRepairValue: Number(deal.arv) > 0 ? r0(Number(deal.arv)) : null,
     propertyTaxAnnual: r0(Number(deal.taxesAnnual)),
@@ -58,9 +60,12 @@ export function opinionFacts({ deal, a, sale, refi, offer }, targets) {
 }
 
 export function buildOpinionPrompt(item, targets) {
+  const ca = item.deal.country === 'ca';
+  const who = ca ? 'Ontario rental-property investor and mortgage underwriter' : 'US rental-property investor and DSCR loan underwriter';
+  const where = ca ? 'an Ontario rental (this one is in or near Thunder Bay if the address says so)' : 'a typical US rental';
   return [
-    'You are an experienced US rental-property investor and DSCR loan underwriter giving a second opinion to an investor growing past five properties.',
-    'Be direct and specific, and quote the numbers given. Use only the data below. If an input looks unusual for a typical US rental (for example vacancy, repairs, CapEx, insurance, taxes or appreciation), name it and say what is typical. Do not give legal or tax advice.',
+    `You are an experienced ${who} giving a second opinion to an investor growing past five properties.`,
+    `Be direct and specific, and quote the numbers given. Use only the data below. If an input looks unusual for ${where} (for example vacancy, repairs, CapEx, insurance, taxes or appreciation), name it and say what is typical. Do not give legal or tax advice.`,
     '',
     'Write under 230 words in exactly this format, with no other headings and no preamble:',
     '### Verdict',

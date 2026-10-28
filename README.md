@@ -47,6 +47,9 @@ Deals are always saved in the browser. On the hosted page they also sync to the 
 | Taxable rental income | rent collected − management, maintenance, taxes, insurance, HOA − mortgage interest − depreciation (CapEx reserves aren't deducted in the year they're saved) |
 | After-tax cash flow | cash flow − taxable income × your rate; a loss lowers tax only if you can use rental losses, otherwise it carries forward |
 | Stress test | the deal re-run for rent −15% to +15% against rate −1 to +2 points; break-even rate solved by bisection |
+| Canadian mortgage | the quoted rate compounds semi-annually: monthly rate = (1 + r/2)^(1/6) − 1 |
+| Ontario land transfer tax | 0.5% to $55k, 1% to $250k, 1.5% to $400k, 2% above (2.5% over $2M for one or two homes), added to closing costs |
+| Capital cost allowance (Canada) | 4% of the Class 1 cost (building share of price + closing, plus rehab), capped so it never creates or deepens a rental loss |
 
 DSCR bands: **< 1.00** red (negative), **1.00–1.19** yellow (tight), **1.20–1.25** green (sweet spot), **> 1.25** blue (strong). DSCR is banded on the 2-decimal value shown on screen.
 
@@ -65,6 +68,8 @@ Additional figures: cap rate (NOI ÷ price), breakeven rent per unit, rent neede
 - **Max offer price**: set targets (DSCR, cash flow per door, cash-on-cash) and see the most you can pay, which target sets it, and a one-click "use this price".
 - **Value-add and refinance (BRRRR)**: after-repair value, a cash-out refinance in year 1–9, cash left in the deal, the new loan's DSCR and cash flow, and prepayment penalties.
 - **Plan view**: cash on hand, monthly savings and a deal to repeat become a 10-year path in doors, cash flow and equity, with every purchase dated and lender reserves held throughout.
+- **Listings (Thunder Bay)**: every morning a scheduled Claude run searches public listing sites for Thunder Bay properties for sale and saves them to the page's database. The Listings tab ranks them by cash flow per door under your assumptions (financing, costs, a rent table for units without stated rents), flags new listings and price drops, and opens any listing as a full deal. Your phone gets a notification when a new or cheaper listing beats all your targets.
+- **Canadian rules**: any deal can switch to Canada (Ontario): semi-annual mortgage compounding, land transfer tax in closing costs, CCA in the tax card, condo fees and owner-paid utilities in place of HOA. Deals added from Listings are Canadian, and new deals follow the open deal's rules.
 - **Deal library**: unlimited deals, each a prospect or owned, with a searchable picker. Each deal can carry an address, a listing link and notes, which search, the CSV and the PDF memo include. Starter deals are tagged "Example" until edited.
 - **Search** (Ctrl K, or ⌘K on a Mac): open any deal, view or section, or run an action such as export, duplicate or new deal.
 - **Undo instead of "are you sure?"**: deleting a deal, applying a what-if, using the max-offer price and starting over each show an Undo button for a few seconds.
@@ -85,12 +90,27 @@ src/lib/memoPdf.js        PDF deal memo (jsPDF, loaded on demand)
 src/lib/runtime.js        hosted-viewer capabilities with plain-browser fallbacks
 src/lib/glossary.js       metric explanations used by the hover tips
 src/lib/opinion.js        second-opinion prompt and reply parser (tested)
+src/lib/market.js         daily listings: cleaning, merging, listing → deal, ranking, standouts (tested)
 src/hooks/useDeals.js     deal library: browser storage + account sync, snapshots for undo
 src/hooks/useExports.js   PDF and CSV export with status toasts
+src/hooks/useMarket.js    the saved listings feed, live from the page's database
 src/components/*          UI sections, plus the search palette, phone sheet and toasts
 src/views/CompareView.jsx compare view (loaded on demand)
+src/views/ListingsView.jsx listings tab (loaded on demand)
+scripts/market/           the daily run: RUNBOOK.md, merge.mjs (fold findings into the feed), score.mjs (rank and pick standouts)
 scripts/build-artifact.mjs  turns the Vite build into the hosted page
 ```
+
+## Daily listings
+
+A scheduled task runs every morning at about 6 am Eastern in a fresh cloud session and follows `scripts/market/RUNBOOK.md`:
+
+1. Read the saved feed (`data/users/<owner>/thunderbay`) and the owner's settings from the page's database.
+2. Search the web for Thunder Bay listings (no page scraping) and write what each result states to `found.json`.
+3. `node scripts/market/merge.mjs prev.json found.json --today YYYY-MM-DD > next.json` keeps first-seen dates, records price changes, and drops listings unseen for three weeks or reported sold.
+4. Save `next.json` back with a version check, then `node scripts/market/score.mjs next.json bedrock.json` ranks everything and lists standouts for the phone notification.
+
+The page does the full analysis live, so changing an assumption re-ranks the list straight away.
 
 ## Brand
 
