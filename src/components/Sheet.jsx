@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useEffectEvent, useRef } from 'react';
 import { X } from 'lucide-react';
 
 /**
@@ -8,6 +8,10 @@ import { X } from 'lucide-react';
 export default function Sheet({ open, onClose, title, children }) {
   const closeBtn = useRef(null);
   const returnFocus = useRef(null);
+  // Callers pass a new onClose on every render. Reading it through an effect
+  // event keeps the effect below to opening and closing; re-running it on each
+  // keystroke moved focus to Done and dropped the phone keyboard.
+  const onEscape = useEffectEvent((e) => e.key === 'Escape' && onClose());
 
   useEffect(() => {
     if (!open) return undefined;
@@ -16,14 +20,14 @@ export default function Sheet({ open, onClose, title, children }) {
     const prev = root.style.overflow;
     root.style.overflow = 'hidden';
     closeBtn.current?.focus();
-    const onKey = (e) => e.key === 'Escape' && onClose();
+    const onKey = (e) => onEscape(e);
     document.addEventListener('keydown', onKey);
     return () => {
       root.style.overflow = prev;
       document.removeEventListener('keydown', onKey);
       returnFocus.current?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
   return (
