@@ -296,6 +296,24 @@ export function analyzeDeal(deal) {
 }
 
 /**
+ * The same deal bought outright with your own money: no loan, so no
+ * payment, no lender reserves and no DSCR, only what the rent leaves you.
+ */
+export function allCash(deal) {
+  return { ...deal, downPct: 100, ioYears: 0, reserveMonths: 0, lenderHaircutPct: 0, refiEnabled: false, prepay: 'none' };
+}
+
+/** Years of income it takes to get back the cash you put in, or null if it never does. */
+export function paybackYears(a) {
+  return a.annualCashFlow > 0 && a.cashInvested > 0 ? a.cashInvested / a.annualCashFlow : null;
+}
+
+/** A year of loan payments as a share of the amount borrowed (the mortgage constant), or null with no loan. */
+export function loanConstant(a) {
+  return a.loanAmount > 0 ? (a.pi * 12) / a.loanAmount : null;
+}
+
+/**
  * Year-by-year wealth projection. Rent (and the OpEx tied to it) grows at
  * rentGrowthPct; taxes, insurance and HOA grow at expenseGrowthPct; debt
  * service follows the loan schedule (it steps up when interest-only ends).

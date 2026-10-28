@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyzeDeal, maxOffer } from './finance.js';
+import { allCash, analyzeDeal, maxOffer } from './finance.js';
 import {
   DEFAULT_MARKET,
   INSURANCE_MIN,
@@ -150,6 +150,22 @@ describe('scoreListing and rankListings', () => {
     expect(s.perDoor).toBeCloseTo(a.netCashFlow / 2, 8);
     expect(s.meets).toBe(maxOffer(s.deal, targets).price >= 180000);
     expect(scoreListing(pricey, DEFAULT_MARKET, targets).meets).toBe(false);
+  });
+
+  it('also scores the listing bought outright, with no loan', () => {
+    const s = scoreListing(cheap, DEFAULT_MARKET, targets);
+    expect(s.cash).toEqual(analyzeDeal(allCash(s.deal)));
+    expect(s.cash.loanAmount).toBe(0);
+    expect(s.cash.cashInvested).toBeCloseTo(s.cash.price + s.cash.closingCosts + s.cash.rehab, 6);
+    // No mortgage payment, so more income each month than with the loan.
+    expect(s.cash.netCashFlow).toBeGreaterThan(s.a.netCashFlow);
+  });
+
+  it('sorts by the all-cash return when asked', () => {
+    const byCash = rankListings([house, pricey, cheap], DEFAULT_MARKET, targets, { sort: 'cashCoc' });
+    expect(byCash).toHaveLength(3);
+    for (let i = 1; i < byCash.length; i++) expect(byCash[i - 1].cash.coc).toBeGreaterThanOrEqual(byCash[i].cash.coc);
+    expect(byCash[0].listing.address).toBe('10 Cheap St');
   });
 
   it('ranks by cash flow per door and filters by type, hidden and status', () => {

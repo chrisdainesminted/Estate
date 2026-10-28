@@ -160,7 +160,7 @@ function ListingRow({ s, rank, feed, imported, hidden, onAnalyze, onHide, onUnhi
                 <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                   {[...more, confirmed].filter(Boolean).join(' · ')}
                 </p>
-                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-5">
+                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-6">
                   <Metric label="Cash flow / door" tip="netCashFlow" sub="a month, after every cost">
                     <span className={signedClass(s.perDoor)}>{money(s.perDoor, { signed: true })}</span>
                   </Metric>
@@ -172,6 +172,9 @@ function ListingRow({ s, rank, feed, imported, hidden, onAnalyze, onHide, onUnhi
                   </Metric>
                   <Metric label="Cash-on-cash" tip="coc" sub={`on ${money(s.a.cashInvested)}`}>
                     <span className={signedClass(s.a.coc)}>{percent(s.a.coc, 1)}</span>
+                  </Metric>
+                  <Metric label="Bought outright" tip="allCash" sub={`on ${money(s.cash.cashInvested)}, no loan`}>
+                    <span className={signedClass(s.cash.coc)}>{percent(s.cash.coc, 1)}</span>
                   </Metric>
                   <Metric label="Your max offer" tip="maxOffer" sub={room == null ? 'no targets set' : room >= 0 ? `${money(room)} of room` : `${money(-room)} over your max`}>
                     {room == null ? '—' : money(s.offer.price)}
@@ -383,7 +386,7 @@ export default function ListingsView({ feedState, market, targets, importedIds, 
                   Show hidden ({hiddenCount})
                 </button>
               )}
-              <div className="flex items-center gap-2 md:ml-auto">
+              <div className="flex flex-wrap items-center gap-2 md:ml-auto">
                 <label htmlFor="listing-sort" className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
                   Sort
                 </label>

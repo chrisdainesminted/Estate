@@ -7,7 +7,8 @@ import { Button, NumberField } from './ui.jsx';
 import { InfoTip, Num } from './motion.jsx';
 import { Section } from './Section.jsx';
 
-function TargetRow({ id, on, onToggle, children }) {
+/** A target with an on/off switch; switched off, it no longer limits the offer. */
+export function TargetRow({ id, on, onToggle, children }) {
   return (
     <div className={`flex items-end gap-3 rounded-2xl p-3 transition ${on ? 'bg-well' : 'opacity-60'}`}>
       <label htmlFor={`${id}-on`} className="flex shrink-0 cursor-pointer items-center pb-2.5">

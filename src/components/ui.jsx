@@ -92,7 +92,7 @@ export function Segmented({ options, value, onChange, label, size = 'md', stretc
             onClick={() => onChange(o.value)}
             className={`inline-flex items-center rounded-lg font-medium whitespace-nowrap transition focus-visible:outline-2 focus-visible:outline-emerald-500 ${
               size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm'
-            } ${stretch ? 'max-md:flex-1 max-md:justify-center max-md:px-1 max-md:text-[13px]' : ''} ${
+            } ${stretch ? 'max-md:flex-1 max-md:justify-center max-md:px-1 max-md:text-[13px] max-[400px]:px-0.5! max-[400px]:text-xs! max-[340px]:text-[11px]!' : ''} ${
               selected
                 ? 'bg-white text-zinc-900 shadow-[0_1px_2px_rgb(0_0_0/0.08),0_4px_12px_-4px_rgb(0_0_0/0.12)] ring-1 ring-zinc-950/5 dark:bg-white/[0.14] dark:text-white dark:ring-white/10'
                 : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'

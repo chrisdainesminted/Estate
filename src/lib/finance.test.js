@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
+  allCash,
   amortize,
   analyzeDeal,
   applyAdjustments,
   estimateToday,
   irr,
   isNeutralAdjustment,
+  loanConstant,
   loanSchedule,
   monthlyPI,
   maxOffer,
+  paybackYears,
   portfolioSummary,
   positionAt,
   prepayRate,
@@ -695,5 +698,31 @@ describe('Canadian rules', () => {
     expect(earning.depreciation).toBeCloseTo(Math.min(earning.ccaAvailable, before), 6);
     expect(earning.taxable).toBeCloseTo(before - earning.depreciation, 6);
     expect(earning.taxable).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('allCash', () => {
+  const deal = PRESET_DEALS[0];
+  const c = analyzeDeal(allCash(deal));
+
+  it('drops the loan, its payment and the lender reserves', () => {
+    expect(c.loanAmount).toBe(0);
+    expect(c.pi).toBe(0);
+    expect(c.reserves).toBe(0);
+    expect(c.cashInvested).toBeCloseTo(deal.price + c.closingCosts + (deal.rehabCost || 0), 6);
+  });
+
+  it('leaves cash-on-cash as the income on the full cost', () => {
+    expect(c.coc).toBeCloseTo(c.annualCashFlow / c.cashInvested, 10);
+    expect(c.netCashFlow).toBeCloseTo(c.grossRent - c.taxes - c.insurance - c.hoa - c.opex.total, 6);
+    expect(paybackYears(c)).toBeCloseTo(c.cashInvested / c.annualCashFlow, 10);
+    expect(paybackYears(analyzeDeal(allCash({ ...deal, rentPerUnit: 300 })))).toBeNull();
+  });
+
+  it('prices a loan by a year of payments over the amount borrowed', () => {
+    const loan = analyzeDeal(deal);
+    // $187,500 at 7% over 30 years: $1,247.44 a month, about 7.98% of the loan a year.
+    expect(loanConstant(loan)).toBeCloseTo((1247.44 * 12) / 187500, 4);
+    expect(loanConstant(c)).toBeNull();
   });
 });

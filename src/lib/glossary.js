@@ -133,6 +133,18 @@ export const GLOSSARY = {
     term: 'Stated or estimated rents',
     body: 'Stated rents are the current rents a listing gives. Where it doesn’t give one, Bedrock uses your rent table for that many bedrooms. Estimates can be off, so check them before you offer.',
   },
+  allCash: {
+    term: 'Bought outright',
+    body: 'Paid for entirely with your own money: no mortgage, so no loan payment, no lender and no DSCR. Your return is the yearly income divided by everything you put in.',
+  },
+  payback: {
+    term: 'Money back',
+    body: 'Years of rent income it takes to repay the cash you put in. It ignores rent increases, appreciation and selling, so it’s a simple yardstick, not a forecast.',
+  },
+  loanConstant: {
+    term: 'Cost of borrowing',
+    body: 'A year of loan payments as a share of the amount borrowed. When it’s higher than what the property earns on its full cost, a mortgage lowers your cash-on-cash return; when it’s lower, a mortgage raises it.',
+  },
   utilities: {
     term: 'Owner-paid utilities',
     body: 'In many Thunder Bay multi-unit buildings the owner pays water and sometimes heat. Bedrock adds this amount per unit per month to listings with 2 or more units. Set it to 0 if tenants pay everything.',

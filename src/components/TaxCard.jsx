@@ -21,7 +21,7 @@ function Step({ label, value, op, strong, tip }) {
 }
 
 /** Year-1 income tax on the rental: depreciation, taxable income and what's left after tax. */
-export default function TaxCard({ deal, tax, onTax }) {
+export default function TaxCard({ deal, tax, onTax, id = 'sec-tax' }) {
   const t = useMemo(() => taxSnapshot(deal, tax), [deal, tax]);
   const loss = t.taxable < 0;
   const ca = t.rules === 'ca';
@@ -37,7 +37,7 @@ export default function TaxCard({ deal, tax, onTax }) {
 
   return (
     <Section
-      id="sec-tax"
+      id={id}
       icon={Landmark}
       title="Taxes in year 1"
       value={`${money(t.afterTaxCashFlow / 12, { signed: true })}/mo after tax`}

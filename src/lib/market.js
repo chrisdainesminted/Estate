@@ -2,7 +2,7 @@
 // saves for each property, how Bedrock turns one into a deal, and how the
 // list is ranked. Pure functions, shared by the page and the run's scripts.
 
-import { DEFAULT_TARGETS, analyzeDeal, maxOffer } from './finance.js';
+import { DEFAULT_TARGETS, allCash, analyzeDeal, maxOffer } from './finance.js';
 import { DEFAULT_DEAL, UNIT_TYPES } from './presets.js';
 import { safeHttpUrl } from './format.js';
 
@@ -247,7 +247,10 @@ export function priceDrop(listing) {
   return prev > listing.price ? prev - listing.price : 0;
 }
 
-/** One listing run through the engine: cash flow per door, max offer, and whether it beats every target. */
+/**
+ * One listing run through the engine: cash flow per door, max offer, and
+ * whether it beats every target, plus the same listing bought outright.
+ */
 export function scoreListing(listing, market, targets = DEFAULT_TARGETS) {
   const deal = listingToDeal(listing, market);
   const a = analyzeDeal(deal);
@@ -256,6 +259,7 @@ export function scoreListing(listing, market, targets = DEFAULT_TARGETS) {
     listing,
     deal,
     a,
+    cash: analyzeDeal(allCash(deal)),
     offer,
     perDoor: a.netCashFlow / a.units,
     meets: offer.price == null ? a.netCashFlow > 0 : offer.price >= a.price,
@@ -270,6 +274,7 @@ const room = (s) => (Number.isFinite(s.offer.price) ? s.offer.price - s.a.price 
 export const SORTS = {
   perDoor: { label: 'Cash flow per door', compare: (x, y) => y.perDoor - x.perDoor },
   coc: { label: 'Cash-on-cash', compare: (x, y) => y.a.coc - x.a.coc },
+  cashCoc: { label: 'All-cash return', compare: (x, y) => y.cash.coc - x.cash.coc },
   room: { label: 'Room to negotiate', compare: (x, y) => room(y) - room(x) },
   price: { label: 'Lowest price', compare: (x, y) => x.a.price - y.a.price },
   newest: { label: 'Newest', compare: (x, y) => String(y.listing.firstSeen ?? '').localeCompare(String(x.listing.firstSeen ?? '')) },

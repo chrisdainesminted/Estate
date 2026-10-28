@@ -1,17 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { analyzeDeal, maxOffer, projectDeal, saleAnalysis, taxSnapshot } from './finance.js';
+import { allCash, analyzeDeal, maxOffer, projectDeal, saleAnalysis, taxSnapshot } from './finance.js';
 import { PRESET_DEALS } from './presets.js';
 import {
   breakevenSentence,
   cashFlowMeaning,
+  cashIncomeMeaning,
   cashInMeaning,
+  cashSentence,
   cocMeaning,
   compareSummary,
   dealSentence,
   dscrMeaning,
   equityMeaning,
+  leverageMeaning,
   listingSentence,
   offerMeaning,
+  outrightCashMeaning,
+  paybackMeaning,
   portfolioCashMeaning,
   portfolioDscrMeaning,
   saleMeaning,
@@ -130,5 +135,27 @@ describe('portfolio and compare meanings', () => {
       'C makes the most if you sell in year 10: +$120,000.',
     ]);
     expect(compareSummary([item('A', 1, 1, 1)])).toEqual([]);
+  });
+});
+
+describe('bought outright with your own money', () => {
+  const c = analyzeDeal(allCash(trap));
+
+  it('says what the cash earns and when it comes back', () => {
+    expect(cashSentence(c)).toBe(
+      `Bought outright with $257,500 of your own money, it would pay you about $${Math.round(c.netCashFlow).toLocaleString('en-US')} a month after every cost: a ${(c.coc * 100).toFixed(1)}% cash-on-cash return. At that rate your money comes back in about ${Math.round(c.cashInvested / c.annualCashFlow)} years from rent alone.`,
+    );
+    // Even with no loan, $400 rent doesn't cover $375 of taxes and insurance plus running costs.
+    expect(cashSentence(analyzeDeal(allCash({ ...trap, rentPerUnit: 400 })))).toMatch(/^Even with no mortgage it would cost you about \$[\d,]+ a month/);
+    expect(cashIncomeMeaning(c)).toMatch(/^What you keep each month .* with no mortgage: \$[\d,]+ a year\.$/);
+    expect(outrightCashMeaning(c)).toBe('$250,000 price + $7,500 closing costs. No loan, so no lender reserves.');
+    expect(paybackMeaning(c)).toBe('Years of income it takes to repay the $257,500 you put in, before rent increases or a sale.');
+  });
+
+  it('says whether a mortgage would raise or lower the return', () => {
+    expect(leverageMeaning(c, analyzeDeal(trap))).toMatch(/^Paying cash earns more per dollar: the loan’s payments cost 8\.0% of what you borrow each year, more than the 5\.\d% the property earns/);
+    const cheap = { ...strong, rate: 3 };
+    expect(leverageMeaning(analyzeDeal(allCash(cheap)), analyzeDeal(cheap))).toMatch(/^A mortgage raises your return: the loan’s payments cost 5\.\d% /);
+    expect(leverageMeaning(c, c)).toMatch(/no loan/);
   });
 });

@@ -1,5 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Banknote,
   Briefcase,
   Building,
   Cloud,
@@ -62,6 +63,7 @@ const PlanView = lazy(() => import('./components/PlanView.jsx'));
 const CompareView = lazy(() => import('./views/CompareView.jsx'));
 const ProjectionChart = lazy(() => import('./components/ProjectionChart.jsx'));
 const ListingsView = lazy(() => import('./views/ListingsView.jsx'));
+const CashView = lazy(() => import('./views/CashView.jsx'));
 
 const NO_ADJ = { rateDelta: 0, downPct: null, rentPct: 0 };
 const YEARS = 10;
@@ -70,6 +72,7 @@ const VIEW_KEY = 'bedrock-view';
 const VIEWS = [
   { value: 'portfolio', label: 'Portfolio', icon: Briefcase },
   { value: 'analyze', label: 'Analyze', icon: LayoutDashboard },
+  { value: 'cash', label: 'Cash', icon: Banknote, keywords: 'all cash own money outright no loan cash on cash income' },
   { value: 'compare', label: 'Compare', icon: Columns3 },
   { value: 'plan', label: 'Plan', icon: Sprout },
   { value: 'listings', label: 'Listings', icon: Radar },
@@ -216,6 +219,15 @@ export default function App() {
     [lib, setView],
   );
 
+  const pickDeal = useCallback(
+    (id) => {
+      if (view !== 'cash') return openDeal(id);
+      lib.setActive(id);
+      window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    },
+    [view, lib, openDeal],
+  );
+
   // New deals follow the open deal's rules; Canadian ones start from your listing financing.
   const newDeal = useCallback(() => {
     const m = lib.settings.market;
@@ -307,7 +319,7 @@ export default function App() {
   const inCompare = compare.some((c) => c.id === activeId);
   const commands = useMemo(() => {
     const list = [
-      ...VIEWS.map((v) => ({ id: `view-${v.value}`, group: 'Go to', label: v.label, icon: v.icon, keywords: 'view tab page', run: () => setView(v.value) })),
+      ...VIEWS.map((v) => ({ id: `view-${v.value}`, group: 'Go to', label: v.label, icon: v.icon, keywords: `view tab page ${v.keywords ?? ''}`, run: () => setView(v.value) })),
       ...baseItems.map((x) => ({
         id: `deal-${x.deal.id}`,
         group: 'Deals',
@@ -315,7 +327,7 @@ export default function App() {
         hint: `DSCR ${ratio(x.a.dscr)} · ${money(x.a.netCashFlow, { signed: true })}/mo`,
         icon: x.deal.status === 'owned' ? Building : Home,
         keywords: `${x.deal.address ?? ''} ${x.deal.status} open deal`,
-        run: () => openDeal(x.deal.id),
+        run: () => pickDeal(x.deal.id),
       })),
       ...topListings.map((x) => ({
         id: `listing-${x.listing.id}`,
@@ -373,7 +385,7 @@ export default function App() {
       ...SECTIONS.map((s) => ({ id: `jump-${s.id}`, group: 'Jump to section', label: s.label, icon: s.id === 'sec-opinion' ? Sparkles : ListTree, keywords: `section scroll analyze ${s.keywords}`, run: () => jump(s.id) })),
     ];
     return list;
-  }, [baseItems, topListings, analyzeListing, active, inCompare, compare.length, exports, dark, toggle, neutral, deals.length, newDeal, duplicateDeal, deleteDeal, jump, openDeal, lib, toast, setView, withUndo]);
+  }, [baseItems, topListings, analyzeListing, active, inCompare, compare.length, exports, dark, toggle, neutral, deals.length, newDeal, duplicateDeal, deleteDeal, jump, pickDeal, lib, toast, setView, withUndo]);
 
   // "Open all" ignores the second opinion, which only shows inside Claude.
   const allOpen = DETAIL_IDS.filter((id) => id !== 'sec-opinion' && (id !== 'sec-refi' || current.refi)).every((id) => sections.isOpen(id));
@@ -431,7 +443,7 @@ export default function App() {
             </nav>
 
             <div className="order-4 w-full md:order-none md:ml-auto md:w-auto lg:ml-0">
-              <DealPicker items={baseItems} activeId={activeId} onSelect={openDeal} onNew={newDeal} />
+              <DealPicker items={baseItems} activeId={activeId} onSelect={pickDeal} onNew={newDeal} />
             </div>
 
             <div className="ml-auto flex items-center gap-1 md:ml-0">
@@ -562,24 +574,48 @@ export default function App() {
                   <SecondOpinion item={current} targets={targets} />
                 </div>
               </div>
-
-              {!isDesktop && (
-                // display: contents keeps main's space-y margin off these fixed overlays.
-                <div className="contents">
-                  <button
-                    type="button"
-                    onClick={() => setSheetOpen(true)}
-                    className="fixed z-40 inline-flex items-center gap-2 rounded-full bg-gradient-to-b from-emerald-600 to-emerald-700 px-5 py-3.5 text-sm font-semibold text-white shadow-[0_16px_32px_-12px_rgb(5_150_105/0.8),inset_0_1px_0_rgb(255_255_255/0.25)] ring-1 ring-emerald-800/40 transition ring-inset focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 active:scale-[0.98] print:hidden"
-                    style={{ right: 'max(16px, env(safe-area-inset-right, 0px))', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
-                  >
-                    <Pencil className="size-4" aria-hidden /> Edit deal
-                  </button>
-                  <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={`Edit “${active.name}”`}>
-                    {inputs}
-                  </Sheet>
-                </div>
-              )}
             </>
+          )}
+
+          {view === 'cash' && (
+            <div className="grid gap-6 lg:grid-cols-12">
+              {isDesktop && (
+                <aside className="lg:col-span-4 xl:col-span-3" aria-label="Deal inputs">
+                  <div className="thin-scroll lg:sticky lg:top-28 lg:max-h-[calc(100vh-8.5rem)] lg:overflow-y-auto lg:rounded-3xl">{inputs}</div>
+                </aside>
+              )}
+              <div className="min-w-0 lg:col-span-8 xl:col-span-9">
+                <Suspense fallback={<SkeletonCard className="h-[28rem]" />}>
+                  <CashView
+                    deal={active}
+                    items={baseItems}
+                    targets={targets}
+                    onTargets={(patch) => lib.updateSettings('targets', patch)}
+                    tax={lib.settings.tax}
+                    onTax={(patch) => lib.updateSettings('tax', patch)}
+                    onSelect={pickDeal}
+                    onUsePrice={(price) => withUndo(`Price set to ${money(price)}`, () => lib.updateDeal(active.id, { price }))}
+                  />
+                </Suspense>
+              </div>
+            </div>
+          )}
+
+          {(view === 'analyze' || view === 'cash') && !isDesktop && (
+            // display: contents keeps main's space-y margin off these fixed overlays.
+            <div className="contents">
+              <button
+                type="button"
+                onClick={() => setSheetOpen(true)}
+                className="fixed z-40 inline-flex items-center gap-2 rounded-full bg-gradient-to-b from-emerald-600 to-emerald-700 px-5 py-3.5 text-sm font-semibold text-white shadow-[0_16px_32px_-12px_rgb(5_150_105/0.8),inset_0_1px_0_rgb(255_255_255/0.25)] ring-1 ring-emerald-800/40 transition ring-inset focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 active:scale-[0.98] print:hidden"
+                style={{ right: 'max(16px, env(safe-area-inset-right, 0px))', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+              >
+                <Pencil className="size-4" aria-hidden /> Edit deal
+              </button>
+              <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={`Edit “${active.name}”`}>
+                {inputs}
+              </Sheet>
+            </div>
           )}
 
           <footer className="mt-4 flex flex-col gap-4 border-t border-hairline pt-6 pb-24 text-xs leading-relaxed text-zinc-500 sm:flex-row sm:items-start lg:pb-10 dark:text-zinc-400">

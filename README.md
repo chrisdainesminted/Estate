@@ -36,6 +36,9 @@ Deals are always saved in the browser. On the hosted page they also sync to the 
 | Cash invested | down payment + closing costs (3% default) + rehab |
 | Lender reserves | months of PITIA held in the bank (6 by default); shown separately, not spent |
 | Cash-on-cash | annual net cash flow ÷ cash invested |
+| Bought outright (Cash view) | the same deal with 100% down: no loan, payment, lender reserves or DSCR, so cash invested = price + closing costs + rehab |
+| Money back | cash invested ÷ annual cash flow (no rent growth or sale) |
+| Cost of borrowing | a year of loan payments ÷ the loan; a mortgage raises cash-on-cash only when this is below the bought-outright return |
 | 10-year total return | cumulative cash flow + principal paydown + appreciation, before selling costs |
 | Profit if sold | cash flow + sale price − selling costs (7% default) − loan payoff − cash invested |
 | IRR | rate that zeroes the NPV of −cash invested, each year's cash flow, and net sale proceeds in year 10 |
@@ -62,6 +65,7 @@ Additional figures: cap rate (NOI ÷ price), breakeven rent per unit, rent neede
 
 - **Portfolio view**: owned properties rolled up into today's net cash flow, global DSCR, cash-on-cash and equity (value, loan balance and payment rolled forward by years owned), what you'd net if you sold everything in 10 years, a cash-flow-by-property chart, and "What if you buy it?", which shows how a prospect changes the whole portfolio.
 - **Analyze view**: one summary card answers "is this a good deal?" in a plain sentence (what a lender would say and what your bank account would see, plus the break-even rent), then four numbers that each say what they mean: the lender check (DSCR, with where it sits among the lender bands), monthly cash flow, cash-on-cash return and the cash you put in. Below it every part of the analysis folds down to one line with its key number and a plain explanation: where the rent goes, the most you should pay, a what-if, the stress test, the 10-year outlook, a refinance, selling in year 10, taxes and a second opinion. Open one to see how the number adds up, or open them all; the page remembers which you left open.
+- **Cash view (your own money)**: any deal bought outright, with no mortgage, so no lender and no DSCR. A summary card says what it would pay you each month, its cash-on-cash return on everything you put in (price, closing costs and rehab), whether that beats your cash-on-cash target, and how many years of rent it takes to get your money back. Below it, each folding down like Analyze: where the rent goes, cash against a mortgage side by side (and whether borrowing raises or lowers your return), the most to pay in cash for your targets, income over 10 years with how much of your cash it has paid back, year-1 taxes, and every deal in your library ranked by what it would pay on cash.
 - **Stress test**: a 7×7 heatmap of rent against rate, in cash flow or DSCR, with the break-even rate and rent. Click any cell to load it as the what-if.
 - **Taxes, year 1**: depreciation, mortgage interest and operating costs become taxable income, then after-tax cash flow and cash-on-cash, using your tax rate, the land share of the price and whether you can use rental losses.
 - **Loan schedule**: a third projection view with yearly payments, interest, principal and balance, noting when interest-only ends or a refinance happens.
@@ -71,7 +75,7 @@ Additional figures: cap rate (NOI ÷ price), breakeven rent per unit, rent neede
 - **Max offer price**: set targets (DSCR, cash flow per door, cash-on-cash) and see the most you can pay, which target sets it, and a one-click "use this price".
 - **Value-add and refinance (BRRRR)**: after-repair value, a cash-out refinance in year 1–9, cash left in the deal, the new loan's DSCR and cash flow, and prepayment penalties.
 - **Plan view**: cash on hand, monthly savings and a deal to repeat become a 10-year path in doors, cash flow and equity, with every purchase dated and lender reserves held throughout.
-- **Listings (Thunder Bay)**: every morning a scheduled Claude run searches public listing sites for Thunder Bay properties for sale and saves them to the page's database. The Listings tab ranks them by cash flow per door under your assumptions (financing, costs, a rent table for units without stated rents), sums each one up in a sentence (cash per door, the lender's view, asking against your max offer), flags new listings and price drops, keeps the full numbers a tap away under Details, and opens any listing as a full deal. Your phone gets a notification when a new or cheaper listing beats all your targets.
+- **Listings (Thunder Bay)**: every morning a scheduled Claude run searches public listing sites for Thunder Bay properties for sale and saves them to the page's database. The Listings tab ranks them by cash flow per door under your assumptions (financing, costs, a rent table for units without stated rents), sums each one up in a sentence (cash per door, the lender's view, asking against your max offer), flags new listings and price drops, keeps the full numbers a tap away under Details (including the return if you bought it outright, which you can also sort by), and opens any listing as a full deal. Your phone gets a notification when a new or cheaper listing beats all your targets.
 - **Canadian rules**: any deal can switch to Canada (Ontario): semi-annual mortgage compounding, land transfer tax in closing costs, CCA in the tax card, condo fees and owner-paid utilities in place of HOA. Deals added from Listings are Canadian, and new deals follow the open deal's rules.
 - **Deal library**: unlimited deals, each a prospect or owned, with a searchable picker. Each deal can carry an address, a listing link and notes, which search, the CSV and the PDF memo include. Starter deals are tagged "Example" until edited.
 - **Search** (Ctrl K, or ⌘K on a Mac): open any deal, view or section, or run an action such as export, duplicate or new deal.
@@ -101,6 +105,7 @@ src/hooks/useExports.js   PDF and CSV export with status toasts
 src/hooks/useMarket.js    the saved listings feed, live from the page's database
 src/components/Section.jsx fold-down sections: one line with the key number and its meaning, detail on demand
 src/components/*          UI sections, plus the search palette, phone sheet and toasts
+src/views/CashView.jsx    cash view: a deal bought outright with your own money (loaded on demand)
 src/views/CompareView.jsx compare view (loaded on demand)
 src/views/ListingsView.jsx listings tab (loaded on demand)
 scripts/market/           the daily run: RUNBOOK.md, merge.mjs (fold findings into the feed), score.mjs (rank and pick standouts)
