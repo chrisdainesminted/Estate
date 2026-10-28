@@ -6,10 +6,10 @@
 
 Bedrock separates **lender DSCR math (PITIA)** from **real-world cash flow (PITIA + OpEx)**, so a deal a DSCR lender approves can't quietly lose money every month. The mark is stacked layers widening to a solid base: real cash flow is the layer a portfolio is built on.
 
-- Website: on Cloudflare Pages (public; deals are saved in each visitor's browser)
+- Website: https://bedrock.signia83.workers.dev/ (public; deals are saved in each visitor's browser)
 - Claude page: https://claude.ai/artifact/5KH4ZZHoZ8CvCKF5CXutGJ (private to the owner; deals sync to their Claude account, Second opinion, and the morning listings run saves here)
 
-The website is the same app. Cloudflare Pages builds it from the default branch on every push, with build command `npm test && npm run build` and output directory `dist`, so a failing test stops a deploy and the last good version stays up. Outside Claude it reads Thunder Bay listings from `public/data/thunderbay.json`, which is published with the site.
+The website is the same app, served by Cloudflare as a static-assets Worker. Cloudflare builds it from the default branch on every push with `npm test && npm run build`, then `npx wrangler deploy` publishes `dist/` as set in `wrangler.jsonc`, so a failing test stops a deploy and the last good version stays up. Outside Claude it reads Thunder Bay listings from `public/data/thunderbay.json`, which is published with the site.
 
 ## Run it
 
@@ -102,6 +102,7 @@ src/views/CompareView.jsx compare view (loaded on demand)
 src/views/ListingsView.jsx listings tab (loaded on demand)
 scripts/market/           the daily run: RUNBOOK.md, merge.mjs (fold findings into the feed), score.mjs (rank and pick standouts)
 scripts/build-artifact.mjs  turns the Vite build into the hosted page
+wrangler.jsonc            Cloudflare config for the website (serves dist/)
 ```
 
 ## Daily listings
