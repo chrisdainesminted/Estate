@@ -6,7 +6,10 @@
 
 Bedrock separates **lender DSCR math (PITIA)** from **real-world cash flow (PITIA + OpEx)**, so a deal a DSCR lender approves can't quietly lose money every month. The mark is stacked layers widening to a solid base: real cash flow is the layer a portfolio is built on.
 
-Live: https://claude.ai/artifact/5KH4ZZHoZ8CvCKF5CXutGJ (private to the owner until shared).
+- Website: https://chrisdainesminted.github.io/Estate/ (public; deals are saved in each visitor's browser)
+- Claude page: https://claude.ai/artifact/5KH4ZZHoZ8CvCKF5CXutGJ (private to the owner; deals sync to their Claude account, Second opinion, and the morning listings run saves here)
+
+The website is the same app built by `.github/workflows/pages.yml` on every push to the default branch. Outside Claude it reads Thunder Bay listings from `public/data/thunderbay.json`, which is published with the site.
 
 ## Run it
 
