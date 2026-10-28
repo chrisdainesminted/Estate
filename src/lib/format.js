@@ -4,8 +4,9 @@ const usd2 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD'
 export function money(v, { cents = false, signed = false } = {}) {
   if (!Number.isFinite(v)) return '—';
   const s = (cents ? usd2 : usd0).format(Math.abs(v));
-  if (v < 0) return `−${s}`;
-  return signed && v > 0 ? `+${s}` : s;
+  // A word joiner (U+2060) keeps the sign on the same line as the amount.
+  if (v < 0) return `−\u2060${s}`;
+  return signed && v > 0 ? `+\u2060${s}` : s;
 }
 
 export function compactMoney(v) {

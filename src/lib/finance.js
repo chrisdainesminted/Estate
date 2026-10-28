@@ -303,6 +303,18 @@ export function allCash(deal) {
   return { ...deal, downPct: 100, ioYears: 0, reserveMonths: 0, lenderHaircutPct: 0, refiEnabled: false, prepay: 'none' };
 }
 
+/** The down payment the Cash tab always assumes, in percent. */
+export const OWN_DOWN_PCT = 20;
+
+/**
+ * The deal as the Cash tab sees it: your own money as a 20% down payment,
+ * the rest a regular mortgage at the deal's rate and term. No DSCR lender,
+ * so no interest-only period, reserves or rent haircut, and no refinance.
+ */
+export function ownMoney(deal) {
+  return { ...deal, downPct: OWN_DOWN_PCT, ioYears: 0, reserveMonths: 0, lenderHaircutPct: 0, refiEnabled: false };
+}
+
 /** Years of income it takes to get back the cash you put in, or null if it never does. */
 export function paybackYears(a) {
   return a.annualCashFlow > 0 && a.cashInvested > 0 ? a.cashInvested / a.annualCashFlow : null;

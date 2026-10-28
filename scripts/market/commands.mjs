@@ -5,6 +5,9 @@ import { DEFAULT_TARGETS } from '../../src/lib/finance.js';
 import { money, percent } from '../../src/lib/format.js';
 import { parseArgs, readJson, unwrap } from './io.mjs';
 
+// Plain text for the terminal: drop the invisible word joiner money() puts after a sign.
+const plainMoney = (v, opts) => money(v, opts).replace(/\u2060/g, '');
+
 /** merge <prev.json|-> <found.json> [--today YYYY-MM-DD] [--note "text"]: print the new feed. */
 export function runMerge(argv) {
   const { flags, positional } = parseArgs(argv);
@@ -62,15 +65,15 @@ export function runScore(argv) {
     console.log(`Run ${r.date}: ${r.found} found, ${r.added} new, ${r.priceDrops} price drops; ${feed.listings.length} in the feed, ${ranked.length} ranked.`);
     console.log(`Assumptions: ${market.downPct}% down, ${market.rate}% over ${market.amortYears} years. Targets: ${on || 'none'}.\n`);
     ranked.forEach((s, i) => {
-      const flagsText = [isNew(s.listing, feed) && 'NEW', droppedInLatestRun(s.listing, feed) && `DROP ${money(s.drop)}`, s.meets && 'meets targets'].filter(Boolean).join(' · ');
+      const flagsText = [isNew(s.listing, feed) && 'NEW', droppedInLatestRun(s.listing, feed) && `DROP ${plainMoney(s.drop)}`, s.meets && 'meets targets'].filter(Boolean).join(' · ');
       console.log(
-        `${String(i + 1).padStart(2)}. ${money(s.perDoor, { signed: true }).padStart(7)}/door  DSCR ${s.a.dscr.toFixed(2)}  CoC ${percent(s.a.coc, 1).padStart(6)}  ${money(s.a.price).padStart(10)}  ${s.a.units}u  rents ${s.rentSource.padEnd(9)} ${s.listing.address}${flagsText ? `  [${flagsText}]` : ''}`,
+        `${String(i + 1).padStart(2)}. ${plainMoney(s.perDoor, { signed: true }).padStart(7)}/door  DSCR ${s.a.dscr.toFixed(2)}  CoC ${percent(s.a.coc, 1).padStart(6)}  ${plainMoney(s.a.price).padStart(10)}  ${s.a.units}u  rents ${s.rentSource.padEnd(9)} ${s.listing.address}${flagsText ? `  [${flagsText}]` : ''}`,
       );
     });
     console.log(`\nSTANDOUTS (beat every target, new or cheaper today): ${best.length}`);
     best.forEach((s) =>
       console.log(
-        `- ${s.listing.address}: ${money(s.a.price)}, ${money(s.perDoor, { signed: true })}/door/mo, DSCR ${s.a.dscr.toFixed(2)}${s.rentSource === 'stated' ? '' : ` (rents ${s.rentSource === 'mixed' ? 'partly ' : ''}estimated)`}${s.listing.url ? `, ${s.listing.url}` : ''}`,
+        `- ${s.listing.address}: ${plainMoney(s.a.price)}, ${plainMoney(s.perDoor, { signed: true })}/door/mo, DSCR ${s.a.dscr.toFixed(2)}${s.rentSource === 'stated' ? '' : ` (rents ${s.rentSource === 'mixed' ? 'partly ' : ''}estimated)`}${s.listing.url ? `, ${s.listing.url}` : ''}`,
       ),
     );
   }

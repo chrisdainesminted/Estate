@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  OWN_DOWN_PCT,
   allCash,
   amortize,
   analyzeDeal,
@@ -11,6 +12,7 @@ import {
   loanSchedule,
   monthlyPI,
   maxOffer,
+  ownMoney,
   paybackYears,
   portfolioSummary,
   positionAt,
@@ -717,6 +719,19 @@ describe('allCash', () => {
     expect(c.netCashFlow).toBeCloseTo(c.grossRent - c.taxes - c.insurance - c.hoa - c.opex.total, 6);
     expect(paybackYears(c)).toBeCloseTo(c.cashInvested / c.annualCashFlow, 10);
     expect(paybackYears(analyzeDeal(allCash({ ...deal, rentPerUnit: 300 })))).toBeNull();
+  });
+
+  it('puts 20% down on a regular mortgage for the Cash tab', () => {
+    const own = analyzeDeal(ownMoney({ ...deal, downPct: 35, ioYears: 5, reserveMonths: 6 }));
+    expect(OWN_DOWN_PCT).toBe(20);
+    expect(own.downPayment).toBeCloseTo(deal.price * 0.2, 6);
+    expect(own.loanAmount).toBeCloseTo(deal.price * 0.8, 6);
+    expect(own.interestOnly).toBe(false);
+    expect(own.pi).toBeCloseTo(monthlyPI(deal.price * 0.8, deal.rate, deal.termYears), 6);
+    expect(own.reserves).toBe(0);
+    expect(own.cashInvested).toBeCloseTo(deal.price * 0.2 + own.closingCosts + (deal.rehabCost || 0), 6);
+    // The mortgage payment is the only difference from buying it outright.
+    expect(own.netCashFlow).toBeCloseTo(c.netCashFlow - own.pi, 6);
   });
 
   it('prices a loan by a year of payments over the amount borrowed', () => {

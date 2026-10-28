@@ -12,9 +12,11 @@ const RULE = [212, 212, 216];
 const BRAND = [4, 120, 87];
 
 // The PDF's built-in Helvetica covers WinAnsi only: swap the few
-// typographic characters the app uses for ones it can draw.
+// typographic characters the app uses for ones it can draw, and drop the
+// invisible word joiner money() puts after a sign.
 const clean = (s) =>
   String(s)
+    .replace(/\u2060/g, '')
     .replace(/−/g, '-')
     .replace(/[“”]/g, '"')
     .replace(/[‘’]/g, "'")

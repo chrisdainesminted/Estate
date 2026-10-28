@@ -137,9 +137,9 @@ export const GLOSSARY = {
     term: 'Bought outright',
     body: 'Paid for entirely with your own money: no mortgage, so no loan payment, no lender and no DSCR. Your return is the yearly income divided by everything you put in.',
   },
-  payback: {
-    term: 'Money back',
-    body: 'Years of rent income it takes to repay the cash you put in. It ignores rent increases, appreciation and selling, so it’s a simple yardstick, not a forecast.',
+  mortgagePayment: {
+    term: 'Mortgage payment',
+    body: 'The monthly principal and interest on the loan. In the Cash tab the loan is always the price minus a 20% down payment, at the deal’s rate and term, paid down from the first month. Property taxes and insurance are counted separately.',
   },
   loanConstant: {
     term: 'Cost of borrowing',

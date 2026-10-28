@@ -10,6 +10,12 @@ const EVEN = 0.5;
 
 const perUnit = (units) => (units > 1 ? ' per unit' : '');
 
+/** "a" or "an" before a number, by how it's read aloud: an 8% rate, an 11.0% return, an $18,000 loss, a 5.8% return. */
+function an(text) {
+  const lead = String(text).replace(/^\$/, '').match(/^\d+/)?.[0] ?? '';
+  return `${lead.startsWith('8') || lead === '11' || lead === '18' ? 'an' : 'a'} ${text}`;
+}
+
 function cashClause(cf, units = 1) {
   const m = `${money(Math.abs(cf))} a month${perUnit(units)}`;
   if (cf >= EVEN) return { tone: 'keeps', text: `puts about ${m} in your pocket` };
@@ -88,7 +94,7 @@ export function rentFlowMeaning(a) {
 /** The what-if sliders in words, or null when they're all at the deal's own values. */
 export function whatIfSummary(deal, adj) {
   const parts = [];
-  if (adj.rateDelta) parts.push(`a ${Math.max((Number(deal.rate) || 0) + adj.rateDelta, 0).toFixed(3).replace(/\.?0+$/, '')}% rate`);
+  if (adj.rateDelta) parts.push(`${an(`${Math.max((Number(deal.rate) || 0) + adj.rateDelta, 0).toFixed(3).replace(/\.?0+$/, '')}%`)} rate`);
   if (adj.downPct != null && adj.downPct !== Number(deal.downPct)) parts.push(`${adj.downPct}% down`);
   if (adj.rentPct) parts.push(`rent ${adj.rentPct > 0 ? 'up' : 'down'} ${Math.abs(adj.rentPct)}%`);
   if (!parts.length) return null;
@@ -137,7 +143,7 @@ export function taxMeaning(t) {
   if (t.taxable < 0) {
     return t.taxDue < 0
       ? `A ${money(-t.taxable)} paper loss saves about ${money(-t.taxDue)} of tax on your other income.`
-      : `No tax in year 1: ${shield} turns it into a ${money(-t.taxable)} paper loss for later years.`;
+      : `No tax in year 1: ${shield} turns it into ${an(money(-t.taxable))} paper loss for later years.`;
   }
   if (t.taxDue > 0) return `About ${money(t.taxDue)} of tax in year 1, after ${shield} shelters part of the income.`;
   return `No tax in year 1: ${shield} shelters the rental income.`;
@@ -186,66 +192,75 @@ export function compareSummary(items) {
   ];
 }
 
-// Bought outright with your own money: no loan, no lender, no DSCR. `c` is
-// analyzeDeal(allCash(deal)).
+// The Cash tab: your own money as a 20% down payment and a regular mortgage
+// for the rest, with no DSCR lender. `c` is analyzeDeal(ownMoney(deal)).
 
-/** An all-cash purchase in one sentence: what it pays, and when your money is back. */
+const downText = (c) => `${percent(c.price > 0 ? c.downPayment / c.price : 0, 0)} down`;
+
+function aboutYears(y) {
+  const n = Math.max(Math.round(y), 1);
+  return `about ${n} year${n === 1 ? '' : 's'}`;
+}
+
+/** The deal with 20% down in one sentence: what it pays you after the mortgage, and the return on your cash. */
 export function cashSentence(c) {
+  const pay = `the ${money(c.pi)} mortgage payment`;
   if (c.netCashFlow >= EVEN) {
-    const years = paybackYears(c);
-    const back = years ? ` At that rate your money comes back in about ${Math.round(years)} years from rent alone.` : '';
-    return `Bought outright with ${money(c.cashInvested)} of your own money, it would pay you about ${money(c.netCashFlow)} a month after every cost: a ${percent(c.coc, 1)} cash-on-cash return.${back}`;
+    return `With ${downText(c)}, ${money(c.cashInvested)} of your own money in all, it would pay you about ${money(c.netCashFlow)} a month after ${pay} and every cost: ${an(percent(c.coc, 1))} cash-on-cash return.`;
   }
-  if (c.netCashFlow <= -EVEN) return `Even with no mortgage it would cost you about ${money(-c.netCashFlow)} a month: the rent doesn’t cover taxes, insurance and running costs.`;
-  return 'Even with no mortgage it only breaks even: the rent just covers taxes, insurance and running costs.';
+  if (c.netCashFlow <= -EVEN) return `With ${downText(c)}, it would cost you about ${money(-c.netCashFlow)} a month: the rent doesn’t cover ${pay} plus taxes, insurance and running costs.`;
+  return `With ${downText(c)}, it only breaks even: the rent just covers ${pay} and every cost.`;
 }
 
-export function cashIncomeMeaning(c) {
-  if (c.netCashFlow >= EVEN) return `What you keep each month after taxes, insurance and every running cost, with no mortgage: ${money(c.annualCashFlow)} a year.`;
-  if (c.netCashFlow <= -EVEN) return `What you’d pay in each month even with no mortgage: ${money(-c.annualCashFlow)} a year.`;
-  return 'The rent just covers taxes, insurance and running costs.';
+export function mortgageMeaning(c, deal) {
+  return `Principal and interest on ${an(money(c.loanAmount))} loan (the price minus your ${downText(c)}) at ${Number(deal.rate)}% over ${Number(deal.termYears)} years.`;
 }
 
-export function outrightCashMeaning(c) {
-  const parts = [`${money(c.price)} price`, `${money(c.closingCosts)} closing costs`];
-  if (c.rehab > 0) parts.push(`${money(c.rehab)} repairs`);
-  return `${parts.join(' + ')}. No loan, so no lender reserves.`;
-}
-
-export function paybackMeaning(c) {
-  return paybackYears(c)
-    ? `Years of income it takes to repay the ${money(c.cashInvested)} you put in, before rent increases or a sale.`
-    : 'Never, from income alone: it doesn’t make money each year.';
+/** The cash you put in, and how long cash flow takes to pay it back. */
+export function ownCashMeaning(c) {
+  const years = paybackYears(c);
+  return `${cashInMeaning(c)} ${years ? `Cash flow pays it back in ${aboutYears(years)}.` : 'Cash flow alone never pays it back.'}`;
 }
 
 /**
- * Cash or a mortgage: borrowing raises your return only when a year of loan
- * payments costs less, per dollar borrowed, than the property earns on its
- * full cost. `loan` is the deal with its own financing.
+ * The mortgage or all cash: borrowing raises your return only when a year of
+ * loan payments costs less, per dollar borrowed, than the property earns on
+ * its full cost. `cash` is the deal bought outright, `loan` with its mortgage.
  */
 export function leverageMeaning(cash, loan) {
   const k = loanConstant(loan);
-  if (k == null) return 'This deal is set up with no loan. Set a down payment under 100% in its inputs to compare.';
-  const costs = `the loan’s payments cost ${percent(k, 1)} of what you borrow each year`;
+  if (k == null) return null;
+  const costs = `a year of mortgage payments costs ${percent(k, 1)} of the loan`;
   return loan.coc > cash.coc
-    ? `A mortgage raises your return: ${costs}, less than the ${percent(cash.coc, 1)} the property earns, so borrowing adds to what each of your dollars makes.`
-    : `Paying cash earns more per dollar: ${costs}, more than the ${percent(cash.coc, 1)} the property earns, so borrowing drags your return down.`;
+    ? `The mortgage raises your return: ${costs}, less than the ${percent(cash.coc, 1)} the property earns on its full cost, so each of your dollars makes more.`
+    : `Paying all cash would earn more per dollar: ${costs}, more than the ${percent(cash.coc, 1)} the property earns on its full cost, so the mortgage drags your return down.`;
 }
 
 export function cashRentMeaning(c) {
-  return `Rent ${money(c.grossRent)}, minus ${money(c.taxes + c.insurance + c.hoa)} for taxes and insurance${c.hoa > 0 ? ' and fees' : ''}, minus ${money(c.opex.total)} of running costs. No mortgage payment.`;
+  return `Rent ${money(c.grossRent)}, minus the ${money(c.pi)} mortgage payment, ${money(c.taxes + c.insurance + c.hoa)} for taxes and insurance${c.hoa > 0 ? ' and fees' : ''}, and ${money(c.opex.total)} of running costs.`;
 }
 
-/** Income added up over the years shown, as a share of the cash put in. */
+/** Cash flow added up over the years shown, as a share of the cash put in. */
 export function cashYearsMeaning(c, rows, rentGrowthPct) {
   const last = rows[rows.length - 1];
-  const back = rows.find((r) => r.cumCashFlow >= c.cashInvested);
-  const share = c.cashInvested > 0 ? `: ${percent(Math.max(last.cumCashFlow, 0) / c.cashInvested, 0)} of your cash back` : '';
   const growth = Number(rentGrowthPct) ? `, with rent rising ${Number(rentGrowthPct)}% a year` : '';
-  return `Rent income added up over ${rows.length} years${growth}${share}${back ? `, all of it by year ${back.year}` : ''}.`;
+  if (!(last.cumCashFlow > 0)) {
+    return `Cash flow over ${rows.length} years${growth} adds up to ${money(last.cumCashFlow, { signed: true })}, so none of your cash comes back from it.`;
+  }
+  const back = rows.find((r) => r.cumCashFlow >= c.cashInvested);
+  const share = c.cashInvested > 0 ? `: ${percent(last.cumCashFlow / c.cashInvested, 0)} of your cash back` : '';
+  return `Cash flow added up over ${rows.length} years${growth}${share}${back ? `, all of it by year ${back.year}` : ''}.`;
 }
 
 export function cashSaleMeaning(sale) {
   const rate = Number.isFinite(sale.irr) ? `, like earning ${percent(sale.irr, 1)} a year on your ${money(sale.cashInvested)}` : '';
-  return `If you sold in year ${sale.year}: ${money(sale.profit, { signed: true })} ${sale.profit >= 0 ? 'profit' : 'loss'} after selling costs and every year’s income${rate}.`;
+  return `If you sold in year ${sale.year}: ${money(sale.profit, { signed: true })} ${sale.profit >= 0 ? 'profit' : 'loss'}, counting every year’s cash flow, after selling costs and paying off the mortgage${rate}.`;
+}
+
+/** The top of the deal ranking, or a note that none of the deals pays. `top` is { deal, c }. */
+export function cashRankingMeaning(top) {
+  if (!top) return null;
+  return top.c.netCashFlow >= EVEN
+    ? `${top.deal.name} would pay the most on your cash: ${percent(top.c.coc, 1)} a year.`
+    : `None of your deals pays you each month with ${downText(top.c)}. ${top.deal.name} comes closest: ${percent(top.c.coc, 1)} a year.`;
 }

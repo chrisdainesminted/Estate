@@ -36,7 +36,8 @@ Deals are always saved in the browser. On the hosted page they also sync to the 
 | Cash invested | down payment + closing costs (3% default) + rehab |
 | Lender reserves | months of PITIA held in the bank (6 by default); shown separately, not spent |
 | Cash-on-cash | annual net cash flow ÷ cash invested |
-| Bought outright (Cash view) | the same deal with 100% down: no loan, payment, lender reserves or DSCR, so cash invested = price + closing costs + rehab |
+| Cash view | 20% down; the rest a fully amortizing mortgage at the deal's rate and term (no interest-only period, reserves, rent haircut or refinance); cash invested = 20% down + closing costs + rehab |
+| Bought outright | the same deal with 100% down: no loan, payment, lender reserves or DSCR, so cash invested = price + closing costs + rehab |
 | Money back | cash invested ÷ annual cash flow (no rent growth or sale) |
 | Cost of borrowing | a year of loan payments ÷ the loan; a mortgage raises cash-on-cash only when this is below the bought-outright return |
 | 10-year total return | cumulative cash flow + principal paydown + appreciation, before selling costs |
@@ -65,7 +66,7 @@ Additional figures: cap rate (NOI ÷ price), breakeven rent per unit, rent neede
 
 - **Portfolio view**: owned properties rolled up into today's net cash flow, global DSCR, cash-on-cash and equity (value, loan balance and payment rolled forward by years owned), what you'd net if you sold everything in 10 years, a cash-flow-by-property chart, and "What if you buy it?", which shows how a prospect changes the whole portfolio.
 - **Analyze view**: one summary card answers "is this a good deal?" in a plain sentence (what a lender would say and what your bank account would see, plus the break-even rent), then four numbers that each say what they mean: the lender check (DSCR, with where it sits among the lender bands), monthly cash flow, cash-on-cash return and the cash you put in. Below it every part of the analysis folds down to one line with its key number and a plain explanation: where the rent goes, the most you should pay, a what-if, the stress test, the 10-year outlook, a refinance, selling in year 10, taxes and a second opinion. Open one to see how the number adds up, or open them all; the page remembers which you left open.
-- **Cash view (your own money)**: any deal bought outright, with no mortgage, so no lender and no DSCR. A summary card says what it would pay you each month, its cash-on-cash return on everything you put in (price, closing costs and rehab), whether that beats your cash-on-cash target, and how many years of rent it takes to get your money back. Below it, each folding down like Analyze: where the rent goes, cash against a mortgage side by side (and whether borrowing raises or lowers your return), the most to pay in cash for your targets, income over 10 years with how much of your cash it has paid back, year-1 taxes, and every deal in your library ranked by what it would pay on cash.
+- **Cash view (your own money)**: any deal with your own money as a 20% down payment and a regular mortgage for the rest, at the deal's rate and term, with no DSCR. A summary card shows the monthly cash flow after the mortgage payment, the cash-on-cash return on everything you put in (20% down, closing costs and rehab) against your target, the mortgage payment, and the cash you put in with how long cash flow takes to pay it back. Below it, each folding down like Analyze: where the rent goes (the mortgage payment first), the deal with 20% down next to buying it with all cash (and whether the mortgage raises or lowers your return), the most to pay for your targets, cash flow over 10 years with how much of your cash it has paid back and a sale, year-1 taxes, and every deal in your library ranked by its cash-on-cash return with 20% down.
 - **Stress test**: a 7×7 heatmap of rent against rate, in cash flow or DSCR, with the break-even rate and rent. Click any cell to load it as the what-if.
 - **Taxes, year 1**: depreciation, mortgage interest and operating costs become taxable income, then after-tax cash flow and cash-on-cash, using your tax rate, the land share of the price and whether you can use rental losses.
 - **Loan schedule**: a third projection view with yearly payments, interest, principal and balance, noting when interest-only ends or a refinance happens.
@@ -105,7 +106,7 @@ src/hooks/useExports.js   PDF and CSV export with status toasts
 src/hooks/useMarket.js    the saved listings feed, live from the page's database
 src/components/Section.jsx fold-down sections: one line with the key number and its meaning, detail on demand
 src/components/*          UI sections, plus the search palette, phone sheet and toasts
-src/views/CashView.jsx    cash view: a deal bought outright with your own money (loaded on demand)
+src/views/CashView.jsx    cash view: your own money as 20% down, with the mortgage payment (loaded on demand)
 src/views/CompareView.jsx compare view (loaded on demand)
 src/views/ListingsView.jsx listings tab (loaded on demand)
 scripts/market/           the daily run: RUNBOOK.md, merge.mjs (fold findings into the feed), score.mjs (rank and pick standouts)

@@ -72,7 +72,7 @@ const VIEW_KEY = 'bedrock-view';
 const VIEWS = [
   { value: 'portfolio', label: 'Portfolio', icon: Briefcase },
   { value: 'analyze', label: 'Analyze', icon: LayoutDashboard },
-  { value: 'cash', label: 'Cash', icon: Banknote, keywords: 'all cash own money outright no loan cash on cash income' },
+  { value: 'cash', label: 'Cash', icon: Banknote, keywords: 'own money cash flow cash on cash 20% down mortgage payment income' },
   { value: 'compare', label: 'Compare', icon: Columns3 },
   { value: 'plan', label: 'Plan', icon: Sprout },
   { value: 'listings', label: 'Listings', icon: Radar },
