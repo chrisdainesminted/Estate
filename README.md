@@ -6,10 +6,10 @@
 
 Bedrock separates **lender DSCR math (PITIA)** from **real-world cash flow (PITIA + OpEx)**, so a deal a DSCR lender approves can't quietly lose money every month. The mark is stacked layers widening to a solid base: real cash flow is the layer a portfolio is built on.
 
-- Website: https://chrisdainesminted.github.io/Estate/ (public; deals are saved in each visitor's browser)
+- Website: on Cloudflare Pages (public; deals are saved in each visitor's browser)
 - Claude page: https://claude.ai/artifact/5KH4ZZHoZ8CvCKF5CXutGJ (private to the owner; deals sync to their Claude account, Second opinion, and the morning listings run saves here)
 
-The website is the same app built by `.github/workflows/pages.yml` on every push to the default branch. Outside Claude it reads Thunder Bay listings from `public/data/thunderbay.json`, which is published with the site.
+The website is the same app. Cloudflare Pages builds it from the default branch on every push, with build command `npm test && npm run build` and output directory `dist`, so a failing test stops a deploy and the last good version stays up. Outside Claude it reads Thunder Bay listings from `public/data/thunderbay.json`, which is published with the site.
 
 ## Run it
 
@@ -114,6 +114,8 @@ A scheduled task runs every morning at about 6 am Eastern in a fresh cloud sessi
 4. Save `next.json` back with a version check, then `node scripts/market/score.mjs next.json bedrock.json` ranks everything and lists standouts for the phone notification.
 
 The page does the full analysis live, so changing an assumption re-ranks the list straight away.
+
+At about 6:34 am a second scheduled step, running in a session that has this repository checked out, copies the saved feed into `public/data/thunderbay.json` and pushes it. Cloudflare rebuilds the website from that push, so its Listings tab shows the same morning list. (The 6 am run itself can't push: scheduled runs start without repository access.)
 
 ## Brand
 
