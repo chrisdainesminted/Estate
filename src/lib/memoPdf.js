@@ -4,6 +4,7 @@
 import { verdict } from './dscr.js';
 import { money, percent, ratio } from './format.js';
 import { UNIT_TYPES } from './presets.js';
+import { STRATA, STRATA_HEIGHT } from './brand.js';
 
 const PAGE = { w: 612, h: 792, m: 40 };
 const INK = [24, 24, 27];
@@ -41,12 +42,9 @@ export async function buildMemoPdf({ deal, a, rows, sale, refi, offer }) {
   };
 
   // Header: brand mark, deal name, terms, verdict.
+  // The strata mark (src/lib/brand.js), its 48-unit square drawn 16 pt wide.
   doc.setFillColor(...BRAND);
-  doc.roundedRect(m, m, 16, 16, 4, 4, 'F');
-  doc.setFillColor(255, 255, 255);
-  doc.roundedRect(m + 5.5, m + 3.5, 5, 2.2, 0.8, 0.8, 'F');
-  doc.roundedRect(m + 4, m + 6.8, 8, 2.2, 0.8, 0.8, 'F');
-  doc.roundedRect(m + 2.5, m + 10.1, 11, 2.2, 0.8, 0.8, 'F');
+  STRATA.forEach((s) => doc.rect(m + s.x / 3, m + s.y / 3, s.w / 3, STRATA_HEIGHT / 3, 'F'));
   text('Bedrock  ·  Deal memo', m + 22, m + 11.5, { size: 9, bold: true });
   text(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), m + W, m + 11.5, { size: 8, color: MUTED, align: 'right' });
 

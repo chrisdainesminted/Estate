@@ -145,6 +145,7 @@ At about 6:34 am a second scheduled step, running in a session that has this rep
 ## Brand
 
 - Name: Bedrock. Tagline: "Cash flow you can build on."
+- Mark: three layers of rock stepping up to the right, like a rising chart (`src/lib/brand.js`). `node scripts/brand-icons.cjs` redraws the app icons and the link preview image from it.
 - Accent: emerald (`emerald-700` #047857 light, `emerald-400` #34d399 dark) on zinc "ink" neutrals.
 - Type: Inter, with tabular figures for every number.
 - Surfaces: flat panels with hairline edges (`.panel` in `src/index.css`) on an onyx (#0b0b0c) or paper-white page, with 4–6 px corners. Numbers sit in ledgers (`LedgerLine` in `src/components/ui.jsx`): label, dotted leader, amount, and a double rule above the bottom line.
