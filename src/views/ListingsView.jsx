@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRight, Check, ChevronDown, ExternalLink, Eye, EyeOff, Radar, RotateCcw, SlidersHorizontal } from 'lucide-react';
-import { DEFAULT_MARKET, LISTING_TYPES, MARKET, SORTS, droppedInLatestRun, isNew, lensTargets, listingPageUrl, rankListings, siteName, typeOf } from '../lib/market.js';
+import { DEFAULT_MARKET, LISTING_TYPES, MARKET, SORTS, droppedInLatestRun, isNew, lensTargets, listingPageUrl, listingToDeal, rankListings, siteName, typeOf } from '../lib/market.js';
+import { homeFor } from '../lib/firstHome.js';
 import { listingSentence } from '../lib/explain.js';
 import { money, percent } from '../lib/format.js';
 import { Button, Card, CardHeader, DscrChip, NumberField, Segmented, SelectField, SkeletonCard, ViewHeader, signedClass } from '../components/ui.jsx';
@@ -73,10 +74,12 @@ function dayLabel(isoDate) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-const COLUMNS = 7;
+const COLUMNS = 8;
+// Sorted here rather than in rankListings: it needs your Home numbers.
+const LIVE_SORT = { key: 'live', label: 'Cheapest to live in' };
 
 /** One listing as a table row; opening it adds a row under it with the details and what to do next. */
-function ListingRow({ s, rank, sort, feed, imported, hidden, onAnalyze, onHide, onUnhide }) {
+function ListingRow({ s, home, rank, sort, feed, imported, hidden, onAnalyze, onHide, onUnhide }) {
   const [open, setOpen] = useState(false);
   const l = s.listing;
   const link = listingPageUrl(l.url, l.address);
@@ -106,6 +109,7 @@ function ListingRow({ s, rank, sort, feed, imported, hidden, onAnalyze, onHide, 
             <span className="tabular mt-0.5 block text-xs text-zinc-500 dark:text-zinc-400">
               {kind}
               <span className="md:hidden"> · {money(s.a.price)}</span>
+              {home && <span className="md:hidden"> · live in: {money(home.costToLive)}/mo</span>}
             </span>
           </button>
           {tags.length > 0 && (
@@ -119,6 +123,16 @@ function ListingRow({ s, rank, sort, feed, imported, hidden, onAnalyze, onHide, 
           )}
         </td>
         <td className={`${cell} hidden text-zinc-700 md:table-cell dark:text-zinc-300`}>{money(s.a.price)}</td>
+        <td className={`${cell} hidden md:table-cell ${sort === 'live' ? 'font-semibold' : ''}`}>
+          {home ? (
+            <>
+              <span className="block text-zinc-900 dark:text-zinc-100">{money(home.costToLive)}/mo</span>
+              {home.canBuy && <span className="mt-0.5 block text-[11px] font-medium text-emerald-700 dark:text-emerald-400">You qualify</span>}
+            </>
+          ) : (
+            <span className="text-zinc-500 dark:text-zinc-400">—</span>
+          )}
+        </td>
         <td className={`${cell} font-semibold ${signedClass(s.perDoor)}`}>{money(s.perDoor, { signed: true })}</td>
         <td className={`${cell} hidden lg:table-cell`}>{s.lens === 'own' ? <span className="text-zinc-700 dark:text-zinc-300">{money(s.a.pi)}/mo</span> : <DscrChip status={s.a.status} dscr={s.a.dscr} size="sm" />}</td>
         <td className={`${cell} ${sort === 'coc' ? 'font-semibold' : ''} ${signedClass(s.a.coc)}`}>{percent(s.a.coc, 1)}</td>
@@ -155,6 +169,11 @@ function ListingRow({ s, rank, sort, feed, imported, hidden, onAnalyze, onHide, 
                 <Metric label="Bought outright" tip="allCash" sub={`on ${money(s.cash.cashInvested)}, no loan`}>
                   <span className={signedClass(s.cash.coc)}>{percent(s.cash.coc, 1)}</span>
                 </Metric>
+                {home && (
+                  <Metric label="If you live in it" sub={home.canBuy ? `you could buy it, ${money(home.down)} down` : home.qualifies ? `${money(home.shortCash)} short of the cash` : 'not yet on your income'}>
+                    {money(home.costToLive)}/mo
+                  </Metric>
+                )}
                 <Metric label="Your max offer" tip="maxOffer" sub={room == null ? 'no targets set' : room >= 0 ? `${money(room)} of room` : `${money(-room)} over your max`}>
                   {room == null ? '—' : money(s.offer.price)}
                 </Metric>
@@ -262,7 +281,7 @@ function Notice({ icon: Icon = Radar, title, children }) {
 }
 
 /** The Listings tab: Thunder Bay properties for sale, refreshed each morning and ranked by your numbers. */
-export default function ListingsView({ feedState, market, targets, importedIds, onMarket, onAnalyze, onHide, onUnhide }) {
+export default function ListingsView({ feedState, market, targets, profile, importedIds, onMarket, onAnalyze, onHide, onUnhide }) {
   const { status, feed } = feedState;
   const [sort, setSort] = useState('perDoor');
   const [onlyMeets, setOnlyMeets] = useState(false);
@@ -272,7 +291,13 @@ export default function ListingsView({ feedState, market, targets, importedIds, 
 
   // For sale, with a page of its own to check it against (rankListings applies the same rule).
   const active = useMemo(() => (feed?.listings ?? []).filter((l) => (l.status ?? 'active') === 'active' && listingPageUrl(l.url, l.address)), [feed]);
-  const ranked = useMemo(() => rankListings(active, market, targets, { sort, showHidden }), [active, market, targets, sort, showHidden]);
+  const homes = useMemo(() => new Map(active.map((l) => [l.id, profile ? homeFor(listingToDeal(l, market, 'own'), profile, market.rate) : null])), [active, market, profile]);
+  const ranked = useMemo(() => {
+    const list = rankListings(active, market, targets, { sort: sort === LIVE_SORT.key ? 'perDoor' : sort, showHidden });
+    if (sort !== LIVE_SORT.key) return list;
+    const cost = (s) => homes.get(s.listing.id)?.costToLive ?? Infinity;
+    return [...list].sort((x, y) => cost(x) - cost(y));
+  }, [active, market, targets, sort, showHidden, homes]);
   const hiddenSet = useMemo(() => new Set(market.hidden), [market.hidden]);
   const visible = ranked.filter((s) => !hiddenSet.has(s.listing.id));
   const shown = onlyMeets ? ranked.filter((s) => s.meets) : ranked;
@@ -394,6 +419,7 @@ export default function ListingsView({ feedState, market, targets, importedIds, 
                       {s.label}
                     </option>
                   ))}
+                  {profile && <option value={LIVE_SORT.key}>{LIVE_SORT.label}</option>}
                 </select>
                 <Button className="py-1.5" onClick={() => setEditing((v) => !v)} aria-expanded={editing} aria-controls="listing-assumptions">
                   <SlidersHorizontal className="size-4" aria-hidden /> Assumptions
@@ -437,6 +463,9 @@ export default function ListingsView({ feedState, market, targets, importedIds, 
                     <th scope="col" className={`${th} hidden md:table-cell`}>
                       Price
                     </th>
+                    <th scope="col" className={`${th} hidden md:table-cell`}>
+                      To live in{sort === LIVE_SORT.key && <span aria-hidden> ↓</span>}
+                    </th>
                     <th scope="col" className={th}>
                       Per door{sort === 'perDoor' && <span aria-hidden> ↓</span>}
                     </th>
@@ -456,6 +485,7 @@ export default function ListingsView({ feedState, market, targets, importedIds, 
                     <ListingRow
                       key={s.listing.id}
                       s={s}
+                      home={homes.get(s.listing.id)}
                       rank={i + 1}
                       sort={sort}
                       feed={feed}

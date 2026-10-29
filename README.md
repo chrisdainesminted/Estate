@@ -4,7 +4,7 @@
 
 **Cash flow you can build on.**
 
-Bedrock separates **lender DSCR math (PITIA)** from **real-world cash flow (PITIA + OpEx)**, so a deal a DSCR lender approves can't quietly lose money every month. The mark is stacked layers widening to a solid base: real cash flow is the layer a portfolio is built on.
+Bedrock helps young adults get into their first home, starting in Thunder Bay. It shows what you could buy on your own or by renting out part of a duplex, the government money you can claim, when your savings will be ready, what living in a real listing would cost you each month, and how to get a rental suite through the permits. Underneath, it separates **lender DSCR math (PITIA)** from **real-world cash flow (PITIA + OpEx)**, so a deal a lender approves can't quietly lose money every month. The mark is three layers of rock stepping up like a rising chart.
 
 - Website: https://bedrock.signia83.workers.dev/ (public; deals are saved in each visitor's browser)
 - Claude page: https://claude.ai/artifact/5KH4ZZHoZ8CvCKF5CXutGJ (private to the owner; deals sync to their Claude account, Second opinion, and the morning listings run saves here)
@@ -64,9 +64,18 @@ Additional figures: cap rate (NOI ÷ price), breakeven rent per unit, rent neede
 
 ## Features
 
+- **Home (first-time buyers, the first tab)**: your income, savings, monthly savings, debts and rent (saved with your deals, never in share links). From those:
+  - **What you could buy**: the most a lender would approve and your savings cover, for a house on your own and for a duplex where you rent the other unit, each as a ledger down to what it costs you each month against your rent today.
+  - **Money you can get**: the FHSA tax refund, Ontario's land transfer tax refund, the $1,500 home buyers' tax credit, the GST rebate on new homes, the RRSP Home Buyers' Plan and the insured refinance for suites, each with its amount for you and a link to the official page.
+  - **When you'll be ready**: the cash a target home needs (down payment, closing costs, insurance PST) and the month your savings get there, with FHSA refunds added back each spring.
+  - **Live in one of your deals**: whether you could buy it and what it would cost to live there once the other units' rent comes in.
+  - **Add a suite or backyard home**: what Thunder Bay's zoning allows, the permit steps as a checklist that remembers your progress, the grants and financing, and whether the rent pays the build back. Every rule links to its source.
+  - The lending rules (5% down on the first $500,000 and 10% above, 10% on 3–4 units, CMHC premiums with the 30-year surcharge, the 5.25% stress test, 39%/44% debt limits, rent counted in full for a second unit and half on 3–4) live in `src/lib/firstHome.js` with the date they were last checked, shown in the app. Estimates, not advice.
+- **Listings for first-time buyers**: a "To live in" column and a "Cheapest to live in" sort show each listing's monthly cost if you live in one unit, and "You qualify" where your numbers would get the mortgage.
+
 - **Portfolio view**: owned properties rolled up into today's net cash flow, global DSCR, cash-on-cash and equity (value, loan balance and payment rolled forward by years owned), what you'd net if you sold everything in 10 years, a cash-flow-by-property chart, and "What if you buy it?", which shows how a prospect changes the whole portfolio.
 - **Quick check (for beginners)**: on the welcome card, or any time from the help panel, type a price, the type of property, the rent and whether it's in Canada (the default) or the US. Don't know the rent? Pick the bedrooms in each unit and it fills in the typical Thunder Bay rent from the listing assumptions' rent table (also under the rent in a Canadian deal's inputs). Bedrock fills in typical taxes, insurance and running costs (your listing assumptions in Canada; scaled from the price in the US), opens the result, and says the taxes and insurance are estimates until you type real ones.
-- **Three tabs to start**: Analyze, Cash and Listings. On a phone they sit along the bottom with More, which holds Portfolio, Compare and Plan. On a computer, Portfolio, Compare and Plan wait under More until you have two deals of your own or own a property; clicking More (or going to one from search) brings them out for good in that browser.
+- **Four tabs to start**: Home, Analyze, Cash and Listings, opening on Home. On a phone they sit along the bottom with More, which holds Portfolio, Compare and Plan. On a computer, Portfolio, Compare and Plan wait under More until you have two deals of your own or own a property; clicking More (or going to one from search) brings them out for good in that browser.
 - **Share a deal by link**: the Share button (on the summary, in the deal inputs, or in search) makes a link to the public site that carries the deal's numbers, with or without its address, listing link and notes. They ride after the # in the link, which browsers never send to a server, and only the inputs that differ from a new deal are included. A quick-check deal keeps its note that taxes and insurance are estimates. Opening the link checks every field, adds the deal once (opening it again shows the saved copy) and shows it.
 - **Help (the ? button)**: what each tab is for, the quick check, and every term Bedrock uses in plain words, with a search box.
 - **Analyze view**: the summary answers "is this a good deal?" with a plain verdict ("Makes money each month" or "Loses money each month") and a sentence (what your bank account would see and what a lender would say, plus the break-even rent), then two ledgers: **Each month** (rent, the mortgage payment, property tax, insurance and running costs, down to what's left for you) and **Your cash** (down payment and closing costs, down to the cash you put in, the return on it each year and the lender check). Below it every part of the analysis folds down to one ledger line with its key number and a plain explanation: where the rent goes, the most you should pay, a what-if, the stress test, the 10-year outlook, a refinance, selling in year 10, taxes and a second opinion. Open one to see how the number adds up, or open them all; the page remembers which you left open.
@@ -121,6 +130,9 @@ src/components/HelpSheet.jsx  help: what each tab does and the words to know (lo
 src/components/ShareSheet.jsx the share panel: copy the link or use the phone's share sheet (loaded on demand)
 src/components/RentHelper.jsx "Don't know the rent?": the Thunder Bay rent for a number of bedrooms
 src/components/*          UI sections, plus the search palette, phone sheet and toasts
+src/views/HomeView.jsx    home: first-time buyers, money you can get, the suite permit guide (loaded on demand)
+src/lib/firstHome.js      first-time buyer lending rules, qualifying, live-in cost, benefits, savings timeline (tested)
+src/lib/suites.js         Thunder Bay suite rules, permit steps and payback (tested)
 src/views/CashView.jsx    cash view: your own money as 20% down, with the mortgage payment (loaded on demand)
 src/views/CompareView.jsx compare view (loaded on demand)
 src/views/ListingsView.jsx listings tab (loaded on demand)

@@ -61,7 +61,7 @@ export default function Dock({ views, view, onView, result, onEdit }) {
           </Button>
         </section>
       )}
-      <nav aria-label="Views" className="grid grid-cols-4 border-t border-hairline">
+      <nav aria-label="Views" className="grid border-t border-hairline" style={{ gridTemplateColumns: `repeat(${basic.length + 1}, minmax(0, 1fr))` }}>
         {basic.map((v) => (
           <button key={v.value} type="button" aria-current={v.value === view ? 'page' : undefined} onClick={() => onView(v.value)} className={tabClass(v.value === view)}>
             {v.label}

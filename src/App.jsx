@@ -14,6 +14,7 @@ import {
   FileText,
   HardDrive,
   Home,
+  KeyRound,
   LayoutDashboard,
   ListTree,
   Moon,
@@ -70,6 +71,7 @@ const PlanView = lazy(() => import('./components/PlanView.jsx'));
 const CompareView = lazy(() => import('./views/CompareView.jsx'));
 const ListingsView = lazy(() => import('./views/ListingsView.jsx'));
 const CashView = lazy(() => import('./views/CashView.jsx'));
+const HomeView = lazy(() => import('./views/HomeView.jsx'));
 const HelpSheet = lazy(() => import('./components/HelpSheet.jsx'));
 const ShareSheet = lazy(() => import('./components/ShareSheet.jsx'));
 
@@ -81,6 +83,14 @@ const TABS_KEY = 'bedrock-all-tabs';
 // `about` is what the help panel says each tab is for. The `basic` tabs
 // always show; the rest wait behind More until they're useful.
 const VIEWS = [
+  {
+    value: 'home',
+    label: 'Home',
+    icon: KeyRound,
+    basic: true,
+    keywords: 'first home buy afford qualify down payment fhsa savings grants rebate suite permit build',
+    about: 'Your first home: what you could buy, the government money you can get, when you’ll be ready, and how to add a rental suite.',
+  },
   { value: 'analyze', label: 'Analyze', icon: LayoutDashboard, basic: true, about: 'One deal in detail: what you’d keep each month, what a lender would say, and the most you should pay.' },
   {
     value: 'cash',
@@ -168,9 +178,9 @@ function useStoredView() {
   const [view, setView] = useState(() => {
     try {
       const v = localStorage.getItem(VIEW_KEY);
-      return VIEWS.some((x) => x.value === v) ? v : 'analyze';
+      return VIEWS.some((x) => x.value === v) ? v : 'home';
     } catch {
-      return 'analyze';
+      return 'home';
     }
   });
   useEffect(() => {
@@ -204,6 +214,8 @@ export default function App() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [fromLink, setFromLink] = useState(false);
+  // The deal the Home tab tries living in; the open deal until you pick another.
+  const [liveDealId, setLiveDealId] = useState(null);
   const [allTabs, showAllTabs] = useAllTabs();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const marketFeed = useMarket();
@@ -619,11 +631,26 @@ export default function App() {
               <PlanView owned={owned} deals={baseItems} plan={lib.settings.plan} onPlan={(patch) => lib.updateSettings('plan', patch)} dark={dark} onOpen={openDeal} />
             )}
 
+            {view === 'home' && (
+              <HomeView
+                profile={lib.settings.home}
+                suite={lib.settings.suite}
+                market={normalizeMarket(market)}
+                items={baseItems}
+                liveDealId={liveDealId ?? activeId}
+                onHome={(patch) => lib.updateSettings('home', patch)}
+                onSuite={(patch) => lib.updateSettings('suite', patch)}
+                onPickDeal={setLiveDealId}
+                onOpen={openDeal}
+              />
+            )}
+
             {view === 'listings' && (
               <ListingsView
                 feedState={marketFeed}
                 market={market}
                 targets={targets}
+                profile={lib.settings.home}
                 importedIds={importedIds}
                 onMarket={(patch) => lib.updateSettings('market', patch)}
                 onAnalyze={analyzeListing}

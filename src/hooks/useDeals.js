@@ -4,10 +4,13 @@ import { capability } from '../lib/runtime.js';
 import { DEFAULT_TARGETS, DEFAULT_TAX } from '../lib/finance.js';
 import { DEFAULT_PLAN } from '../lib/growth.js';
 import { DEFAULT_MARKET, normalizeMarket } from '../lib/market.js';
+import { DEFAULT_PROFILE, normalizeProfile } from '../lib/firstHome.js';
+import { DEFAULT_SUITE, normalizeSuite } from '../lib/suites.js';
 
 // Per-library settings that travel with the deals: offer targets, the growth
-// plan, tax inputs and the assumptions used to underwrite daily listings.
-const DEFAULT_SETTINGS = { targets: DEFAULT_TARGETS, plan: DEFAULT_PLAN, tax: DEFAULT_TAX, market: DEFAULT_MARKET };
+// plan, tax inputs, the assumptions used to underwrite daily listings, your
+// first-home numbers and your progress on adding a suite.
+const DEFAULT_SETTINGS = { targets: DEFAULT_TARGETS, plan: DEFAULT_PLAN, tax: DEFAULT_TAX, market: DEFAULT_MARKET, home: DEFAULT_PROFILE, suite: DEFAULT_SUITE };
 
 function normalizeSettings(s) {
   return {
@@ -15,6 +18,8 @@ function normalizeSettings(s) {
     plan: { ...DEFAULT_PLAN, ...(s?.plan ?? {}) },
     tax: { ...DEFAULT_TAX, ...(s?.tax ?? {}) },
     market: normalizeMarket(s?.market),
+    home: normalizeProfile(s?.home),
+    suite: normalizeSuite(s?.suite),
   };
 }
 
