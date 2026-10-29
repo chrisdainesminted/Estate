@@ -50,6 +50,7 @@ import MaxOfferCard from './components/MaxOfferCard.jsx';
 import RefiCard from './components/RefiCard.jsx';
 import StressTestCard from './components/StressTestCard.jsx';
 import TaxCard from './components/TaxCard.jsx';
+import ProjectionChart from './components/ProjectionChart.jsx';
 import SecondOpinion from './components/SecondOpinion.jsx';
 import DealPicker from './components/DealPicker.jsx';
 import ExportMenu from './components/ExportMenu.jsx';
@@ -67,7 +68,6 @@ import { Button, ConfirmButton, SkeletonCard, signedClass } from './components/u
 const PortfolioView = lazy(() => import('./components/PortfolioView.jsx'));
 const PlanView = lazy(() => import('./components/PlanView.jsx'));
 const CompareView = lazy(() => import('./views/CompareView.jsx'));
-const ProjectionChart = lazy(() => import('./components/ProjectionChart.jsx'));
 const ListingsView = lazy(() => import('./views/ListingsView.jsx'));
 const CashView = lazy(() => import('./views/CashView.jsx'));
 const HelpSheet = lazy(() => import('./components/HelpSheet.jsx'));
@@ -515,13 +515,16 @@ export default function App() {
         ? { value: money(own.netCashFlow, { signed: true }), valueClass: signedClass(own.netCashFlow), sub: `${percent(own.coc, 1)} return · ${money(own.pi)} mortgage` }
         : null;
 
-  const inputs = (
+  const editActive = useCallback((patch) => lib.updateDeal(active.id, patch), [lib, active.id]);
+
+  const inputs = (bare = false) => (
     <InputsPanel
+      bare={bare}
       deal={active}
       a={base.a}
       rents={rents}
       onShare={() => setShareOpen(true)}
-      onChange={(patch) => lib.updateDeal(active.id, patch)}
+      onChange={editActive}
       onDuplicate={() => duplicateDeal(active)}
       onDelete={deals.length > 1 ? () => deleteDeal(active) : null}
     />
@@ -653,13 +656,14 @@ export default function App() {
                 a={a}
                 base={neutral ? null : base.a}
                 onShare={() => setShareOpen(true)}
+                onChange={editActive}
                 whatIf={neutral ? null : { text: whatIfSummary(active, adj) ?? 'Testing new numbers.', onReset: () => setAdj(NO_ADJ), onApply: applyWhatIf }}
               />
 
               <div className="grid gap-6 lg:grid-cols-12">
                 {isDesktop && (
                   <aside className="lg:col-span-4 xl:col-span-3" aria-label="Deal inputs">
-                    <div className="thin-scroll lg:sticky lg:top-20 lg:max-h-[calc(100vh-6.5rem)] lg:overflow-y-auto lg:rounded-md">{inputs}</div>
+                    <div className="thin-scroll lg:sticky lg:top-20 lg:max-h-[calc(100vh-6.5rem)] lg:overflow-y-auto lg:rounded-md">{inputs()}</div>
                   </aside>
                 )}
 
@@ -683,9 +687,7 @@ export default function App() {
                     />
                     {sliders}
                     <StressTestCard deal={active} adj={adj} onPick={(p) => setAdj((x) => ({ ...x, ...p }))} />
-                    <Suspense fallback={<div className="skeleton h-16" />}>
-                      <ProjectionChart rows={current.rows} a={a} deal={current.deal} dark={dark} appreciationPct={Number(current.deal.appreciationPct)} />
-                    </Suspense>
+                    <ProjectionChart rows={current.rows} a={a} deal={current.deal} dark={dark} appreciationPct={Number(current.deal.appreciationPct)} />
                     {current.refi && <RefiCard refi={current.refi} a={a} deal={current.deal} />}
                     <ExitCard sale={current.sale} deal={current.deal} />
                     <TaxCard deal={current.deal} tax={lib.settings.tax} onTax={(patch) => lib.updateSettings('tax', patch)} />
@@ -700,7 +702,7 @@ export default function App() {
             <div className="grid gap-6 lg:grid-cols-12">
               {isDesktop && (
                 <aside className="lg:col-span-4 xl:col-span-3" aria-label="Deal inputs">
-                  <div className="thin-scroll lg:sticky lg:top-20 lg:max-h-[calc(100vh-6.5rem)] lg:overflow-y-auto lg:rounded-md">{inputs}</div>
+                  <div className="thin-scroll lg:sticky lg:top-20 lg:max-h-[calc(100vh-6.5rem)] lg:overflow-y-auto lg:rounded-md">{inputs()}</div>
                 </aside>
               )}
               <div className="min-w-0 lg:col-span-8 xl:col-span-9">
@@ -714,6 +716,7 @@ export default function App() {
                     onTax={(patch) => lib.updateSettings('tax', patch)}
                     onSelect={pickDeal}
                     onUsePrice={(price) => withUndo(`Price set to ${money(price)}`, () => lib.updateDeal(active.id, { price }))}
+                    onChange={editActive}
                   />
                 </Suspense>
               </div>
@@ -721,9 +724,12 @@ export default function App() {
           )}
 
           {(view === 'analyze' || view === 'cash') && !isDesktop && (
-            <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={`Edit “${active.name}”`}>
-              {inputs}
-            </Sheet>
+            // display: contents keeps main's space-y margin off the fixed sheet, which would shorten it.
+            <div className="contents">
+              <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={`Edit “${active.name}”`}>
+                {inputs(true)}
+              </Sheet>
+            </div>
           )}
 
           <footer className="dock-space mt-4 flex flex-col gap-4 border-t border-hairline pt-6 text-xs leading-relaxed text-zinc-500 sm:flex-row sm:items-start dark:text-zinc-400">

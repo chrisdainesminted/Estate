@@ -9,6 +9,7 @@ import { Button, ExampleTag, Figure, LedgerLine, NumberField, SummaryCard, ViewH
 import { InfoTip, Num } from '../components/motion.jsx';
 import { Section, SectionGroup } from '../components/Section.jsx';
 import DealLedgers from '../components/DealLedgers.jsx';
+import CalcInputs from '../components/CalcInputs.jsx';
 import { TargetRow } from '../components/MaxOfferCard.jsx';
 import TaxCard from '../components/TaxCard.jsx';
 
@@ -26,7 +27,7 @@ function cashVerdict(c, targets) {
     : { tone: 'warn', icon: AlertTriangle, label: `Below your ${Number(targets.coc)}% target` };
 }
 
-function CashSummary({ deal, own, c, targets }) {
+function CashSummary({ deal, own, c, targets, onChange }) {
   const v = cashVerdict(c, targets);
   const type = UNIT_TYPES.find((u) => u.key === deal.unitType);
   const years = paybackYears(c);
@@ -55,6 +56,7 @@ function CashSummary({ deal, own, c, targets }) {
         </>
       }
     >
+      {onChange && <CalcInputs deal={deal} a={c} onChange={onChange} ownDown={OWN_DOWN_PCT} />}
       <DealLedgers deal={own} a={c} lender={false} heading="h4">
         <LedgerLine label="Cash flow pays it back in" value={years ? yearsText(years) : 'Never'} />
       </DealLedgers>
@@ -288,7 +290,7 @@ function DealRanking({ items, activeId, onSelect }) {
  * regular mortgage for the rest. No DSCR, only the cash flow after the
  * mortgage payment and the return on the cash you put in.
  */
-export default function CashView({ deal, items, targets, onTargets, tax, onTax, onSelect, onUsePrice }) {
+export default function CashView({ deal, items, targets, onTargets, tax, onTax, onSelect, onUsePrice, onChange }) {
   const own = useMemo(() => ownMoney(deal), [deal]);
   const c = useMemo(() => analyzeDeal(own), [own]);
   const rows = useMemo(() => projectDeal(own, YEARS), [own]);
@@ -304,7 +306,7 @@ export default function CashView({ deal, items, targets, onTargets, tax, onTax, 
         cash flow after the mortgage payment, and the return on your cash.
       </ViewHeader>
 
-      <CashSummary deal={deal} own={own} c={c} targets={targets} />
+      <CashSummary deal={deal} own={own} c={c} targets={targets} onChange={onChange} />
 
       <SectionGroup>
         <RentSection deal={deal} c={c} />

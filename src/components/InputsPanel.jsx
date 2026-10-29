@@ -45,17 +45,20 @@ function Derived({ children }) {
 const iconBtn = 'rounded-md p-1.5 text-zinc-500 transition dark:text-zinc-400 hover:bg-well hover:text-zinc-700 dark:hover:text-zinc-200';
 const pct = (v) => `${Number((Number(v) || 0).toFixed(2))}%`;
 
-export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onDelete, onShare }) {
+/** The deal's inputs. `bare` drops the panel's own frame, for when the phone sheet already frames them. */
+export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onDelete, onShare, bare = false }) {
   const id = (k) => `${deal.id}-${k}`;
   const set = (k) => (v) => onChange({ [k]: v });
   const opexPct = (Number(deal.mgmtPct) || 0) + (Number(deal.maintPct) || 0) + (Number(deal.vacancyPct) || 0) + (Number(deal.capexPct) || 0);
   const ca = deal.country === 'ca';
   const prepay = deal.prepay && deal.prepay !== 'none' ? deal.prepay : null;
   const valueAdd = Number(deal.arv) > 0 || Boolean(deal.refiEnabled);
+  // In the sheet, its edges replace the panel's; the negative margins undo the sheet's padding.
+  const Frame = bare ? 'section' : Card;
 
   return (
     // Keyed by deal so each deal's groups start open or folded by its own settings.
-    <Card key={deal.id} id="sec-inputs">
+    <Frame key={deal.id} id="sec-inputs" className={bare ? '-mx-4 -my-4 sm:-mx-6' : undefined}>
       <CardHeader
         title="Deal inputs"
         subtitle="Saves as you type."
@@ -451,6 +454,6 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
           />
         </div>
       </Section>
-    </Card>
+    </Frame>
   );
 }

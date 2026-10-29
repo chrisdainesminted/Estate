@@ -70,6 +70,13 @@ describe('shareLink and readShared', () => {
     expect({}.price).toBeUndefined();
   });
 
+  it('carries the note that taxes and insurance are estimated', () => {
+    const quick = makeDeal({ name: '$389k Duplex', price: 389000, estimated: true });
+    expect(readShared(hashOf(shareLink(quick))).fields.estimated).toBe(true);
+    expect(readShared(hashOf(shareLink(deal))).fields).not.toHaveProperty('estimated');
+    expect(readShared(hashOf(linkFor({ estimated: 'yes' }))).fields).not.toHaveProperty('estimated');
+  });
+
   it('keeps a 5+ unit building between 5 and 500 units', () => {
     expect(readShared(hashOf(linkFor({ unitType: 'multiplex', units: 2 }))).fields.units).toBe(5);
     expect(readShared(hashOf(linkFor({ unitType: 'multiplex', units: 9000 }))).fields.units).toBe(500);

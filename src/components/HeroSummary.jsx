@@ -5,11 +5,16 @@ import { money, safeHttpUrl } from '../lib/format.js';
 import { UNIT_TYPES } from '../lib/presets.js';
 import { Button, ExampleTag, SummaryCard } from './ui.jsx';
 import DealLedgers from './DealLedgers.jsx';
+import CalcInputs from './CalcInputs.jsx';
 
 const TONE_ICONS = { bad: XCircle, warn: AlertTriangle, good: CheckCircle2 };
 
-/** The deal at a glance: its name and a plain verdict, then the month and the cash as two ledgers. */
-export default function HeroSummary({ deal, a, base, whatIf, onShare }) {
+/**
+ * The deal at a glance: its name and a plain verdict, then the month and the
+ * cash as two ledgers, with the main inputs above them on phones. They step
+ * aside during a what-if, whose banner holds the test numbers.
+ */
+export default function HeroSummary({ deal, a, base, whatIf, onShare, onChange }) {
   const v = verdict(a);
   const VIcon = TONE_ICONS[v.tone];
   const type = UNIT_TYPES.find((u) => u.key === deal.unitType);
@@ -96,6 +101,7 @@ export default function HeroSummary({ deal, a, base, whatIf, onShare }) {
         </>
       }
     >
+      {onChange && !whatIf && <CalcInputs deal={deal} a={a} onChange={onChange} />}
       <DealLedgers deal={deal} a={a} base={base} />
     </SummaryCard>
   );

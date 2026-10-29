@@ -39,7 +39,18 @@ export default function DealLedgers({ deal, a, base, lender = true, heading = 'h
         {a.rehab > 0 && <LedgerLine label="Repairs" value={money(a.rehab)} />}
         <LedgerLine label="Cash in" tip="cashInvested" value={<Num value={a.cashInvested} format={(x) => money(x)} />} sum />
         <LedgerLine label="Return on it each year" tip="coc" value={<Num value={a.coc} format={(x) => percent(x, 1)} />} valueClass={signedClass(a.coc)} />
-        {lender && <LedgerLine label="Lender check (DSCR)" tip="dscr" value={<DscrChip status={a.status} dscr={a.dscr} size="sm" />} />}
+        {lender && (
+          <LedgerLine
+            label={
+              // Phones drop "(DSCR)" so the label stays on one line beside the tag; the tip names it.
+              <>
+                Lender check<span className="max-sm:hidden"> (DSCR)</span>
+              </>
+            }
+            tip="dscr"
+            value={<DscrChip status={a.status} dscr={a.dscr} size="sm" />}
+          />
+        )}
         {a.reserves > 0 && <LedgerLine label="Also kept in the bank" tip="reserves" value={money(a.reserves)} muted />}
         {children}
         {base && (

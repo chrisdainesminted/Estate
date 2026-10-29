@@ -50,6 +50,7 @@ export const DEFAULT_DEAL = {
   address: '',
   listingUrl: '',
   notes: '',
+  estimated: false, // taxes and insurance are guesses from the price (a quick check) until someone types real ones
 };
 
 export const PRESET_DEALS = [

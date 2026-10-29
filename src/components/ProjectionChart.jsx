@@ -1,12 +1,13 @@
-import { useMemo, useState } from 'react';
-import { Bar, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Suspense, lazy, useMemo, useState } from 'react';
 import { chartTheme, niceScale } from '../lib/chartTheme.js';
 import { outlookMeaning } from '../lib/explain.js';
 import { loanSchedule } from '../lib/finance.js';
-import { compactMoney, money } from '../lib/format.js';
+import { money } from '../lib/format.js';
 import { Segmented, Stat, signedClass } from './ui.jsx';
-import { CHART_ANIMATE } from './motion.jsx';
 import { Section } from './Section.jsx';
+
+// The chart and its library load only when the outlook is opened on its chart.
+const ProjectionGraph = lazy(() => import('./ProjectionGraph.jsx'));
 
 const SERIES = [
   { key: 'cumCashFlow', label: 'Cumulative cash flow' },
@@ -15,36 +16,6 @@ const SERIES = [
 ];
 // Only shown when a refinance is planned: its penalty and fees, drawn below zero.
 const REFI_SERIES = { key: 'refiCostsNeg', label: 'Refinance costs' };
-
-function ProjectionTooltip({ active, payload, label, theme, series }) {
-  if (!active || !payload?.length) return null;
-  const row = payload[0].payload;
-  return (
-    <div className="popover min-w-56 rounded-2xl p-3.5 text-xs">
-      <div className="mb-2 font-semibold text-zinc-900 dark:text-zinc-100">Year {label}</div>
-      {series.map((s, i) => (
-        <div key={s.key} className="flex items-center justify-between gap-4 py-0.5">
-          <span className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-300">
-            <span className="size-2.5 rounded-sm" style={{ background: theme.series[i] }} aria-hidden />
-            {s.label}
-          </span>
-          <span className="tabular font-medium text-zinc-900 dark:text-zinc-100">{money(row[s.key], { signed: true })}</span>
-        </div>
-      ))}
-      <div className="mt-1.5 flex items-center justify-between gap-4 border-t border-hairline pt-1.5">
-        <span className="flex items-center gap-1.5 font-semibold text-zinc-900 dark:text-zinc-100">
-          <span className="h-0.5 w-3 rounded-full" style={{ background: theme.total }} aria-hidden />
-          Total return
-        </span>
-        <span className="tabular font-semibold text-zinc-900 dark:text-zinc-100">{money(row.totalReturn, { signed: true })}</span>
-      </div>
-      <div className="tabular mt-1.5 flex justify-between gap-4 text-zinc-500 dark:text-zinc-400">
-        <span>If sold this year</span>
-        <span className={`font-medium ${signedClass(row.profitIfSold)}`}>{money(row.profitIfSold, { signed: true })}</span>
-      </div>
-    </div>
-  );
-}
 
 export default function ProjectionChart({ rows, a, deal, dark, appreciationPct }) {
   const [view, setView] = useState('chart');
@@ -94,62 +65,9 @@ export default function ProjectionChart({ rows, a, deal, dark, appreciationPct }
 
       <div className="p-5">
         {view === 'chart' ? (
-          <>
-            <ul className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-600 dark:text-zinc-300" aria-label="Legend">
-              {series.map((s, i) => (
-                <li key={s.key} className="flex items-center gap-1.5">
-                  <span className="size-2.5 rounded-sm" style={{ background: theme.series[i] }} aria-hidden />
-                  {s.label}
-                </li>
-              ))}
-              <li className="flex items-center gap-1.5">
-                <span className="h-0.5 w-3.5 rounded-full" style={{ background: theme.total }} aria-hidden />
-                Total return
-              </li>
-            </ul>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={data} stackOffset="sign" margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap="28%">
-                  <CartesianGrid vertical={false} stroke={theme.grid} />
-                  <XAxis dataKey="year" tickLine={false} axisLine={{ stroke: theme.axis }} tick={{ fill: theme.tick, fontSize: 11 }} tickFormatter={(y) => `Y${y}`} />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fill: theme.tick, fontSize: 11 }}
-                    tickFormatter={compactMoney}
-                    width={56}
-                    domain={scale.domain}
-                    ticks={scale.ticks}
-                    allowDataOverflow
-                  />
-                  <ReferenceLine y={0} stroke={theme.zero} />
-                  <Tooltip content={<ProjectionTooltip theme={theme} series={series} />} cursor={{ fill: dark ? 'rgba(148,163,184,0.08)' : 'rgba(15,23,42,0.04)' }} />
-                  {series.map((s, i) => (
-                    <Bar
-                      key={s.key}
-                      dataKey={s.key}
-                      stackId="wealth"
-                      fill={theme.series[i]}
-                      stroke={theme.surface}
-                      strokeWidth={2}
-                      maxBarSize={28}
-                      radius={s.key === 'cumAppreciation' ? [4, 4, 0, 0] : 0}
-                      isAnimationActive={CHART_ANIMATE} animationDuration={700}
-                    />
-                  ))}
-                  <Line
-                    dataKey="totalReturn"
-                    type="monotone"
-                    stroke={theme.total}
-                    strokeWidth={2}
-                    dot={{ r: 4, fill: theme.total, stroke: theme.surface, strokeWidth: 2 }}
-                    activeDot={{ r: 5, fill: theme.total, stroke: theme.surface, strokeWidth: 2 }}
-                    isAnimationActive={CHART_ANIMATE} animationDuration={700}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-          </>
+          <Suspense fallback={<div className="skeleton h-80 rounded-md" aria-hidden />}>
+            <ProjectionGraph data={data} series={series} scale={scale} theme={theme} dark={dark} />
+          </Suspense>
         ) : view === 'loan' ? (
           <div tabIndex={0} role="region" aria-label="Loan schedule" className="thin-scroll overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500">
             <table className="w-full min-w-[640px] text-sm">
