@@ -4,8 +4,9 @@ import { X } from 'lucide-react';
 /**
  * Slide-up panel for phones and tablets. Locks page scroll while open,
  * closes on Escape or a backdrop tap, and returns focus to the opener.
+ * With `desktop`, it also shows on large screens, as a panel on the right.
  */
-export default function Sheet({ open, onClose, title, children }) {
+export default function Sheet({ open, onClose, title, children, desktop = false }) {
   const closeBtn = useRef(null);
   const returnFocus = useRef(null);
   // Callers pass a new onClose on every render. Reading it through an effect
@@ -31,17 +32,17 @@ export default function Sheet({ open, onClose, title, children }) {
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[70] lg:hidden print:hidden">
+    <div className={`fixed inset-0 z-[70] print:hidden ${desktop ? '' : 'lg:hidden'}`}>
       <div className="pop absolute inset-0 bg-zinc-950/35 backdrop-blur-[2px] dark:bg-black/55" onClick={onClose} aria-hidden />
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="sheet glass-strong absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-3xl"
+        className={`sheet glass-strong absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-3xl ${desktop ? 'lg:inset-x-auto lg:top-4 lg:right-4 lg:bottom-4 lg:max-h-none lg:w-[30rem] lg:rounded-3xl' : ''}`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className="flex items-center justify-between gap-3 border-b border-hairline px-5 pt-3 pb-3">
-          <div className="absolute top-1.5 left-1/2 h-1 w-10 -translate-x-1/2 rounded-full bg-zinc-400/50" aria-hidden />
+          <div className="absolute top-1.5 left-1/2 h-1 w-10 -translate-x-1/2 rounded-full bg-zinc-400/50 lg:hidden" aria-hidden />
           <h2 className="pt-1 text-base font-semibold text-zinc-900 dark:text-white">{title}</h2>
           <button
             ref={closeBtn}

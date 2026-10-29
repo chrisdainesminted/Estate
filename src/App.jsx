@@ -3,6 +3,8 @@ import {
   Banknote,
   Briefcase,
   Building,
+  Calculator,
+  CircleHelp,
   Cloud,
   CloudOff,
   Columns3,
@@ -35,6 +37,7 @@ import { analyzeDeal, applyAdjustments, isNeutralAdjustment, maxOffer, projectDe
 import { money, ratio } from './lib/format.js';
 import { DEFAULT_DEAL, MAX_COMPARE, switchRules } from './lib/presets.js';
 import { listingToDeal, rankListings } from './lib/market.js';
+import { quickDeal } from './lib/quick.js';
 import { whatIfSummary } from './lib/explain.js';
 import HeroSummary from './components/HeroSummary.jsx';
 import InputsPanel from './components/InputsPanel.jsx';
@@ -64,18 +67,26 @@ const CompareView = lazy(() => import('./views/CompareView.jsx'));
 const ProjectionChart = lazy(() => import('./components/ProjectionChart.jsx'));
 const ListingsView = lazy(() => import('./views/ListingsView.jsx'));
 const CashView = lazy(() => import('./views/CashView.jsx'));
+const HelpSheet = lazy(() => import('./components/HelpSheet.jsx'));
 
 const NO_ADJ = { rateDelta: 0, downPct: null, rentPct: 0 };
 const YEARS = 10;
 const VIEW_KEY = 'bedrock-view';
 
+// `about` is what the help panel says each tab is for.
 const VIEWS = [
-  { value: 'portfolio', label: 'Portfolio', icon: Briefcase },
-  { value: 'analyze', label: 'Analyze', icon: LayoutDashboard },
-  { value: 'cash', label: 'Cash', icon: Banknote, keywords: 'own money cash flow cash on cash 20% down mortgage payment income' },
-  { value: 'compare', label: 'Compare', icon: Columns3 },
-  { value: 'plan', label: 'Plan', icon: Sprout },
-  { value: 'listings', label: 'Listings', icon: Radar },
+  { value: 'portfolio', label: 'Portfolio', icon: Briefcase, about: 'The properties you own, added up: what they bring in each month and what they’re worth today.' },
+  { value: 'analyze', label: 'Analyze', icon: LayoutDashboard, about: 'One deal in detail: what you’d keep each month, what a lender would say, and the most you should pay.' },
+  {
+    value: 'cash',
+    label: 'Cash',
+    icon: Banknote,
+    keywords: 'own money cash flow cash on cash 20% down mortgage payment income',
+    about: 'Your own money as a 20% down payment: the cash flow after the mortgage payment, and the return on your cash.',
+  },
+  { value: 'compare', label: 'Compare', icon: Columns3, about: 'Up to three deals side by side, with the best of each row marked.' },
+  { value: 'plan', label: 'Plan', icon: Sprout, about: 'When your savings and rent could buy the next property, and where that leads in 10 years.' },
+  { value: 'listings', label: 'Listings', icon: Radar, about: 'Real Thunder Bay properties for sale, found every morning and checked against your targets.' },
 ];
 
 // Analyze sections the command palette can jump to. The detail sections fold
@@ -157,6 +168,7 @@ export default function App() {
   const [scope, setScope] = useState('active');
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const marketFeed = useMarket();
   const sections = useSectionsState();
@@ -238,6 +250,21 @@ export default function App() {
     if (!isDesktop) setSheetOpen(true);
     toast({ tone: 'info', text: 'New deal started. Fill in the inputs and everything updates as you type.' });
   }, [lib, active.country, setView, isDesktop, toast]);
+
+  // The quick check: a new deal from a price, a type and a rent, with everything else typical.
+  const quickCheck = useCallback(
+    (fields) => {
+      lib.insertDeal(quickDeal(fields, lib.settings.market));
+      setHelpOpen(false);
+      setView('analyze');
+      window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+      toast({
+        tone: 'info',
+        text: `Here’s your property. Taxes, insurance and running costs are typical estimates: ${isDesktop ? 'change them in the inputs on the left' : 'tap Edit deal to change them'}.`,
+      });
+    },
+    [lib, setView, isDesktop, toast],
+  );
 
   const deleteDeal = useCallback(
     (deal) => {
@@ -339,6 +366,8 @@ export default function App() {
         run: () => analyzeListing(x.listing),
       })),
       { id: 'act-new', group: 'Actions', label: 'New deal', icon: Plus, keywords: 'add create', run: newDeal },
+      { id: 'act-quick', group: 'Actions', label: 'Quick check a property', icon: Calculator, keywords: 'price rent simple fast beginner try', run: () => setHelpOpen(true) },
+      { id: 'act-help', group: 'Actions', label: 'How Bedrock works', icon: CircleHelp, keywords: 'help guide words terms glossary meaning tabs start beginner', run: () => setHelpOpen(true) },
       {
         id: 'act-rules',
         group: 'Actions',
@@ -470,6 +499,9 @@ export default function App() {
                   <RotateCcw className="size-4" aria-hidden />
                 </ConfirmButton>
               </div>
+              <button type="button" onClick={() => setHelpOpen(true)} className={headerIcon} aria-label="How Bedrock works" title="How Bedrock works">
+                <CircleHelp className="size-4" aria-hidden />
+              </button>
               <Button variant="ghost" className="px-2.5" onClick={toggle} aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'} title="Toggle theme">
                 {dark ? <Sun className="size-4" aria-hidden /> : <Moon className="size-4" aria-hidden />}
               </Button>
@@ -529,11 +561,10 @@ export default function App() {
 
           {view === 'analyze' && (
             <>
-              <Welcome onNewDeal={newDeal} />
+              <Welcome country={active.country} onQuickCheck={quickCheck} />
               <HeroSummary
                 deal={current.deal}
                 a={a}
-                sale={current.sale}
                 base={neutral ? null : base.a}
                 targets={targets}
                 whatIf={neutral ? null : { text: whatIfSummary(active, adj) ?? 'Testing new numbers.', onReset: () => setAdj(NO_ADJ), onApply: applyWhatIf }}
@@ -637,6 +668,11 @@ export default function App() {
       </div>
 
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} commands={commands} />}
+      {helpOpen && (
+        <Suspense fallback={null}>
+          <HelpSheet onClose={() => setHelpOpen(false)} views={VIEWS} country={active.country} onQuickCheck={quickCheck} />
+        </Suspense>
+      )}
       <DealMemo item={current} />
     </SectionsContext.Provider>
   );

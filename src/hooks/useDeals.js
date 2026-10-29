@@ -175,9 +175,16 @@ export function useDeals() {
     });
   }, []);
 
-  // Editing an example makes it the user's own.
+  // Editing an example makes it the user's own; typing real taxes or
+  // insurance replaces a quick check's estimates.
   const updateDeal = useCallback(
-    (id, patch) => commit((s) => ({ ...s, deals: s.deals.map((d) => (d.id === id ? { ...d, ...patch, example: false } : d)) })),
+    (id, patch) =>
+      commit((s) => ({
+        ...s,
+        deals: s.deals.map((d) =>
+          d.id === id ? { ...d, ...patch, example: false, ...('taxesAnnual' in patch || 'insuranceAnnual' in patch ? { estimated: false } : {}) } : d,
+        ),
+      })),
     [commit],
   );
 

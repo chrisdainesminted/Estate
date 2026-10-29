@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Gauge, Plus, Sprout, Target, X } from 'lucide-react';
-import { Button, Card } from './ui.jsx';
+import { X } from 'lucide-react';
+import { Card } from './ui.jsx';
+import QuickCheck from './QuickCheck.jsx';
 
 const KEY = 'bedrock-welcomed';
 
@@ -12,14 +13,8 @@ function seen() {
   }
 }
 
-const STEPS = [
-  { icon: Gauge, title: 'Check the verdict', body: 'what a lender says and what you’d keep' },
-  { icon: Target, title: 'Know your number', body: 'the most to pay for your targets' },
-  { icon: Sprout, title: 'Plan the next door', body: 'when your cash covers the next one' },
-];
-
-/** One-time introduction, shown until it's dismissed in this browser. */
-export default function Welcome({ onNewDeal }) {
+/** First visit: what Bedrock answers, and the quickest way to try it on a property. Shown until it's dismissed in this browser. */
+export default function Welcome({ country, onQuickCheck }) {
   const [open, setOpen] = useState(() => !seen());
   if (!open) return null;
   const dismiss = () => {
@@ -44,31 +39,28 @@ export default function Welcome({ onNewDeal }) {
       </button>
       <div className="relative p-5 pr-12 sm:p-6 sm:pr-14">
         <p className="eyebrow">Welcome to Bedrock</p>
-        <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-balance text-zinc-950 sm:text-xl dark:text-white">A lender can approve a deal that still loses you money.</h2>
+        <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-balance text-zinc-950 sm:text-xl dark:text-white">Would this rental make you money?</h2>
         <p className="mt-1 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-          Bedrock checks every deal two ways: what a lender would approve, and what actually lands in your bank account. Start with the summary below, then open any
-          line for the detail.
+          Type a property’s price and rent. Bedrock fills in typical costs, which you can change later, then shows what you’d keep each month and whether a lender
+          would lend on it.
         </p>
-        <ol className="mt-3 hidden flex-wrap gap-x-6 gap-y-1 text-xs text-zinc-600 sm:flex dark:text-zinc-400">
-          {STEPS.map((s) => (
-            <li key={s.title} className="flex items-center gap-1.5">
-              <s.icon className="size-3.5 text-emerald-600 dark:text-emerald-400" aria-hidden />
-              <span className="font-medium text-zinc-800 dark:text-zinc-200">{s.title}:</span> {s.body}
-            </li>
-          ))}
-        </ol>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button
-            variant="primary"
-            onClick={() => {
-              dismiss();
-              onNewDeal();
-            }}
-          >
-            <Plus className="size-4" aria-hidden /> Start a new deal
-          </Button>
-          <Button onClick={dismiss}>Explore the examples</Button>
-        </div>
+      </div>
+      <div className="relative max-w-2xl px-5 pb-5 sm:px-6 sm:pb-6">
+        <QuickCheck
+          idPrefix="welcome"
+          country={country}
+          onCheck={(fields) => {
+            dismiss();
+            onQuickCheck(fields);
+          }}
+        />
+        <button
+          type="button"
+          onClick={dismiss}
+          className="mt-3 rounded-lg text-sm font-medium text-emerald-700 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:text-emerald-300"
+        >
+          Or look at the example deals first
+        </button>
       </div>
     </Card>
   );

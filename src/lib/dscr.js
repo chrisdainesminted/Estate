@@ -42,12 +42,16 @@ export const BAND_CLASSES = {
   },
 };
 
-/** One-line verdict on a deal, combining the lender view with real cash flow. */
+/**
+ * One-line verdict on a deal in plain words: whether it makes money each
+ * month, flagging a tight lender check. The sentence beside it explains a
+ * loss a lender would still approve (`trap`).
+ */
 export function verdict(a) {
-  if (a.lenderApprovedButNegative) return { key: 'trap', tone: 'bad', label: 'Lender yes, cash flow no' };
-  if (a.netCashFlow < 0) return { key: 'negative', tone: 'bad', label: 'Negative cash flow' };
-  if (a.status.key === 'tight') return { key: 'tight', tone: 'warn', label: 'Cash flows, tight DSCR' };
-  return { key: 'good', tone: 'good', label: 'Cash flows' };
+  if (a.lenderApprovedButNegative) return { key: 'trap', tone: 'bad', label: 'Loses money each month' };
+  if (a.netCashFlow < 0) return { key: 'negative', tone: 'bad', label: 'Loses money each month' };
+  if (a.status.key === 'tight') return { key: 'tight', tone: 'warn', label: 'Makes money, lender check is tight' };
+  return { key: 'good', tone: 'good', label: 'Makes money each month' };
 }
 
 export const TONE_CLASSES = {

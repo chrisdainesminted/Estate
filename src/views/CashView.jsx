@@ -71,6 +71,7 @@ function CashSummary({ deal, c, targets }) {
           </span>
         </div>
         <p className="tabular mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">{facts.join(' · ')}</p>
+        {deal.estimated && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Taxes and insurance are estimated from the price: edit the deal once you know the real numbers.</p>}
         <p className="mt-4 max-w-3xl text-[15px] leading-relaxed font-medium text-zinc-900 sm:text-base dark:text-zinc-100">{cashSentence(c)}</p>
       </div>
       <dl className="relative mt-5 grid grid-cols-2 border-t border-hairline lg:grid-cols-4">

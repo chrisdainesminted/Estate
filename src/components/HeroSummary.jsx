@@ -49,8 +49,8 @@ function DscrBar({ a }) {
   );
 }
 
-/** The deal at a glance: a plain verdict, then the four numbers that decide it, each with what it means. */
-export default function HeroSummary({ deal, a, sale, base, targets, whatIf }) {
+/** The deal at a glance: a plain verdict, then the four numbers that decide it (money first), each with what it means. */
+export default function HeroSummary({ deal, a, base, targets, whatIf }) {
   const v = verdict(a);
   const VIcon = TONE_ICONS[v.tone];
   const type = UNIT_TYPES.find((u) => u.key === deal.unitType);
@@ -64,7 +64,6 @@ export default function HeroSummary({ deal, a, sale, base, targets, whatIf }) {
     `${money(a.grossRent)}/mo rent`,
     deal.country === 'ca' && 'Ontario rules',
     a.interestOnly && `interest-only for ${a.ioYears} years`,
-    sale && Number.isFinite(sale.irr) && `${percent(sale.irr, 1)} IRR if sold in year ${sale.year}`,
   ].filter(Boolean);
   const breakeven = breakevenSentence(a);
 
@@ -107,6 +106,7 @@ export default function HeroSummary({ deal, a, sale, base, targets, whatIf }) {
         )}
         <p className="tabular mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">{facts.join(' · ')}</p>
         {deal.example && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">An example deal: edit it, or add your own.</p>}
+        {deal.estimated && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Taxes and insurance are estimated from the price: edit the deal once you know the real numbers.</p>}
 
         <p className="mt-4 max-w-3xl text-[15px] leading-relaxed text-zinc-900 sm:text-base dark:text-zinc-100">
           <span className="font-medium">{dealSentence(a)}</span>
@@ -130,20 +130,6 @@ export default function HeroSummary({ deal, a, sale, base, targets, whatIf }) {
       </div>
 
       <dl className="relative mt-5 grid grid-cols-2 border-t border-hairline lg:grid-cols-4">
-        <KpiTile
-          label="Lender check (DSCR)"
-          tip="dscr"
-          value={<Num value={a.dscr} format={ratio} />}
-          valueClass={BAND_CLASSES[a.status.key].text}
-          extra={
-            <dd className="mt-2">
-              <DscrChip status={a.status} size="sm" />
-              <DscrBar a={a} />
-            </dd>
-          }
-          meaning={dscrMeaning(a)}
-          base={base && ratio(base.dscr)}
-        />
         <KpiTile
           label="Monthly cash flow"
           tip="netCashFlow"
@@ -171,6 +157,20 @@ export default function HeroSummary({ deal, a, sale, base, targets, whatIf }) {
           value={<Num value={a.cashInvested} format={(x) => money(x)} />}
           meaning={cashInMeaning(a)}
           base={base && money(base.cashInvested)}
+        />
+        <KpiTile
+          label="Lender check (DSCR)"
+          tip="dscr"
+          value={<Num value={a.dscr} format={ratio} />}
+          valueClass={BAND_CLASSES[a.status.key].text}
+          extra={
+            <dd className="mt-2">
+              <DscrChip status={a.status} size="sm" />
+              <DscrBar a={a} />
+            </dd>
+          }
+          meaning={dscrMeaning(a)}
+          base={base && ratio(base.dscr)}
         />
       </dl>
     </Card>

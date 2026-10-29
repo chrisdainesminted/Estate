@@ -261,7 +261,7 @@ export default function PortfolioView({ owned, prospects, dark, onOpen, onMarkOw
   const tone = p.negative > 0 ? 'bad' : p.status.key === 'tight' ? 'warn' : 'good';
   const ToneIcon = tone === 'good' ? CheckCircle2 : XCircle;
   const badge =
-    p.negative > 0 ? `${p.negative} of ${p.properties} losing money` : tone === 'warn' ? 'All cash flowing, DSCR tight' : 'Every property cash flows';
+    p.negative > 0 ? `${p.negative} of ${p.properties} losing money` : tone === 'warn' ? 'All make money, lender check is tight' : 'Every property makes money';
 
   return (
     <div className="space-y-6">
