@@ -1,5 +1,5 @@
-import { AlertTriangle, CheckCircle2, ExternalLink, FlaskConical, MapPin, XCircle } from 'lucide-react';
-import { BAND_CLASSES, DSCR_BANDS, TONE_CLASSES, verdict } from '../lib/dscr.js';
+import { AlertTriangle, CheckCircle2, ExternalLink, FlaskConical, MapPin, Share2, XCircle } from 'lucide-react';
+import { BAND_CLASSES, DSCR_BANDS, TONE_CLASSES, TONE_GLOW, verdict } from '../lib/dscr.js';
 import { breakevenSentence, cashFlowMeaning, cashInMeaning, cocMeaning, dealSentence, dscrMeaning } from '../lib/explain.js';
 import { money, percent, ratio, safeHttpUrl } from '../lib/format.js';
 import { UNIT_TYPES } from '../lib/presets.js';
@@ -7,11 +7,6 @@ import { Button, Card, DscrChip, KpiTile, signedClass } from './ui.jsx';
 import { Num } from './motion.jsx';
 
 const TONE_ICONS = { bad: XCircle, warn: AlertTriangle, good: CheckCircle2 };
-const TONE_GLOW = {
-  bad: 'from-red-500/30 via-rose-400/10',
-  warn: 'from-amber-400/30 via-yellow-300/10',
-  good: 'from-emerald-400/35 via-teal-300/10',
-};
 
 // Piecewise-linear DSCR scale so the narrow 1.20–1.25 sweet spot stays visible.
 const STOPS = [0.5, 1.0, 1.2, 1.25, 2.0];
@@ -50,7 +45,7 @@ function DscrBar({ a }) {
 }
 
 /** The deal at a glance: a plain verdict, then the four numbers that decide it (money first), each with what it means. */
-export default function HeroSummary({ deal, a, base, targets, whatIf }) {
+export default function HeroSummary({ deal, a, base, targets, whatIf, onShare }) {
   const v = verdict(a);
   const VIcon = TONE_ICONS[v.tone];
   const type = UNIT_TYPES.find((u) => u.key === deal.unitType);
@@ -78,10 +73,19 @@ export default function HeroSummary({ deal, a, base, targets, whatIf }) {
             <p className="eyebrow">{deal.status === 'owned' ? 'Owned property' : 'Deal analysis'}</p>
             <h2 className="mt-1 truncate text-2xl font-semibold tracking-tight text-zinc-950 sm:text-3xl dark:text-white">{deal.name}</h2>
           </div>
-          <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ring-1 ring-inset backdrop-blur ${TONE_CLASSES[v.tone]}`}>
-            <VIcon className="size-4" aria-hidden />
-            {v.label}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold whitespace-nowrap ring-1 ring-inset backdrop-blur ${TONE_CLASSES[v.tone]}`}>
+              <VIcon className="size-4" aria-hidden />
+              {v.label}
+            </span>
+            {onShare && (
+              // Just the icon on phones, so the verdict stays on one line.
+              <Button variant="ghost" className="px-2.5 py-1.5" onClick={onShare} title="Share this deal as a link">
+                <Share2 className="size-4" aria-hidden />
+                <span className="max-sm:sr-only">Share</span>
+              </Button>
+            )}
+          </div>
         </div>
         {(deal.address || link) && (
           <p className="mt-1 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-600 dark:text-zinc-400">

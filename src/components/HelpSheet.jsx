@@ -15,7 +15,7 @@ function Heading({ id, children }) {
 }
 
 /** How Bedrock works: a quick check, what each tab is for, and the words it uses. */
-export default function HelpSheet({ onClose, views, country, onQuickCheck }) {
+export default function HelpSheet({ onClose, views, country, rents, onQuickCheck, moreHidden, onShowAll }) {
   const [q, setQ] = useState('');
   const shown = useMemo(() => {
     const words = q.trim().toLowerCase();
@@ -32,7 +32,7 @@ export default function HelpSheet({ onClose, views, country, onQuickCheck }) {
         <section aria-labelledby="help-check" className="space-y-3">
           <Heading id="help-check">Check a property</Heading>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">Type its price and rent. Taxes, insurance and running costs start at typical values you can change.</p>
-          <QuickCheck idPrefix="help" country={country} onCheck={onQuickCheck} />
+          <QuickCheck idPrefix="help" country={country} rents={rents} onCheck={onQuickCheck} />
         </section>
 
         <section aria-labelledby="help-tabs" className="space-y-3">
@@ -48,6 +48,19 @@ export default function HelpSheet({ onClose, views, country, onQuickCheck }) {
               </div>
             ))}
           </dl>
+          {moreHidden && (
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Portfolio, Compare and Plan wait under <span className="font-medium text-zinc-900 dark:text-white">More</span> until you have two deals of your own or own a
+              property.{' '}
+              <button
+                type="button"
+                onClick={onShowAll}
+                className="rounded font-medium text-emerald-700 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:text-emerald-400"
+              >
+                Show them now
+              </button>
+            </p>
+          )}
         </section>
 
         <section aria-labelledby="help-words" className="space-y-3">

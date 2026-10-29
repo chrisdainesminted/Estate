@@ -16,7 +16,7 @@ export function Card({ className = '', delay = 0, style, children, ...rest }) {
 export function IconTile({ icon: Icon, className = '' }) {
   return (
     <div
-      className={`grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-b from-emerald-400/25 to-emerald-600/10 text-emerald-700 ring-1 ring-emerald-600/20 ring-inset dark:from-emerald-300/20 dark:to-emerald-500/5 dark:text-emerald-300 dark:ring-emerald-300/20 ${className}`}
+      className={`grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-b from-zinc-950/[0.05] to-zinc-950/[0.02] text-emerald-700 ring-1 ring-zinc-950/10 ring-inset dark:from-white/[0.09] dark:to-white/[0.03] dark:text-emerald-400 dark:ring-white/10 ${className}`}
     >
       <Icon className="size-[18px]" aria-hidden />
     </div>
@@ -94,7 +94,7 @@ export function Segmented({ options, value, onChange, label, size = 'md', stretc
               size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm'
             } ${stretch ? 'max-md:flex-1 max-md:justify-center max-md:px-1 max-md:text-[13px] max-[400px]:px-0.5! max-[400px]:text-xs! max-[340px]:text-[11px]!' : ''} ${
               selected
-                ? 'bg-white text-zinc-900 shadow-[0_1px_2px_rgb(0_0_0/0.08),0_4px_12px_-4px_rgb(0_0_0/0.12)] ring-1 ring-zinc-950/5 dark:bg-white/[0.14] dark:text-white dark:ring-white/10'
+                ? 'bg-white text-zinc-900 shadow-[0_1px_2px_rgb(0_0_0/0.08),0_4px_12px_-4px_rgb(0_0_0/0.12)] ring-1 ring-zinc-950/5 dark:bg-white/[0.12] dark:text-emerald-300 dark:ring-white/10'
                 : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
             }`}
           >

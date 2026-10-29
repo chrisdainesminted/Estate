@@ -14,13 +14,13 @@
 
 :root {
   color-scheme: light;
-  --page: #f2f5f4;
-  --glass: rgb(255 255 255 / 0.6);
-  --glass-strong: rgb(255 255 255 / 0.86);
-  --glass-border: rgb(255 255 255 / 0.8);
-  --glass-edge: rgb(9 9 11 / 0.06);
+  --page: #f4f4f5;
+  --glass: rgb(255 255 255 / 0.7);
+  --glass-strong: rgb(255 255 255 / 0.9);
+  --glass-border: rgb(255 255 255 / 0.85);
+  --glass-edge: rgb(9 9 11 / 0.07);
   --glass-highlight: rgb(255 255 255 / 0.95);
-  --glass-shadow: 0 30px 60px -32px rgb(6 78 59 / 0.28), 0 6px 16px -8px rgb(9 9 11 / 0.08);
+  --glass-shadow: 0 30px 60px -32px rgb(9 9 11 / 0.22), 0 6px 16px -8px rgb(9 9 11 / 0.08);
   --accent: #059669;
   --accent-glow: rgb(16 185 129 / 0.18);
   --track: rgb(9 9 11 / 0.1);
@@ -28,15 +28,16 @@
   --color-zinc-500: #67676f;
 }
 
+/* Onyx: near-black, neutral surfaces; green is kept for accents. */
 html.dark {
   color-scheme: dark;
-  --page: #050807;
-  --glass: rgb(255 255 255 / 0.045);
-  --glass-strong: rgb(16 22 20 / 0.88);
-  --glass-border: rgb(255 255 255 / 0.085);
-  --glass-edge: rgb(0 0 0 / 0.35);
-  --glass-highlight: rgb(255 255 255 / 0.07);
-  --glass-shadow: 0 40px 80px -40px rgb(0 0 0 / 0.9);
+  --page: #0a0a0b;
+  --glass: rgb(255 255 255 / 0.04);
+  --glass-strong: rgb(20 20 22 / 0.94);
+  --glass-border: rgb(255 255 255 / 0.08);
+  --glass-edge: rgb(0 0 0 / 0.45);
+  --glass-highlight: rgb(255 255 255 / 0.06);
+  --glass-shadow: 0 40px 80px -40px rgb(0 0 0 / 0.95);
   --accent: #34d399;
   --accent-glow: rgb(52 211 153 / 0.2);
   --track: rgb(255 255 255 / 0.12);
@@ -77,7 +78,7 @@ body::before {
   background: var(--page);
 }
 
-/* ---------- Backdrop: aurora + grid + grain ---------- */
+/* ---------- Backdrop: one faint green glow + grid + grain ---------- */
 
 .app-backdrop {
   position: fixed;
@@ -86,19 +87,15 @@ body::before {
   overflow: hidden;
   pointer-events: none;
   background:
-    radial-gradient(52rem 34rem at 6% -8%, rgb(16 185 129 / 0.3), transparent 70%),
-    radial-gradient(44rem 30rem at 96% 2%, rgb(14 165 233 / 0.2), transparent 70%),
-    radial-gradient(60rem 38rem at 72% 108%, rgb(20 184 166 / 0.22), transparent 70%),
-    radial-gradient(38rem 30rem at -4% 92%, rgb(234 179 8 / 0.1), transparent 70%),
+    radial-gradient(52rem 34rem at 6% -8%, rgb(16 185 129 / 0.1), transparent 70%),
+    radial-gradient(60rem 38rem at 80% 110%, rgb(9 9 11 / 0.04), transparent 70%),
     var(--page);
 }
 
 html.dark .app-backdrop {
   background:
-    radial-gradient(52rem 34rem at 6% -8%, rgb(16 185 129 / 0.2), transparent 70%),
-    radial-gradient(44rem 30rem at 96% 2%, rgb(14 165 233 / 0.1), transparent 70%),
-    radial-gradient(60rem 38rem at 72% 108%, rgb(20 184 166 / 0.12), transparent 70%),
-    radial-gradient(38rem 30rem at -4% 92%, rgb(234 179 8 / 0.05), transparent 70%),
+    radial-gradient(52rem 34rem at 6% -8%, rgb(16 185 129 / 0.09), transparent 70%),
+    radial-gradient(48rem 30rem at 100% 0%, rgb(255 255 255 / 0.03), transparent 70%),
     var(--page);
 }
 

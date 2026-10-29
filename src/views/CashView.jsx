@@ -14,7 +14,7 @@ import {
   offerMeaning,
   ownCashMeaning,
 } from '../lib/explain.js';
-import { TONE_CLASSES } from '../lib/dscr.js';
+import { TONE_CLASSES, TONE_GLOW } from '../lib/dscr.js';
 import { money, percent } from '../lib/format.js';
 import { UNIT_TYPES } from '../lib/presets.js';
 import { Button, Card, ExampleTag, KpiTile, NumberField, signedClass } from '../components/ui.jsx';
@@ -24,11 +24,6 @@ import { TargetRow } from '../components/MaxOfferCard.jsx';
 import TaxCard from '../components/TaxCard.jsx';
 
 const YEARS = 10;
-const TONE_GLOW = {
-  bad: 'from-red-500/30 via-rose-400/10',
-  warn: 'from-amber-400/30 via-yellow-300/10',
-  good: 'from-emerald-400/35 via-teal-300/10',
-};
 
 const yearsText = (y) => (y == null ? 'Never' : `${y < 10 ? y.toFixed(1) : Math.round(y)} years`);
 const irrText = (x) => (Number.isFinite(x) ? percent(x, 1) : '—');

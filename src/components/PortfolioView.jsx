@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Briefcase, Building, CheckCircle2, LineChart, ShoppingCart, XCircle } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { estimateToday, portfolioSummary } from '../lib/finance.js';
-import { BAND_CLASSES, TONE_CLASSES, verdict } from '../lib/dscr.js';
+import { BAND_CLASSES, TONE_CLASSES, TONE_GLOW, verdict } from '../lib/dscr.js';
 import { chartTheme } from '../lib/chartTheme.js';
 import { cocMeaning, equityMeaning, portfolioCashMeaning, portfolioDscrMeaning } from '../lib/explain.js';
 import { compactMoney, money, percent, ratio } from '../lib/format.js';
@@ -268,9 +268,7 @@ export default function PortfolioView({ owned, prospects, dark, onOpen, onMarkOw
       <Card className="relative overflow-hidden">
         <div
           aria-hidden
-          className={`pointer-events-none absolute -top-40 -right-24 size-[28rem] rounded-full bg-radial ${
-            tone === 'bad' ? 'from-red-500/25 via-rose-400/10' : 'from-emerald-400/35 via-teal-300/10'
-          } to-transparent to-70% blur-2xl`}
+          className={`pointer-events-none absolute -top-40 -right-24 size-[28rem] rounded-full bg-radial ${TONE_GLOW[tone]} to-transparent to-70% blur-2xl`}
         />
         <div className="relative flex flex-wrap items-start justify-between gap-5 px-5 pt-6 sm:px-7 sm:pt-7">
           <div>

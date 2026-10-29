@@ -104,7 +104,7 @@ export default function PlanView({ owned, deals, plan, onPlan, dark, onOpen }) {
   return (
     <div className="space-y-6">
       <Card className="relative overflow-hidden">
-        <div aria-hidden className="pointer-events-none absolute -top-40 -right-24 size-[28rem] rounded-full bg-radial from-emerald-400/35 via-teal-300/10 to-transparent to-70% blur-2xl" />
+        <div aria-hidden className="pointer-events-none absolute -top-40 -right-24 size-[28rem] rounded-full bg-radial from-emerald-500/20 via-emerald-400/5 to-transparent to-70% blur-2xl" />
         <div className="relative flex flex-wrap items-start justify-between gap-5 px-5 pt-6 sm:px-7 sm:pt-7">
           <div className="min-w-0">
             <p className="eyebrow">Growth plan</p>

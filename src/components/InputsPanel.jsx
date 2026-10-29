@@ -1,9 +1,10 @@
-import { Building2, ChevronDown, Copy, Hammer, Landmark, MapPin, PencilRuler, Receipt, SlidersHorizontal, Trash2, TrendingUp, Wallet, Wrench } from 'lucide-react';
+import { Building2, ChevronDown, Copy, Hammer, Landmark, MapPin, PencilRuler, Receipt, Share2, SlidersHorizontal, Trash2, TrendingUp, Wallet, Wrench } from 'lucide-react';
 import { useState } from 'react';
 import { UNIT_TYPES, switchRules } from '../lib/presets.js';
 import { money, percent } from '../lib/format.js';
 import { Card, CardHeader, FieldLabel, NumberField, Segmented, SelectField } from './ui.jsx';
 import { InfoTip } from './motion.jsx';
+import RentHelper from './RentHelper.jsx';
 
 /**
  * A group of inputs. The basics stay open; the rest fold down to one line
@@ -57,7 +58,7 @@ function Derived({ label, value, strong }) {
 const iconBtn = 'rounded-lg p-1.5 text-zinc-500 transition dark:text-zinc-400 hover:bg-zinc-950/5 hover:text-zinc-700 dark:hover:bg-white/10 dark:hover:text-zinc-200';
 const pct = (v) => `${Number((Number(v) || 0).toFixed(2))}%`;
 
-export default function InputsPanel({ deal, a, onChange, onDuplicate, onDelete }) {
+export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onDelete, onShare }) {
   const id = (k) => `${deal.id}-${k}`;
   const set = (k) => (v) => onChange({ [k]: v });
   const opexPct = (Number(deal.mgmtPct) || 0) + (Number(deal.maintPct) || 0) + (Number(deal.vacancyPct) || 0) + (Number(deal.capexPct) || 0);
@@ -74,6 +75,11 @@ export default function InputsPanel({ deal, a, onChange, onDuplicate, onDelete }
         subtitle="Saves as you type."
         actions={
           <>
+            {onShare && (
+              <button type="button" onClick={onShare} className={iconBtn} aria-label="Share deal" title="Share deal as a link">
+                <Share2 className="size-4" aria-hidden />
+              </button>
+            )}
             <button type="button" onClick={onDuplicate} className={iconBtn} aria-label="Duplicate deal" title="Duplicate deal">
               <Copy className="size-4" aria-hidden />
             </button>
@@ -141,6 +147,7 @@ export default function InputsPanel({ deal, a, onChange, onDuplicate, onDelete }
             step={25}
             decimals={0}
           />
+          {ca && rents && <RentHelper rents={rents} onPick={set('rentPerUnit')} />}
         </div>
         {a.units > 1 && (
           <div className="col-span-2">

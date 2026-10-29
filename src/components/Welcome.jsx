@@ -14,7 +14,7 @@ function seen() {
 }
 
 /** First visit: what Bedrock answers, and the quickest way to try it on a property. Shown until it's dismissed in this browser. */
-export default function Welcome({ country, onQuickCheck }) {
+export default function Welcome({ country, rents, onQuickCheck }) {
   const [open, setOpen] = useState(() => !seen());
   if (!open) return null;
   const dismiss = () => {
@@ -28,7 +28,7 @@ export default function Welcome({ country, onQuickCheck }) {
 
   return (
     <Card className="relative overflow-hidden">
-      <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-24 size-[22rem] rounded-full bg-radial from-emerald-400/25 via-teal-300/10 to-transparent to-70% blur-2xl" />
+      <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-24 size-[22rem] rounded-full bg-radial from-emerald-500/15 via-emerald-400/5 to-transparent to-70% blur-2xl" />
       <button
         type="button"
         onClick={dismiss}
@@ -49,6 +49,7 @@ export default function Welcome({ country, onQuickCheck }) {
         <QuickCheck
           idPrefix="welcome"
           country={country}
+          rents={rents}
           onCheck={(fields) => {
             dismiss();
             onQuickCheck(fields);

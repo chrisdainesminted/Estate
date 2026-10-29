@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { UNIT_TYPES } from '../lib/presets.js';
 import { Button, NumberField, Segmented, SelectField } from './ui.jsx';
+import RentHelper from './RentHelper.jsx';
 
 /** Price, type and rent: the least it takes to see whether a rental would make money. */
-export default function QuickCheck({ idPrefix, country = 'us', onCheck }) {
+export default function QuickCheck({ idPrefix, country = 'ca', rents, onCheck }) {
   const [price, setPrice] = useState(300000);
   const [unitType, setUnitType] = useState('sfh');
   const [units, setUnits] = useState(6);
@@ -30,7 +31,10 @@ export default function QuickCheck({ idPrefix, country = 'us', onCheck }) {
         ))}
       </SelectField>
       {unitType === 'multiplex' && <NumberField id={id('units')} label="How many units" value={units} onChange={(v) => setUnits(Math.round(v))} min={5} max={500} decimals={0} />}
-      <NumberField id={id('rent')} label={single ? 'Monthly rent' : 'Monthly rent for each unit'} prefix="$" suffix="/mo" value={rent} onChange={setRent} step={25} decimals={0} />
+      <div>
+        <NumberField id={id('rent')} label={single ? 'Monthly rent' : 'Monthly rent for each unit'} prefix="$" suffix="/mo" value={rent} onChange={setRent} step={25} decimals={0} />
+        {where === 'ca' && rents && <RentHelper rents={rents} onPick={setRent} />}
+      </div>
       <div>
         <span className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">Where is it?</span>
         <Segmented

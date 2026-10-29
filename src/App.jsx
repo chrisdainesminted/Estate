@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Banknote,
   Briefcase,
@@ -9,6 +9,7 @@ import {
   CloudOff,
   Columns3,
   Copy,
+  Ellipsis,
   FileSpreadsheet,
   FileText,
   HardDrive,
@@ -21,6 +22,7 @@ import {
   Radar,
   RotateCcw,
   Search,
+  Share2,
   Sparkles,
   Sprout,
   Sun,
@@ -36,8 +38,9 @@ import { useMarket } from './hooks/useMarket.js';
 import { analyzeDeal, applyAdjustments, isNeutralAdjustment, maxOffer, projectDeal, refiAnalysis, saleAnalysis } from './lib/finance.js';
 import { money, ratio } from './lib/format.js';
 import { DEFAULT_DEAL, MAX_COMPARE, switchRules } from './lib/presets.js';
-import { listingToDeal, rankListings } from './lib/market.js';
+import { listingToDeal, normalizeMarket, rankListings } from './lib/market.js';
 import { quickDeal } from './lib/quick.js';
+import { readShared, sameDeal } from './lib/share.js';
 import { whatIfSummary } from './lib/explain.js';
 import HeroSummary from './components/HeroSummary.jsx';
 import InputsPanel from './components/InputsPanel.jsx';
@@ -68,26 +71,31 @@ const ProjectionChart = lazy(() => import('./components/ProjectionChart.jsx'));
 const ListingsView = lazy(() => import('./views/ListingsView.jsx'));
 const CashView = lazy(() => import('./views/CashView.jsx'));
 const HelpSheet = lazy(() => import('./components/HelpSheet.jsx'));
+const ShareSheet = lazy(() => import('./components/ShareSheet.jsx'));
 
 const NO_ADJ = { rateDelta: 0, downPct: null, rentPct: 0 };
 const YEARS = 10;
 const VIEW_KEY = 'bedrock-view';
+const TABS_KEY = 'bedrock-all-tabs';
 
-// `about` is what the help panel says each tab is for.
+// `about` is what the help panel says each tab is for. The `basic` tabs
+// always show; the rest wait behind More until they're useful.
 const VIEWS = [
-  { value: 'portfolio', label: 'Portfolio', icon: Briefcase, about: 'The properties you own, added up: what they bring in each month and what they’re worth today.' },
-  { value: 'analyze', label: 'Analyze', icon: LayoutDashboard, about: 'One deal in detail: what you’d keep each month, what a lender would say, and the most you should pay.' },
+  { value: 'analyze', label: 'Analyze', icon: LayoutDashboard, basic: true, about: 'One deal in detail: what you’d keep each month, what a lender would say, and the most you should pay.' },
   {
     value: 'cash',
     label: 'Cash',
     icon: Banknote,
+    basic: true,
     keywords: 'own money cash flow cash on cash 20% down mortgage payment income',
     about: 'Your own money as a 20% down payment: the cash flow after the mortgage payment, and the return on your cash.',
   },
+  { value: 'listings', label: 'Listings', icon: Radar, basic: true, about: 'Real Thunder Bay properties for sale, found every morning and checked against your targets.' },
+  { value: 'portfolio', label: 'Portfolio', icon: Briefcase, about: 'The properties you own, added up: what they bring in each month and what they’re worth today.' },
   { value: 'compare', label: 'Compare', icon: Columns3, about: 'Up to three deals side by side, with the best of each row marked.' },
   { value: 'plan', label: 'Plan', icon: Sprout, about: 'When your savings and rent could buy the next property, and where that leads in 10 years.' },
-  { value: 'listings', label: 'Listings', icon: Radar, about: 'Real Thunder Bay properties for sale, found every morning and checked against your targets.' },
 ];
+const BASIC_VIEWS = new Set(VIEWS.filter((v) => v.basic).map((v) => v.value));
 
 // Analyze sections the command palette can jump to. The detail sections fold
 // down to one line; jumping to one opens it.
@@ -136,6 +144,26 @@ function SyncStatus({ sync }) {
   );
 }
 
+/** Whether Portfolio, Compare and Plan were brought out from under More in this browser. */
+function useAllTabs() {
+  const [all, setAll] = useState(() => {
+    try {
+      return localStorage.getItem(TABS_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const showAll = useCallback(() => {
+    setAll(true);
+    try {
+      localStorage.setItem(TABS_KEY, '1');
+    } catch {
+      // per-viewer convenience only
+    }
+  }, []);
+  return [all, showAll];
+}
+
 function useStoredView() {
   const [view, setView] = useState(() => {
     try {
@@ -169,6 +197,9 @@ export default function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [fromLink, setFromLink] = useState(false);
+  const [allTabs, showAllTabs] = useAllTabs();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const marketFeed = useMarket();
   const sections = useSectionsState();
@@ -241,15 +272,16 @@ export default function App() {
   );
 
   // New deals follow the open deal's rules; Canadian ones start from your listing financing.
+  // New deals and quick checks start on Canada (Ontario) rules, unless you're working in a US deal of your own.
+  const homeRules = !active.example && active.country === 'us' ? 'us' : 'ca';
+
   const newDeal = useCallback(() => {
     const m = lib.settings.market;
-    lib.insertDeal(
-      active.country === 'ca' ? { ...switchRules(DEFAULT_DEAL, 'ca'), downPct: m.downPct, rate: m.rate, refiRate: m.rate, termYears: m.amortYears } : {},
-    );
+    lib.insertDeal(homeRules === 'ca' ? { ...switchRules(DEFAULT_DEAL, 'ca'), downPct: m.downPct, rate: m.rate, refiRate: m.rate, termYears: m.amortYears } : {});
     setView('analyze');
     if (!isDesktop) setSheetOpen(true);
     toast({ tone: 'info', text: 'New deal started. Fill in the inputs and everything updates as you type.' });
-  }, [lib, active.country, setView, isDesktop, toast]);
+  }, [lib, homeRules, setView, isDesktop, toast]);
 
   // The quick check: a new deal from a price, a type and a rent, with everything else typical.
   const quickCheck = useCallback(
@@ -265,6 +297,25 @@ export default function App() {
     },
     [lib, setView, isDesktop, toast],
   );
+
+  // A shared link (#deal=…) opens that deal: saved once, then the address bar is tidied.
+  const linkRead = useRef(false);
+  useEffect(() => {
+    if (linkRead.current) return;
+    linkRead.current = true;
+    const shared = readShared(window.location.hash);
+    if (!shared) return;
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    setFromLink(true);
+    setView('analyze');
+    const saved = deals.find((d) => shared.sharedId && d.sharedId === shared.sharedId && sameDeal(d, shared.fields));
+    if (saved) {
+      lib.setActive(saved.id);
+      toast({ tone: 'info', text: `Opened “${saved.name}”, saved from this link before.` });
+      return;
+    }
+    withUndo(`Added “${shared.fields.name}” from a shared link`, () => lib.insertDeal({ ...shared.fields, ...(shared.sharedId ? { sharedId: shared.sharedId } : {}) }));
+  }, [deals, lib, setView, toast, withUndo]);
 
   const deleteDeal = useCallback(
     (deal) => {
@@ -282,6 +333,21 @@ export default function App() {
 
   // Listings: open one as a deal (once), or hide it from the list.
   const market = lib.settings.market;
+  const rents = useMemo(() => normalizeMarket(market).rents, [market]);
+
+  // Portfolio, Compare and Plan wait behind More until you have two deals of your own or own a property.
+  const ownDeals = deals.filter((d) => !d.example);
+  const tabsUnlocked = allTabs || ownDeals.length >= 2 || ownDeals.some((d) => d.status === 'owned');
+  const tabs = tabsUnlocked ? VIEWS : VIEWS.filter((v) => v.basic);
+  // Going to one of them any other way (search, a saved view) brings them all out.
+  useEffect(() => {
+    if (!BASIC_VIEWS.has(view)) showAllTabs();
+  }, [view, showAllTabs]);
+  const revealTabs = () => {
+    showAllTabs();
+    // The More button goes away: hand focus to the first tab it brought out.
+    requestAnimationFrame(() => document.querySelector(`nav[aria-label="Views"] [role="radio"]:nth-child(${BASIC_VIEWS.size + 1})`)?.focus());
+  };
   const importedIds = useMemo(() => new Set(deals.map((d) => d.listingId).filter(Boolean)), [deals]);
   const analyzeListing = useCallback(
     (listing) => {
@@ -379,6 +445,7 @@ export default function App() {
           withUndo(`“${active.name}” now uses ${to === 'ca' ? 'Canadian' : 'US'} rules`, () => lib.updateDeal(active.id, switchRules(active, to)));
         },
       },
+      { id: 'act-share', group: 'Actions', label: `Share “${active.name}” as a link`, icon: Share2, keywords: 'send url copy partner lender friend', run: () => setShareOpen(true) },
       { id: 'act-dup', group: 'Actions', label: `Duplicate “${active.name}”`, icon: Copy, keywords: 'copy clone', run: () => duplicateDeal(active) },
       {
         id: 'act-compare',
@@ -437,6 +504,8 @@ export default function App() {
     <InputsPanel
       deal={active}
       a={base.a}
+      rents={rents}
+      onShare={() => setShareOpen(true)}
       onChange={(patch) => lib.updateDeal(active.id, patch)}
       onDuplicate={() => duplicateDeal(active)}
       onDelete={deals.length > 1 ? () => deleteDeal(active) : null}
@@ -466,9 +535,16 @@ export default function App() {
             {/* Phones and tablets: views get their own row. From lg up everything shares one row; icons drop until xl to make room. */}
             <nav
               aria-label="Views"
-              className="order-3 w-full overflow-x-auto lg:order-none lg:flex lg:w-auto lg:min-w-0 lg:flex-1 lg:justify-center-safe lg:max-xl:[&_svg]:hidden"
+              className="order-3 flex w-full items-center gap-1.5 overflow-x-auto lg:order-none lg:w-auto lg:min-w-0 lg:flex-1 lg:justify-center-safe lg:max-xl:[&_svg]:hidden"
             >
-              <Segmented label="View" value={view} onChange={setView} options={VIEWS} stretch />
+              <div className="min-w-0 flex-1 md:flex-none">
+                <Segmented label="View" value={view} onChange={setView} options={tabs} stretch />
+              </div>
+              {!tabsUnlocked && (
+                <button type="button" onClick={revealTabs} className={`${headerIcon} shrink-0`} aria-label="More tabs: Portfolio, Compare and Plan" title="More tabs">
+                  <Ellipsis className="size-4" aria-hidden /> More
+                </button>
+              )}
             </nav>
 
             <div className="order-4 w-full md:order-none md:ml-auto md:w-auto lg:ml-0">
@@ -561,12 +637,13 @@ export default function App() {
 
           {view === 'analyze' && (
             <>
-              <Welcome country={active.country} onQuickCheck={quickCheck} />
+              {!fromLink && <Welcome country={homeRules} rents={rents} onQuickCheck={quickCheck} />}
               <HeroSummary
                 deal={current.deal}
                 a={a}
                 base={neutral ? null : base.a}
                 targets={targets}
+                onShare={() => setShareOpen(true)}
                 whatIf={neutral ? null : { text: whatIfSummary(active, adj) ?? 'Testing new numbers.', onReset: () => setAdj(NO_ADJ), onApply: applyWhatIf }}
               />
 
@@ -670,7 +747,20 @@ export default function App() {
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} commands={commands} />}
       {helpOpen && (
         <Suspense fallback={null}>
-          <HelpSheet onClose={() => setHelpOpen(false)} views={VIEWS} country={active.country} onQuickCheck={quickCheck} />
+          <HelpSheet
+            onClose={() => setHelpOpen(false)}
+            views={VIEWS}
+            country={homeRules}
+            rents={rents}
+            onQuickCheck={quickCheck}
+            moreHidden={!tabsUnlocked}
+            onShowAll={showAllTabs}
+          />
+        </Suspense>
+      )}
+      {shareOpen && (
+        <Suspense fallback={null}>
+          <ShareSheet deal={active} onClose={() => setShareOpen(false)} />
         </Suspense>
       )}
       <DealMemo item={current} />

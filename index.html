@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bedrock</title>
     <meta name="description" content="Bedrock underwrites rental deals the way your bank account sees them: lender DSCR, real cash flow after every cost, Canadian or US rules, and a daily list of Thunder Bay rentals." />
-    <meta name="theme-color" content="#047857" />
+    <meta name="theme-color" content="#0a0a0b" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
@@ -23,17 +23,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&display=swap" rel="stylesheet" />
     <script>
-      // Pick the theme before paint to avoid a flash: the host's explicit
-      // choice (data-theme) first, then the in-app toggle, then the OS.
+      // Pick the theme before paint to avoid a flash: onyx (dark) unless
+      // the person switched to light with the in-app toggle.
       (function () {
-        var root = document.documentElement;
-        var host = root.getAttribute('data-theme');
         var saved = null;
         try {
           saved = localStorage.getItem('dscr-theme');
         } catch (e) {}
-        var dark = host === 'dark' || host === 'light' ? host === 'dark' : saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-        root.classList.toggle('dark', dark);
+        document.documentElement.classList.toggle('dark', saved !== 'light');
       })();
     </script>
   </head>
