@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, ArrowRight, Check, ChevronDown, ExternalLink, Eye, EyeOff, Radar, RotateCcw, SlidersHorizontal, Target, TrendingDown } from 'lucide-react';
-import { DEFAULT_MARKET, LISTING_TYPES, MARKET, SORTS, droppedInLatestRun, isNew, listingPageUrl, rankListings, siteName, typeOf } from '../lib/market.js';
+import { AlertTriangle, ArrowRight, Check, ChevronDown, ExternalLink, Eye, EyeOff, Landmark, Radar, RotateCcw, SlidersHorizontal, Target, TrendingDown } from 'lucide-react';
+import { DEFAULT_MARKET, LISTING_TYPES, MARKET, SORTS, droppedInLatestRun, isNew, lensTargets, listingPageUrl, rankListings, siteName, typeOf } from '../lib/market.js';
 import { listingSentence } from '../lib/explain.js';
 import { money, percent } from '../lib/format.js';
-import { Button, Card, CardHeader, DscrChip, NumberField, SelectField, SkeletonCard, signedClass } from '../components/ui.jsx';
+import { Button, Card, CardHeader, DscrChip, NumberField, Segmented, SelectField, SkeletonCard, signedClass } from '../components/ui.jsx';
 import { InfoTip } from '../components/motion.jsx';
 
 const KIND = { 1: 'House', 2: 'Duplex', 3: 'Triplex', 4: 'Fourplex' };
@@ -128,7 +128,7 @@ function ListingRow({ s, rank, feed, imported, hidden, onAnalyze, onHide, onUnhi
 
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
               <Button variant="primary" className="px-2.5 py-1.5" onClick={() => onAnalyze(l)}>
-                {imported ? 'Open deal' : 'Analyze'} <ArrowRight className="size-4" aria-hidden />
+                {imported ? 'Open deal' : s.lens === 'own' ? 'Open in Cash' : 'Analyze'} <ArrowRight className="size-4" aria-hidden />
               </Button>
               {link && (
                 <a
@@ -167,10 +167,16 @@ function ListingRow({ s, rank, feed, imported, hidden, onAnalyze, onHide, onUnhi
                   <Metric label="Asking" sub={`${money(s.a.price / s.a.units)} per door`}>
                     {money(s.a.price)}
                   </Metric>
-                  <Metric label="Lender DSCR" tip="dscr">
-                    <DscrChip status={s.a.status} dscr={s.a.dscr} size="sm" />
-                  </Metric>
-                  <Metric label="Cash-on-cash" tip="coc" sub={`on ${money(s.a.cashInvested)}`}>
+                  {s.lens === 'own' ? (
+                    <Metric label="Mortgage payment" tip="mortgagePayment" sub={`on a ${money(s.a.loanAmount)} loan`}>
+                      {money(s.a.pi)}/mo
+                    </Metric>
+                  ) : (
+                    <Metric label="Lender DSCR" tip="dscr">
+                      <DscrChip status={s.a.status} dscr={s.a.dscr} size="sm" />
+                    </Metric>
+                  )}
+                  <Metric label="Cash-on-cash" tip="coc" sub={`on ${money(s.a.cashInvested)}${s.lens === 'own' ? ' of your own' : ''}`}>
                     <span className={signedClass(s.a.coc)}>{percent(s.a.coc, 1)}</span>
                   </Metric>
                   <Metric label="Bought outright" tip="allCash" sub={`on ${money(s.cash.cashInvested)}, no loan`}>
@@ -225,9 +231,12 @@ function Assumptions({ market, onMarket }) {
       <div className="grid gap-8 p-6 lg:grid-cols-3">
         <fieldset className="grid grid-cols-2 content-start gap-3">
           <legend className="eyebrow mb-3">Financing</legend>
-          {f('downPct', { label: 'Down payment', suffix: '%', max: 100, step: 1, decimals: 1 })}
-          {f('rate', { label: 'Interest rate', suffix: '%', max: 30, step: 0.125, decimals: 3, hint: 'Compounded semi-annually' })}
-          <SelectField id="mkt-amort" label="Amortization" value={market.amortYears} onChange={(e) => onMarket({ amortYears: Number(e.target.value) })}>
+          <p className="col-span-2 -mt-1 text-xs font-medium text-zinc-800 dark:text-zinc-200">DSCR loan</p>
+          {f('dscrDownPct', { label: 'Down payment', suffix: '%', max: 100, step: 1, decimals: 1 })}
+          {f('dscrRate', { label: 'Interest rate', suffix: '%', max: 30, step: 0.125, decimals: 3, hint: 'Usually above a regular mortgage' })}
+          <p className="col-span-2 mt-1 text-xs font-medium text-zinc-800 dark:text-zinc-200">Own money, 20% down</p>
+          <div className="col-span-2">{f('rate', { label: 'Regular mortgage rate', suffix: '%', max: 30, step: 0.125, decimals: 3, hint: 'Compounded semi-annually' })}</div>
+          <SelectField id="mkt-amort" label="Paid off over" value={market.amortYears} onChange={(e) => onMarket({ amortYears: Number(e.target.value) })}>
             {[20, 25, 30, 35, 40].map((y) => (
               <option key={y} value={y}>
                 {y} years
@@ -292,7 +301,8 @@ export default function ListingsView({ feedState, market, targets, importedIds, 
   const stale = run && Date.now() - run.at > STALE_AFTER;
   const freshCount = visible.filter((s) => isNew(s.listing, feed)).length;
   const dropCount = visible.filter((s) => droppedInLatestRun(s.listing, feed)).length;
-  const targetText = [targets.useDscr && `DSCR ${Number(targets.dscr).toFixed(2)}`, targets.useCashFlow && `$${targets.cashFlowPerDoor}/door`, targets.useCoc && `${targets.coc}% cash-on-cash`]
+  const counted = lensTargets(targets, market.lens);
+  const targetText = [counted.useDscr && `DSCR ${Number(counted.dscr).toFixed(2)}`, counted.useCashFlow && `$${counted.cashFlowPerDoor}/door`, counted.useCoc && `${counted.coc}% cash-on-cash`]
     .filter(Boolean)
     .join(' · ');
 
@@ -344,6 +354,30 @@ export default function ListingsView({ feedState, market, targets, importedIds, 
               The last update was {when(run.at)}. A morning run may have failed; the next one will try again.
             </p>
           )}
+
+          <Card delay={20} className="p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+              <div className="min-w-0 max-w-xl">
+                <p className="eyebrow flex items-center gap-1.5">
+                  <Landmark className="size-3.5" aria-hidden /> Count the income with
+                </p>
+                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                  {market.lens === 'own'
+                    ? `Your own money as a 20% down payment, with a regular mortgage at ${Number(market.rate)}%. No lender’s DSCR test: just the income and the return on your cash.`
+                    : `A DSCR loan, where the lender qualifies the property on its rent: ${Number(market.dscrDownPct)}% down at ${Number(market.dscrRate)}%, and it has to pass the lender’s DSCR test.`}
+                </p>
+              </div>
+              <Segmented
+                label="Count the income with"
+                value={market.lens}
+                onChange={(lens) => onMarket({ lens })}
+                options={[
+                  { value: 'dscr', label: 'DSCR loan' },
+                  { value: 'own', label: 'Own money, 20% down' },
+                ]}
+              />
+            </div>
+          </Card>
 
           <Card delay={40} className="@container">
             <dl className="grid grid-cols-2 @3xl:grid-cols-4">

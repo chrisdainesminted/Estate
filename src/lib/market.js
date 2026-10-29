@@ -2,7 +2,7 @@
 // saves for each property, how Bedrock turns one into a deal, and how the
 // list is ranked. Pure functions, shared by the page and the run's scripts.
 
-import { DEFAULT_TARGETS, allCash, analyzeDeal, maxOffer } from './finance.js';
+import { DEFAULT_TARGETS, allCash, analyzeDeal, maxOffer, ownMoney } from './finance.js';
 import { DEFAULT_DEAL, UNIT_TYPES } from './presets.js';
 import { safeHttpUrl } from './format.js';
 
@@ -26,8 +26,15 @@ export const INSURANCE_MIN = 1500;
  * units without a stated rent. Editable on the Listings tab.
  */
 export const DEFAULT_MARKET = {
-  downPct: 20,
-  rate: 4.9, // 5-year fixed, uninsured rental mortgage
+  // How listings are counted: 'dscr', with a DSCR loan, where the lender
+  // qualifies the property on its rent; or 'own', your own money as a 20%
+  // down payment with a regular mortgage at `rate`.
+  lens: 'dscr',
+  // In Canada, loans qualified on the rent come from alternative (B)
+  // lenders: usually 20-25% down, at a rate above a regular mortgage's.
+  dscrDownPct: 25,
+  dscrRate: 6,
+  rate: 4.9, // regular mortgage: 5-year fixed, uninsured rental
   amortYears: 30,
   closingPct: 1, // legal, title, inspection; land transfer tax is added on top
   insurancePerUnit: 800, // $ a year per unit, at least INSURANCE_MIN
@@ -49,6 +56,7 @@ export function normalizeMarket(m) {
     ...DEFAULT_MARKET,
     ...(m ?? {}),
     rents,
+    lens: m?.lens === 'own' ? 'own' : 'dscr',
     types: Array.isArray(m?.types) ? m.types.filter((t) => LISTING_TYPES.some((x) => x.key === t)) : DEFAULT_MARKET.types,
     hidden: Array.isArray(m?.hidden) ? m.hidden.filter((x) => typeof x === 'string') : [],
   };
@@ -204,21 +212,23 @@ export function listingRent(listing, market) {
   return { total, source: stated === 0 ? 'estimated' : stated === units ? 'stated' : 'mixed' };
 }
 
-/** The deal a listing becomes under Ontario rules and your listing assumptions. */
-export function listingToDeal(listing, market) {
+/**
+ * The deal a listing becomes under Ontario rules and your listing
+ * assumptions, financed the way `lens` says (your chosen one by default):
+ * a DSCR loan, or your own 20% down with a regular mortgage.
+ */
+export function listingToDeal(listing, market, lens) {
   const m = normalizeMarket(market);
   const units = Math.max(Math.round(Number(listing.units) || 1), 1);
   const price = Number(listing.price) || 0;
   const rent = listingRent(listing, m);
   const unitType = UNIT_TYPES.find((t) => t.units === units && t.key !== 'multiplex')?.key ?? 'multiplex';
   const rentNote = { stated: 'Rents as listed.', mixed: 'Some rents estimated from your rent table.', estimated: 'Rents estimated from your rent table.' }[rent.source];
-  return {
+  const deal = {
     ...DEFAULT_DEAL,
     name: listing.address,
     country: 'ca',
     price,
-    downPct: m.downPct,
-    rate: m.rate,
     termYears: m.amortYears,
     closingPct: m.closingPct,
     unitType,
@@ -232,12 +242,14 @@ export function listingToDeal(listing, market) {
     maintPct: m.maintPct,
     vacancyPct: m.vacancyPct,
     capexPct: m.capexPct,
-    refiRate: m.rate,
     address: listing.address,
     listingUrl: listing.url || '',
     notes: [listing.highlights, rentNote, listing.mls && `MLS® ${listing.mls}.`].filter(Boolean).join(' '),
     listingId: listing.id,
   };
+  return (lens ?? m.lens) === 'own'
+    ? ownMoney({ ...deal, rate: m.rate, refiRate: m.rate })
+    : { ...deal, downPct: m.dscrDownPct, rate: m.dscrRate, refiRate: m.dscrRate };
 }
 
 /** Price cut in the most recent move, or 0. */
@@ -247,23 +259,29 @@ export function priceDrop(listing) {
   return prev > listing.price ? prev - listing.price : 0;
 }
 
+/** Your targets as a view counts them: your own down payment has no lender's DSCR test to pass. */
+export const lensTargets = (targets, lens) => (lens === 'own' ? { ...targets, useDscr: false } : targets);
+
 /**
- * One listing run through the engine: cash flow per door, max offer, and
- * whether it beats every target, plus the same listing bought outright.
+ * One listing run through the engine the way your chosen view counts it:
+ * cash flow per door, max offer, and whether it beats every target, plus
+ * the same listing bought outright.
  */
 export function scoreListing(listing, market, targets = DEFAULT_TARGETS) {
-  const deal = listingToDeal(listing, market);
+  const m = normalizeMarket(market);
+  const deal = listingToDeal(listing, m);
   const a = analyzeDeal(deal);
-  const offer = maxOffer(deal, targets);
+  const offer = maxOffer(deal, lensTargets(targets, m.lens));
   return {
     listing,
     deal,
     a,
+    lens: m.lens,
     cash: analyzeDeal(allCash(deal)),
     offer,
     perDoor: a.netCashFlow / a.units,
     meets: offer.price == null ? a.netCashFlow > 0 : offer.price >= a.price,
-    rentSource: listingRent(listing, market).source,
+    rentSource: listingRent(listing, m).source,
     taxesEstimated: !positive(listing.taxes),
     drop: priceDrop(listing),
   };

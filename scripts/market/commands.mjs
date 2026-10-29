@@ -1,6 +1,6 @@
 // The daily run's two commands, shared by the repo scripts and the bundled
 // tool published with the page (tools/bedrock-market.mjs).
-import { mergeFeed, normalizeMarket, rankListings, standouts, isNew, droppedInLatestRun } from '../../src/lib/market.js';
+import { mergeFeed, normalizeMarket, rankListings, standouts, isNew, droppedInLatestRun, lensTargets } from '../../src/lib/market.js';
 import { DEFAULT_TARGETS } from '../../src/lib/finance.js';
 import { money, percent } from '../../src/lib/format.js';
 import { parseArgs, readJson, unwrap } from './io.mjs';
@@ -61,9 +61,11 @@ export function runScore(argv) {
     process.stdout.write(`${JSON.stringify({ lastRun: feed.lastRun, ranked: ranked.map(line), standouts: best.map(line) }, null, 1)}\n`);
   } else {
     const r = feed.lastRun ?? {};
-    const on = [targets.useDscr && `DSCR ≥ ${targets.dscr}`, targets.useCashFlow && `$${targets.cashFlowPerDoor}/door`, targets.useCoc && `${targets.coc}% cash-on-cash`].filter(Boolean).join(', ');
+    const counted = lensTargets(targets, market.lens);
+    const on = [counted.useDscr && `DSCR ≥ ${counted.dscr}`, counted.useCashFlow && `$${counted.cashFlowPerDoor}/door`, counted.useCoc && `${counted.coc}% cash-on-cash`].filter(Boolean).join(', ');
+    const loan = market.lens === 'own' ? `own money, 20% down, regular mortgage at ${market.rate}%` : `DSCR loan, ${market.dscrDownPct}% down at ${market.dscrRate}%`;
     console.log(`Run ${r.date}: ${r.found} found, ${r.added} new, ${r.priceDrops} price drops; ${feed.listings.length} in the feed, ${ranked.length} ranked.`);
-    console.log(`Assumptions: ${market.downPct}% down, ${market.rate}% over ${market.amortYears} years. Targets: ${on || 'none'}.\n`);
+    console.log(`Assumptions: ${loan}, over ${market.amortYears} years. Targets: ${on || 'none'}.\n`);
     ranked.forEach((s, i) => {
       const flagsText = [isNew(s.listing, feed) && 'NEW', droppedInLatestRun(s.listing, feed) && `DROP ${plainMoney(s.drop)}`, s.meets && 'meets targets'].filter(Boolean).join(' · ');
       console.log(

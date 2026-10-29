@@ -152,6 +152,7 @@ export function taxMeaning(t) {
 /** One sentence per listing: cash per door, the lender's view, and the asking price against your max. */
 export function listingSentence(s) {
   const cash = cashClause(s.perDoor, s.a.units);
+  if (s.lens === 'own') return ownListingSentence(s, cash);
   const lenderSays = s.a.status.key === 'negative' ? 'most lenders would turn it down' : lenderOk(s.a.status) ? 'a lender would likely approve it' : 'lender approval is tight';
   // "and" when the cash and the lender agree (both fine or both not), "but" when they don't.
   const agree = (cash.tone !== 'loses') === lenderOk(s.a.status);
@@ -159,6 +160,15 @@ export function listingSentence(s) {
   const room = Number.isFinite(s.offer?.price) ? s.offer.price - s.a.price : null;
   if (room == null) return first;
   return `${first} Asking is ${money(Math.abs(room))} ${room >= 0 ? 'under' : 'over'} your max offer.`;
+}
+
+/** A listing counted with your own 20% down and a regular mortgage: no lender's DSCR test. */
+function ownListingSentence(s, cash) {
+  const down = `With ${downText(s.a)} (${money(s.a.cashInvested)} of your own money)`;
+  const after = { keeps: ` after the mortgage and every cost: ${an(percent(s.a.coc, 1))} cash-on-cash return`, loses: ' once the mortgage and running costs are paid', even: ' after the mortgage and every cost' }[cash.tone];
+  const first = `${down}, it ${cash.text}${after}.`;
+  const room = Number.isFinite(s.offer?.price) ? s.offer.price - s.a.price : null;
+  return room == null ? first : `${first} Asking is ${money(Math.abs(room))} ${room >= 0 ? 'under' : 'over'} your max offer.`;
 }
 
 /** The portfolio's monthly cash flow, across every owned property. */

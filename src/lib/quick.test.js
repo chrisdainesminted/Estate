@@ -36,7 +36,7 @@ describe('quickDeal', () => {
     expect(d).toMatchObject({
       country: 'ca',
       units: 3,
-      downPct: m.downPct,
+      downPct: 20,
       rate: m.rate,
       termYears: m.amortYears,
       closingPct: m.closingPct,

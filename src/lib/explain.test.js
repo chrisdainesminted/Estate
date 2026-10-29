@@ -123,6 +123,16 @@ describe('listingSentence', () => {
     expect(listingSentence(listing(trap, 200000))).toMatch(/^It would cost you about \$\d+ a month out of pocket, but a lender would likely approve it\. Asking is \$50,000 over your max offer\.$/);
     expect(listingSentence(listing(underwater, null))).toMatch(/out of pocket, and most lenders would turn it down\.$/);
   });
+
+  it('counts your own 20% down without the lender', () => {
+    const own = (deal, offerPrice) => ({ ...listing(ownMoney(deal), offerPrice), lens: 'own' });
+    const s = own(strong, 300000);
+    expect(listingSentence(s)).toBe(
+      `With 20% down ($57,500 of your own money), it puts about $${Math.round(s.perDoor)} a month in your pocket after the mortgage and every cost: an 11.0% cash-on-cash return. Asking is $50,000 under your max offer.`,
+    );
+    expect(listingSentence(own(trap, null))).toMatch(/^With 20% down \(\$57,500 of your own money\), it would cost you about \$\d+ a month out of pocket once the mortgage and running costs are paid\.$/);
+    expect(listingSentence(own(trap, null))).not.toMatch(/lender/);
+  });
 });
 
 describe('portfolio and compare meanings', () => {

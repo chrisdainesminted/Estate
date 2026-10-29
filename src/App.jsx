@@ -35,7 +35,7 @@ import { useTheme } from './hooks/useTheme.js';
 import { useExports } from './hooks/useExports.js';
 import { useMediaQuery, prefersReducedMotion } from './hooks/useMediaQuery.js';
 import { useMarket } from './hooks/useMarket.js';
-import { analyzeDeal, applyAdjustments, isNeutralAdjustment, maxOffer, projectDeal, refiAnalysis, saleAnalysis } from './lib/finance.js';
+import { OWN_DOWN_PCT, analyzeDeal, applyAdjustments, isNeutralAdjustment, maxOffer, projectDeal, refiAnalysis, saleAnalysis } from './lib/finance.js';
 import { money, ratio } from './lib/format.js';
 import { DEFAULT_DEAL, MAX_COMPARE, switchRules } from './lib/presets.js';
 import { listingToDeal, normalizeMarket, rankListings } from './lib/market.js';
@@ -277,7 +277,7 @@ export default function App() {
 
   const newDeal = useCallback(() => {
     const m = lib.settings.market;
-    lib.insertDeal(homeRules === 'ca' ? { ...switchRules(DEFAULT_DEAL, 'ca'), downPct: m.downPct, rate: m.rate, refiRate: m.rate, termYears: m.amortYears } : {});
+    lib.insertDeal(homeRules === 'ca' ? { ...switchRules(DEFAULT_DEAL, 'ca'), downPct: OWN_DOWN_PCT, rate: m.rate, refiRate: m.rate, termYears: m.amortYears } : {});
     setView('analyze');
     if (!isDesktop) setSheetOpen(true);
     toast({ tone: 'info', text: 'New deal started. Fill in the inputs and everything updates as you type.' });
@@ -349,18 +349,18 @@ export default function App() {
     requestAnimationFrame(() => document.querySelector(`nav[aria-label="Views"] [role="radio"]:nth-child(${BASIC_VIEWS.size + 1})`)?.focus());
   };
   const importedIds = useMemo(() => new Set(deals.map((d) => d.listingId).filter(Boolean)), [deals]);
+  // A listing opens as a deal with the loan its view counts: a DSCR loan on
+  // Analyze, or your own 20% down on Cash.
   const analyzeListing = useCallback(
     (listing) => {
+      const tab = normalizeMarket(market).lens === 'own' ? 'cash' : 'analyze';
       const existing = deals.find((d) => d.listingId === listing.id);
-      if (existing) {
-        openDeal(existing.id);
-        return;
-      }
-      withUndo(`Added “${listing.address}” to your deals`, () => lib.insertDeal(listingToDeal(listing, market)));
-      setView('analyze');
+      if (existing) lib.setActive(existing.id);
+      else withUndo(`Added “${listing.address}” to your deals`, () => lib.insertDeal(listingToDeal(listing, market)));
+      setView(tab);
       window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
     },
-    [deals, market, openDeal, withUndo, lib, setView],
+    [deals, market, withUndo, lib, setView],
   );
   const hideListing = useCallback(
     (listing) => withUndo(`Hid “${listing.address}”`, () => lib.updateSettings('market', { hidden: [...market.hidden, listing.id] })),

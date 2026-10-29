@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { allCash, analyzeDeal, maxOffer } from './finance.js';
+import { DEFAULT_DEAL } from './presets.js';
 import {
   DEFAULT_MARKET,
   INSURANCE_MIN,
   addressKey,
   cleanListing,
+  lensTargets,
   listingPageUrl,
   listingRent,
   listingToDeal,
@@ -116,9 +118,9 @@ describe('listingRent', () => {
 
 describe('listingToDeal', () => {
   it('underwrites a listing under Ontario rules with the listing assumptions', () => {
-    const d = listingToDeal(cleanListing(triplex), { ...DEFAULT_MARKET, downPct: 25 });
+    const d = listingToDeal(cleanListing(triplex), { ...DEFAULT_MARKET, dscrDownPct: 30 });
     expect(d.country).toBe('ca');
-    expect(d.downPct).toBe(25);
+    expect(d.downPct).toBe(30);
     expect(d.units).toBe(3);
     expect(d.unitType).toBe('triplex');
     expect(d.taxesAnnual).toBe(3675);
@@ -127,6 +129,18 @@ describe('listingToDeal', () => {
     expect(d.rentPerUnit).toBe(Math.round((1900 + 1700 + 1950) / 3));
     expect(d.listingId).toBe('X13684758');
     expect(d.notes).toContain('MLS® X13684758');
+  });
+
+  it('finances it the way the chosen view counts it', () => {
+    const l = cleanListing(triplex);
+    const dscr = listingToDeal(l, DEFAULT_MARKET);
+    expect([dscr.downPct, dscr.rate, dscr.reserveMonths]).toEqual([DEFAULT_MARKET.dscrDownPct, DEFAULT_MARKET.dscrRate, DEFAULT_DEAL.reserveMonths]);
+    // Your own 20% down, with the regular mortgage and no lender's reserves.
+    const own = listingToDeal(l, { ...DEFAULT_MARKET, lens: 'own' });
+    expect([own.downPct, own.rate, own.reserveMonths, own.ioYears]).toEqual([20, DEFAULT_MARKET.rate, 0, 0]);
+    expect(listingToDeal(l, DEFAULT_MARKET, 'own')).toEqual(own);
+    // Everything about the property itself is the same either way.
+    for (const k of ['price', 'units', 'rentPerUnit', 'taxesAnnual', 'insuranceAnnual', 'hoaMonthly', 'closingPct', 'termYears']) expect(own[k]).toBe(dscr[k]);
   });
 
   it('estimates missing taxes from the price and keeps a floor under insurance', () => {
@@ -175,6 +189,23 @@ describe('scoreListing and rankListings', () => {
     expect(rankListings([pricey, house, cheap], { ...DEFAULT_MARKET, types: ['single'] }, targets).map((s) => s.listing.address)).toEqual(['30 House Rd']);
     expect(rankListings([pricey, house, cheap], { ...DEFAULT_MARKET, hidden: [cheap.id] }, targets)).toHaveLength(2);
     expect(rankListings([{ ...cheap, status: 'conditional' }], DEFAULT_MARKET, targets)).toHaveLength(0);
+  });
+
+  it('drops the DSCR target when you count your own down payment', () => {
+    // Cash flows well, but short of a strict 2.00 DSCR target.
+    const strict = { ...targets, dscr: 2, cashFlowPerDoor: 50, coc: 2 };
+    const l = cleanListing({ address: '40 Thin St', price: 260000, units: 2, rents: [1350, 1350], taxes: 2600, url: page('40-thin-street') });
+    const asDscr = scoreListing(l, DEFAULT_MARKET, strict);
+    const asOwn = scoreListing(l, { ...DEFAULT_MARKET, lens: 'own' }, strict);
+    expect(asDscr.lens).toBe('dscr');
+    expect(asOwn.lens).toBe('own');
+    expect(asOwn.a.dscr).toBeLessThan(2);
+    expect(asDscr.meets).toBe(false);
+    expect(asOwn.meets).toBe(true);
+    expect(asOwn.offer.limits.map((x) => x.key)).not.toContain('dscr');
+    expect(asDscr.offer.limits.map((x) => x.key)).toContain('dscr');
+    expect(lensTargets(strict, 'own').useDscr).toBe(false);
+    expect(lensTargets(strict, 'dscr')).toBe(strict);
   });
 
   it('leaves out anything without a page of its own, as an older saved feed may hold', () => {
@@ -251,8 +282,10 @@ describe('standouts', () => {
 
 describe('normalizeMarket', () => {
   it('fills missing settings and ignores junk', () => {
-    const m = normalizeMarket({ downPct: 25, rents: { 2: 1800, 3: 'x' }, types: ['small', 'bogus'], hidden: [1, 'a'] });
-    expect(m.downPct).toBe(25);
+    const m = normalizeMarket({ dscrDownPct: 30, lens: 'sideways', rents: { 2: 1800, 3: 'x' }, types: ['small', 'bogus'], hidden: [1, 'a'] });
+    expect(m.dscrDownPct).toBe(30);
+    expect(m.lens).toBe('dscr');
+    expect(normalizeMarket({ lens: 'own' }).lens).toBe('own');
     expect(m.rents[2]).toBe(1800);
     expect(m.rents[3]).toBe(DEFAULT_MARKET.rents[3]);
     expect(m.types).toEqual(['small']);

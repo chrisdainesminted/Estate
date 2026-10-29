@@ -1,6 +1,7 @@
 // The quick check: a deal from just a price, a rent and a property type.
 // Everything else starts at typical values the person can change later.
 
+import { OWN_DOWN_PCT } from './finance.js';
 import { DEFAULT_MARKET, INSURANCE_MIN, normalizeMarket } from './market.js';
 import { DEFAULT_DEAL, UNIT_TYPES } from './presets.js';
 
@@ -20,8 +21,8 @@ export function shortPrice(price) {
 /**
  * The fields of a new deal from a quick check. US deals scale the default
  * taxes and insurance to the price; Canadian ones follow the listing
- * assumptions (Ontario rules, financing, taxes, insurance, utilities and
- * running costs), the same way a listing becomes a deal.
+ * assumptions (Ontario rules, the regular mortgage with 20% down, taxes,
+ * insurance, utilities and running costs).
  */
 export function quickDeal({ price, rentPerUnit, unitType, units, country }, market = DEFAULT_MARKET) {
   const type = UNIT_TYPES.find((t) => t.key === unitType) ?? UNIT_TYPES[0];
@@ -43,7 +44,7 @@ export function quickDeal({ price, rentPerUnit, unitType, units, country }, mark
   return {
     ...common,
     country: 'ca',
-    downPct: m.downPct,
+    downPct: OWN_DOWN_PCT,
     rate: m.rate,
     refiRate: m.rate,
     termYears: m.amortYears,
