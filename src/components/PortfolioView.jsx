@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Briefcase, Building, CheckCircle2, LineChart, ShoppingCart, XCircle } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Briefcase, CheckCircle2, XCircle } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { estimateToday, portfolioSummary } from '../lib/finance.js';
-import { BAND_CLASSES, TONE_CLASSES, TONE_GLOW, verdict } from '../lib/dscr.js';
+import { TONE_CLASSES, TONE_TEXT, verdict } from '../lib/dscr.js';
 import { chartTheme } from '../lib/chartTheme.js';
-import { cocMeaning, equityMeaning, portfolioCashMeaning, portfolioDscrMeaning } from '../lib/explain.js';
 import { compactMoney, money, percent, ratio } from '../lib/format.js';
-import { Button, Card, CardHeader, DscrChip, ExampleTag, KpiTile, SelectField, Stat, signedClass } from './ui.jsx';
+import { Button, Card, CardHeader, DscrChip, ExampleTag, LedgerHeading, LedgerLine, SelectField, Stat, SummaryCard, ViewHeader, signedClass } from './ui.jsx';
 import { CHART_ANIMATE, InfoTip, Num } from './motion.jsx';
-import { Section } from './Section.jsx';
+import { Section, SectionGroup } from './Section.jsx';
 
 const POS = { light: '#059669', dark: '#34d399' };
 const NEG = { light: '#dc2626', dark: '#f87171' };
@@ -17,7 +16,7 @@ function CashFlowTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
   const r = payload[0].payload;
   return (
-    <div className="glass-strong rounded-2xl p-3.5 text-xs">
+    <div className="popover rounded-2xl p-3.5 text-xs">
       <div className="mb-1 font-semibold text-zinc-900 dark:text-white">{r.name}</div>
       <div className="tabular flex justify-between gap-6 text-zinc-600 dark:text-zinc-300">
         <span>Net cash flow</span>
@@ -131,7 +130,6 @@ function ImpactCard({ owned, prospects, onOpen, onMarkOwned }) {
   return (
     <Section
       id="pf-impact"
-      icon={ShoppingCart}
       title="What if you buy it?"
       meaning={
         pick
@@ -141,9 +139,9 @@ function ImpactCard({ owned, prospects, onOpen, onMarkOwned }) {
       subtitle="See how a prospect changes the whole portfolio."
     >
       {!pick ? (
-        <p className="p-6 text-sm text-zinc-500 dark:text-zinc-400">Add a prospect from the deal menu to see its impact here.</p>
+        <p className="p-5 text-sm text-zinc-500 dark:text-zinc-400">Add a prospect from the deal menu to see its impact here.</p>
       ) : (
-        <div className="flex flex-1 flex-col p-6">
+        <div className="flex flex-1 flex-col p-5">
           <SelectField id="impact-pick" label="Prospect" value={pick.deal.id} onChange={(e) => setPickId(e.target.value)}>
             {prospects.map((x) => (
               <option key={x.deal.id} value={x.deal.id}>
@@ -152,7 +150,7 @@ function ImpactCard({ owned, prospects, onOpen, onMarkOwned }) {
             ))}
           </SelectField>
 
-          <p className="mt-4 rounded-2xl bg-well p-3.5 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+          <p className="mt-4 rounded-md bg-well p-3.5 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
             Buying <strong className="text-zinc-900 dark:text-white">{pick.deal.name}</strong>{' '}
             {pick.a.netCashFlow >= 0 ? 'adds' : 'takes'}{' '}
             <strong className={signedClass(pick.a.netCashFlow)}>{money(Math.abs(pick.a.netCashFlow))}/mo</strong>{' '}
@@ -184,11 +182,11 @@ function ImpactCard({ owned, prospects, onOpen, onMarkOwned }) {
 function PropertiesTable({ owned, onOpen }) {
   return (
     <Card delay={240}>
-      <CardHeader icon={Building} title="Properties" subtitle="Click a property to open its full analysis." />
+      <CardHeader title="Properties" subtitle="Click a property to open its full analysis." />
       <div className="thin-scroll overflow-x-auto">
         <table className="w-full min-w-[760px] text-sm">
           <thead>
-            <tr className="eyebrow">
+            <tr className="caption">
               {['Property', 'Doors', 'Rent /mo', 'PITIA', 'Net cash flow', 'DSCR', 'Cash-on-cash', 'Equity today', 'Verdict'].map((h, i) => (
                 <th key={h} className={`px-4 py-3 font-medium first:pl-6 last:pr-6 ${i === 0 ? 'text-left' : 'text-right'}`}>
                   {h}
@@ -203,7 +201,7 @@ function PropertiesTable({ owned, onOpen }) {
               const v = verdict({ ...x.a, netCashFlow: today.netCashFlow, status: today.status, lenderApprovedButNegative: today.lenderApprovedButNegative });
               const coc = x.a.cashInvested > 0 ? (today.netCashFlow * 12) / x.a.cashInvested : 0;
               return (
-                <tr key={x.deal.id} className="border-t border-hairline transition hover:bg-zinc-950/[0.025] dark:hover:bg-white/[0.03]">
+                <tr key={x.deal.id} className="border-t border-hairline transition hover:bg-well">
                   <td className="py-3 pr-4 pl-6">
                     <button type="button" onClick={() => onOpen(x.deal.id)} className="text-left font-medium text-zinc-900 hover:text-emerald-700 dark:text-white dark:hover:text-emerald-300">
                       {x.deal.name}
@@ -223,7 +221,7 @@ function PropertiesTable({ owned, onOpen }) {
                   <td className={`px-4 py-3 text-right ${signedClass(coc)}`}>{percent(coc)}</td>
                   <td className="px-4 py-3 text-right text-zinc-900 dark:text-white">{money(today.equity)}</td>
                   <td className="py-3 pr-6 pl-4 text-right">
-                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ring-1 ring-inset ${TONE_CLASSES[v.tone]}`}>{v.label}</span>
+                    <span className={`inline-flex rounded-[3px] px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap ring-1 ring-inset ${TONE_CLASSES[v.tone]}`}>{v.label}</span>
                   </td>
                 </tr>
               );
@@ -240,11 +238,9 @@ export default function PortfolioView({ owned, prospects, dark, onOpen, onMarkOw
 
   if (!owned.length) {
     return (
-      <Card className="relative overflow-hidden p-8 text-center sm:p-14">
-        <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-600/20 dark:text-emerald-300">
-          <Briefcase className="size-6" aria-hidden />
-        </div>
-        <h2 className="mt-5 text-2xl font-semibold tracking-tight text-zinc-950 dark:text-white">No owned properties yet</h2>
+      <Card className="p-8 text-center sm:p-14">
+        <Briefcase className="mx-auto size-7 text-zinc-500 dark:text-zinc-400" aria-hidden />
+        <h2 className="mt-4 text-xl font-semibold tracking-tight text-zinc-950 dark:text-white">No owned properties yet</h2>
         <p className="mx-auto mt-2 max-w-md text-sm text-zinc-600 dark:text-zinc-400">
           Set a deal’s status to <strong>Owned</strong> in its inputs and it rolls up here: combined cash flow, global DSCR, equity, and what each new purchase
           would do to the whole portfolio.
@@ -259,76 +255,63 @@ export default function PortfolioView({ owned, prospects, dark, onOpen, onMarkOw
   }
 
   const tone = p.negative > 0 ? 'bad' : p.status.key === 'tight' ? 'warn' : 'good';
-  const ToneIcon = tone === 'good' ? CheckCircle2 : XCircle;
+  const ToneIcon = { bad: XCircle, warn: AlertTriangle, good: CheckCircle2 }[tone];
   const badge =
     p.negative > 0 ? `${p.negative} of ${p.properties} losing money` : tone === 'warn' ? 'All make money, lender check is tight' : 'Every property makes money';
 
   return (
     <div className="space-y-6">
-      <Card className="relative overflow-hidden">
-        <div
-          aria-hidden
-          className={`pointer-events-none absolute -top-40 -right-24 size-[28rem] rounded-full bg-radial ${TONE_GLOW[tone]} to-transparent to-70% blur-2xl`}
-        />
-        <div className="relative flex flex-wrap items-start justify-between gap-5 px-5 pt-6 sm:px-7 sm:pt-7">
-          <div>
-            <p className="eyebrow">Portfolio</p>
-            <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-zinc-950 sm:text-[34px] sm:leading-tight dark:text-white">
-              {p.properties} {p.properties === 1 ? 'property' : 'properties'} · {p.units} doors
-            </h2>
-            <p className="tabular mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-              Est. value {money(p.value)} · loans {money(p.debt)} · {percent(p.ltv, 0)} LTV
-            </p>
-          </div>
-          <span className={`inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-semibold ring-1 ring-inset backdrop-blur ${TONE_CLASSES[tone]}`}>
-            <ToneIcon className="size-4" aria-hidden />
-            {badge}
-          </span>
-        </div>
+      <ViewHeader title="Portfolio">The properties you own, added up on today’s numbers.</ViewHeader>
 
-        <dl className="relative mt-6 grid grid-cols-2 border-t border-hairline lg:grid-cols-4">
-          <KpiTile
-            label="Monthly cash flow"
-            tip="netCashFlow"
-            value={
-              <>
-                <Num value={p.netCashFlow} format={(v) => money(v, { signed: true })} />
-                <span className="ml-1 text-sm font-medium tracking-normal text-zinc-500 dark:text-zinc-400">/mo</span>
-              </>
-            }
-            valueClass={signedClass(p.netCashFlow)}
-            meaning={portfolioCashMeaning(p)}
-          />
-          <KpiTile
-            label="Lender check (DSCR)"
-            tip="globalDscr"
-            value={<Num value={p.dscr} format={ratio} />}
-            valueClass={BAND_CLASSES[p.status.key].text}
-            extra={
-              <dd className="mt-2">
-                <DscrChip status={p.status} size="sm" />
-              </dd>
-            }
-            meaning={portfolioDscrMeaning(p)}
-          />
-          <KpiTile label="Cash-on-cash return" tip="coc" value={<Num value={p.coc} format={(v) => percent(v)} />} valueClass={signedClass(p.coc)} meaning={cocMeaning(p)} />
-          <KpiTile
-            label="Equity today"
-            tip="equity"
-            value={<Num value={p.equity} format={(v) => money(v)} />}
-            meaning={`${equityMeaning(p)} Projected ${compactMoney(p.year10Equity)} in 10 years.`}
-          />
-        </dl>
-      </Card>
+      <SummaryCard
+        head={
+          <>
+            <h3 className="text-xl font-semibold tracking-tight text-zinc-950 sm:text-2xl dark:text-white">
+              {p.properties} {p.properties === 1 ? 'property' : 'properties'} · {p.units} doors
+            </h3>
+            <p className={`mt-4 flex items-center gap-1.5 text-[15px] font-semibold ${TONE_TEXT[tone]}`}>
+              <ToneIcon className="size-4 shrink-0" aria-hidden />
+              {badge}
+            </p>
+          </>
+        }
+      >
+        <div className="grid gap-x-10 gap-y-6 text-sm sm:grid-cols-2">
+          <div>
+            <LedgerHeading as="h4" aside={`${money(p.netCashFlow / p.units, { signed: true })} a door`}>
+              Each month
+            </LedgerHeading>
+            <LedgerLine label="Rent" value={money(p.grossRent)} />
+            <LedgerLine label="Loans, taxes and insurance" tip="pitia" value={money(-p.pitia)} />
+            <LedgerLine label="Running costs" tip="opex" value={money(-p.opex)} />
+            <LedgerLine
+              label="Left for you"
+              tip="netCashFlow"
+              value={<Num value={p.netCashFlow} format={(v) => money(v, { signed: true })} />}
+              valueClass={`text-xl ${signedClass(p.netCashFlow)}`}
+              total
+            />
+          </div>
+          <div>
+            <LedgerHeading as="h4">What you own</LedgerHeading>
+            <LedgerLine label="Estimated value" value={money(p.value)} />
+            <LedgerLine label={`Loans, ${percent(p.ltv, 0)} of value`} tip="ltv" value={money(-p.debt)} />
+            <LedgerLine label="Equity today" tip="equity" value={<Num value={p.equity} format={(v) => money(v)} />} sum />
+            <LedgerLine label="Return on your cash each year" tip="coc" value={percent(p.coc)} valueClass={signedClass(p.coc)} />
+            <LedgerLine label="Lender check" tip="globalDscr" value={<DscrChip status={p.status} dscr={p.dscr} size="sm" />} />
+            <LedgerLine label="Equity in 10 years" value={compactMoney(p.year10Equity)} muted />
+          </div>
+        </div>
+      </SummaryCard>
 
       <PropertiesTable owned={owned} onOpen={onOpen} />
 
-      <div className="space-y-3">
-        <Section id="pf-cashflow" icon={LineChart} title="Cash flow by property" meaning={cashFlowRanking(owned)} subtitle="Monthly, after the loan payment and running costs. Tap a bar to open that property.">
-          <div className="p-6">
+      <SectionGroup>
+        <Section id="pf-cashflow" title="Cash flow by property" meaning={cashFlowRanking(owned)} subtitle="Monthly, after the loan payment and running costs. Tap a bar to open that property.">
+          <div className="p-5">
             <CashFlowChart owned={owned} dark={dark} onOpen={onOpen} />
           </div>
-          <div className="grid grid-cols-2 gap-4 border-t border-hairline px-6 py-5 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 border-t border-hairline px-5 py-5 sm:grid-cols-4">
             <Stat label="Monthly rent" value={money(p.grossRent)} sub={`${money(p.pitia)} PITIA`} tip="pitia" />
             <Stat label="Operating costs" value={money(p.opex)} sub="per month" tip="opex" />
             <Stat label="Reserves to hold" value={money(p.reserves)} sub="lender requirement" tip="reserves" />
@@ -336,7 +319,7 @@ export default function PortfolioView({ owned, prospects, dark, onOpen, onMarkOw
           </div>
         </Section>
         <ImpactCard owned={owned} prospects={prospects} onOpen={onOpen} onMarkOwned={onMarkOwned} />
-      </div>
+      </SectionGroup>
     </div>
   );
 }

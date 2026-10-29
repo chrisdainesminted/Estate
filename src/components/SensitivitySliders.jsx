@@ -1,4 +1,4 @@
-import { Check, FlaskConical, RotateCcw } from 'lucide-react';
+import { Check, RotateCcw } from 'lucide-react';
 import { whatIfSummary } from '../lib/explain.js';
 import { money, percent, ratio } from '../lib/format.js';
 import { isNeutralAdjustment } from '../lib/finance.js';
@@ -74,7 +74,6 @@ export default function SensitivitySliders({ deal, adj, setAdj, scope, setScope,
   return (
     <Section
       id="sec-whatif"
-      icon={FlaskConical}
       title="Try a what-if"
       value={neutral ? null : `${money(what.netCashFlow, { signed: true })}/mo`}
       valueClass={signedClass(what.netCashFlow)}
@@ -148,11 +147,11 @@ export default function SensitivitySliders({ deal, adj, setAdj, scope, setScope,
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <caption className="mb-2 text-left eyebrow">
+            <caption className="mb-2 text-left caption">
               Impact on {deal.name}
             </caption>
             <thead>
-              <tr className="eyebrow">
+              <tr className="caption">
                 <th className="py-1.5 text-left font-medium">Metric</th>
                 <th className="py-1.5 text-right font-medium">Base</th>
                 <th className="py-1.5 text-right font-medium">What-if</th>

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { Card, IconTile } from './ui.jsx';
+import { Card } from './ui.jsx';
 
 const KEY = 'bedrock-sections';
 
@@ -36,10 +36,11 @@ export function useSectionsState() {
 const useSections = () => useContext(SectionsContext);
 
 /**
- * A card that folds down to one line: its title, its key number and what that
- * number means. Opening it shows the full detail, so nothing is lost, only tucked away.
+ * One row of a SectionGroup that folds down to a ledger line: its title, a
+ * dotted leader, its key number, and what that number means. Opening it shows
+ * the full detail, so nothing is lost, only tucked away.
  */
-export function Section({ id, icon, title, value, valueClass = '', meaning, subtitle, actions, defaultOpen = false, delay = 0, className = '', children }) {
+export function Section({ id, title, value, valueClass = '', meaning, subtitle, actions, defaultOpen = false, className = '', children }) {
   const ctx = useSections();
   const [local, setLocal] = useState(defaultOpen);
   const open = ctx ? ctx.isOpen(id, defaultOpen) : local;
@@ -49,26 +50,30 @@ export function Section({ id, icon, title, value, valueClass = '', meaning, subt
   const bodyId = `${uid}-body`;
 
   return (
-    <Card id={id} delay={delay} className={`@container ${className}`}>
+    <section id={id} className={`@container ${className}`}>
       <h2>
         <button
           type="button"
           aria-expanded={open}
           aria-controls={open ? bodyId : undefined}
           onClick={toggle}
-          className="flex w-full items-start gap-3 rounded-3xl px-4 py-3.5 text-left transition hover:bg-white/30 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 sm:px-5 sm:py-4 dark:hover:bg-white/[0.03]"
+          className="flex w-full items-start gap-3 px-4 py-3.5 text-left transition hover:bg-well focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 sm:px-5"
         >
-          {icon && <IconTile icon={icon} className="mt-0.5" />}
           <span className="min-w-0 flex-1">
-            <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-              <span id={titleId} className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white">
+            <span className="flex items-baseline gap-2">
+              <span id={titleId} className="min-w-0 text-[15px] font-semibold text-zinc-900 dark:text-white">
                 {title}
               </span>
-              {value != null && <span className={`tabular text-[15px] font-semibold ${valueClass || 'text-zinc-900 dark:text-white'}`}>{value}</span>}
+              {value != null && (
+                <>
+                  <span aria-hidden className="mb-[0.3em] min-w-3 flex-1 border-b border-dotted border-rule" />
+                  <span className={`tabular shrink-0 text-[15px] font-semibold ${valueClass || 'text-zinc-900 dark:text-white'}`}>{value}</span>
+                </>
+              )}
             </span>
             {meaning && <span className="mt-0.5 block text-[13px] leading-snug text-zinc-600 dark:text-zinc-400">{meaning}</span>}
           </span>
-          <ChevronDown className={`mt-2.5 size-4 shrink-0 text-zinc-500 transition-transform dark:text-zinc-400 ${open ? 'rotate-180' : ''}`} aria-hidden />
+          <ChevronDown className={`mt-1 size-4 shrink-0 text-zinc-500 transition-transform dark:text-zinc-400 ${open ? 'rotate-180' : ''}`} aria-hidden />
         </button>
       </h2>
       {open && (
@@ -82,6 +87,15 @@ export function Section({ id, icon, title, value, valueClass = '', meaning, subt
           {children}
         </div>
       )}
+    </section>
+  );
+}
+
+/** Folding sections stacked in one ruled panel, like the lines of a ledger. */
+export function SectionGroup({ className = '', children, ...rest }) {
+  return (
+    <Card className={`divide-y divide-hairline overflow-hidden ${className}`} {...rest}>
+      {children}
     </Card>
   );
 }

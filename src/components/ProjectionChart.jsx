@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { BarChart3, Landmark, Table2, TrendingUp } from 'lucide-react';
 import { Bar, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { chartTheme, niceScale } from '../lib/chartTheme.js';
 import { outlookMeaning } from '../lib/explain.js';
@@ -21,7 +20,7 @@ function ProjectionTooltip({ active, payload, label, theme, series }) {
   if (!active || !payload?.length) return null;
   const row = payload[0].payload;
   return (
-    <div className="glass-strong min-w-56 rounded-2xl p-3.5 text-xs">
+    <div className="popover min-w-56 rounded-2xl p-3.5 text-xs">
       <div className="mb-2 font-semibold text-zinc-900 dark:text-zinc-100">Year {label}</div>
       {series.map((s, i) => (
         <div key={s.key} className="flex items-center justify-between gap-4 py-0.5">
@@ -74,7 +73,6 @@ export default function ProjectionChart({ rows, a, deal, dark, appreciationPct }
   return (
     <Section
       id="sec-projection"
-      icon={TrendingUp}
       title={`${years}-year outlook`}
       value={money(y10.totalReturn, { signed: true })}
       valueClass={signedClass(y10.totalReturn)}
@@ -86,9 +84,9 @@ export default function ProjectionChart({ rows, a, deal, dark, appreciationPct }
           value={view}
           onChange={setView}
           options={[
-            { value: 'chart', label: 'Chart', icon: BarChart3 },
-            { value: 'table', label: 'Table', icon: Table2 },
-            { value: 'loan', label: 'Loan', icon: Landmark },
+            { value: 'chart', label: 'Chart' },
+            { value: 'table', label: 'Table' },
+            { value: 'loan', label: 'Loan' },
           ]}
         />
       }
@@ -157,7 +155,7 @@ export default function ProjectionChart({ rows, a, deal, dark, appreciationPct }
             <table className="w-full min-w-[640px] text-sm">
               <caption className="sr-only">Loan payments by year</caption>
               <thead>
-                <tr className="eyebrow">
+                <tr className="caption">
                   {['Year', 'Payments', 'Interest', 'Principal', 'Balance at year end', 'Note'].map((h, i) => (
                     <th key={h} className={`py-1.5 pr-3 font-medium ${i === 0 || i === 5 ? 'text-left' : 'text-right'}`}>
                       {h}
@@ -193,7 +191,7 @@ export default function ProjectionChart({ rows, a, deal, dark, appreciationPct }
             <table className="w-full min-w-[640px] text-sm">
               <caption className="sr-only">Projection by year</caption>
               <thead>
-                <tr className="eyebrow">
+                <tr className="caption">
                   {['Year', 'Annual cash flow', 'Cum. cash flow', 'Cum. paydown', 'Appreciation', 'Total return', 'Property value', 'Loan balance', 'Equity'].map((h) => (
                     <th key={h} className="py-1.5 pr-2 text-right font-medium first:text-left">
                       {h}

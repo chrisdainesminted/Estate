@@ -4,48 +4,104 @@ import { BAND_CLASSES } from '../lib/dscr.js';
 import { ratio } from '../lib/format.js';
 import { InfoTip } from './motion.jsx';
 
-/** Glass panel. `delay` (ms) staggers its entrance when a view opens. */
+/** Flat panel with a hairline edge. `delay` (ms) staggers its fade-in when a view opens. */
 export function Card({ className = '', delay = 0, style, children, ...rest }) {
   return (
-    <section className={`glass rise rounded-3xl ${className}`} style={{ animationDelay: `${delay}ms`, ...style }} {...rest}>
+    <section className={`panel rise rounded-md ${className}`} style={{ animationDelay: `${delay}ms`, ...style }} {...rest}>
       {children}
     </section>
   );
 }
 
-export function IconTile({ icon: Icon, className = '' }) {
+export function CardHeader({ title, subtitle, actions }) {
   return (
-    <div
-      className={`grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-b from-zinc-950/[0.05] to-zinc-950/[0.02] text-emerald-700 ring-1 ring-zinc-950/10 ring-inset dark:from-white/[0.09] dark:to-white/[0.03] dark:text-emerald-400 dark:ring-white/10 ${className}`}
-    >
-      <Icon className="size-[18px]" aria-hidden />
-    </div>
-  );
-}
-
-export function CardHeader({ icon, title, subtitle, actions }) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-hairline px-6 py-4">
-      <div className="flex min-w-0 items-center gap-3">
-        {icon && <IconTile icon={icon} />}
-        <div className="min-w-0">
-          <h2 className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white">{title}</h2>
-          {subtitle && <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{subtitle}</p>}
-        </div>
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-hairline px-5 py-3.5">
+      <div className="min-w-0">
+        <h2 className="text-[15px] font-semibold text-zinc-900 dark:text-white">{title}</h2>
+        {subtitle && <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
   );
 }
 
+/**
+ * A view's summary: the name, verdict and a sentence on the left, and the
+ * ledgers (or table) beside them on wide screens, below them otherwise.
+ */
+export function SummaryCard({ id, head, children }) {
+  return (
+    <Card id={id} className="xl:grid xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+      <div className="min-w-0 px-5 py-5 sm:px-6">{head}</div>
+      <div className="min-w-0 border-t border-hairline px-5 py-5 sm:px-6 xl:border-t-0 xl:border-l">{children}</div>
+    </Card>
+  );
+}
+
+/** The top of a view: its title, a line on what it's for, and optional controls on the right. */
+export function ViewHeader({ title, children, aside }) {
+  return (
+    <div className="rise flex flex-wrap items-end justify-between gap-x-6 gap-y-3 px-1 pt-1">
+      <div className="min-w-0">
+        <h2 className="text-[22px] font-semibold tracking-tight text-zinc-950 dark:text-white">{title}</h2>
+        {children && <p className="mt-1 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">{children}</p>}
+      </div>
+      {aside}
+    </div>
+  );
+}
+
+/** A ledger's heading: a short title over a rule, with an optional note on the right. */
+export function LedgerHeading({ children, aside, as: Tag = 'h3' }) {
+  return (
+    <div className="mb-1 flex items-baseline justify-between gap-3 border-b border-hairline pb-1.5">
+      <Tag className="text-sm font-semibold text-zinc-900 dark:text-white">{children}</Tag>
+      {aside && <span className="tabular text-xs text-zinc-500 dark:text-zinc-400">{aside}</span>}
+    </div>
+  );
+}
+
+/**
+ * One line of a ledger: the label, a dotted leader, the amount. `sum` draws a
+ * rule above a subtotal; `total` the double rule above a bottom line.
+ */
+export function LedgerLine({ label, value, valueClass = '', tip, sum = false, total = false, muted = false }) {
+  const ruled = sum || total;
+  const tone = ruled ? 'font-semibold text-zinc-900 dark:text-white' : muted ? 'text-zinc-500 dark:text-zinc-400' : 'text-zinc-700 dark:text-zinc-300';
+  return (
+    <div className={`flex items-baseline gap-2 py-[3px] ${tone} ${total ? 'mt-1.5 border-t-[3px] border-double border-rule pt-2' : sum ? 'mt-1 border-t border-rule pt-1.5' : ''}`}>
+      <span className="flex min-w-0 items-center gap-1">
+        {label}
+        {tip && <InfoTip k={tip} />}
+      </span>
+      <span aria-hidden className={`min-w-3 flex-1 ${ruled ? '' : 'mb-[0.3em] border-b border-dotted border-rule'}`} />
+      <span className={`tabular shrink-0 text-right ${valueClass || (ruled ? '' : 'text-zinc-900 dark:text-zinc-100')}`}>{value}</span>
+    </div>
+  );
+}
+
+/** A headline figure in a ruled box: a caption, the number, then a line on what it means. */
+export function Figure({ label, tip, value, valueClass = '', className = '', children }) {
+  return (
+    <div className={`rounded-md border border-hairline p-5 ${className}`}>
+      <div className="caption flex items-center gap-1">
+        {label}
+        {tip && <InfoTip k={tip} />}
+      </div>
+      <div className={`tabular mt-1.5 text-4xl font-semibold tracking-tight ${valueClass || 'text-zinc-950 dark:text-white'}`}>{value}</div>
+      {children && <div className="mt-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">{children}</div>}
+    </div>
+  );
+}
+
 const BAND_ICONS = { negative: XCircle, tight: AlertTriangle, sweet: CheckCircle2, strong: ShieldCheck };
 
-/** Status chip: icon + label + optional value, so status never relies on color alone. */
+/** Status tag: icon + label + optional value, so status never relies on color alone. */
 export function DscrChip({ status, dscr, size = 'md' }) {
   const Icon = BAND_ICONS[status.key] ?? TrendingUp;
-  const sz = size === 'sm' ? 'px-2 py-0.5 text-[11px] gap-1' : 'px-2.5 py-1 text-xs gap-1.5';
+  const sz = size === 'sm' ? 'px-1.5 py-0.5 text-[11px] gap-1' : 'px-2 py-1 text-xs gap-1.5';
   return (
-    <span className={`inline-flex items-center rounded-full font-medium whitespace-nowrap ring-1 ring-inset ${sz} ${BAND_CLASSES[status.key].chip}`}>
+    <span className={`inline-flex items-center rounded-[3px] font-medium whitespace-nowrap ring-1 ring-inset ${sz} ${BAND_CLASSES[status.key].chip}`}>
       <Icon className={size === 'sm' ? 'size-3' : 'size-3.5'} aria-hidden />
       {dscr !== undefined && <span className="tabular font-semibold">{ratio(dscr)}</span>}
       {status.label}
@@ -55,17 +111,15 @@ export function DscrChip({ status, dscr, size = 'md' }) {
 
 export const Button = forwardRef(function Button({ variant = 'secondary', className = '', children, ...rest }, ref) {
   const styles = {
-    primary:
-      'bg-gradient-to-b from-emerald-600 to-emerald-700 text-white font-semibold shadow-[0_10px_24px_-10px_rgb(5_150_105/0.8),inset_0_1px_0_rgb(255_255_255/0.25)] ring-1 ring-emerald-800/40 ring-inset hover:from-emerald-500 hover:to-emerald-700 disabled:shadow-none',
-    secondary:
-      'bg-white/60 text-zinc-800 ring-1 ring-zinc-950/10 ring-inset hover:bg-white/90 dark:bg-white/[0.06] dark:text-zinc-100 dark:ring-white/10 dark:hover:bg-white/[0.1]',
-    ghost: 'text-zinc-600 hover:bg-zinc-950/5 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white',
+    primary: 'bg-(--accent) font-semibold text-(--accent-ink) hover:brightness-110',
+    secondary: 'font-medium text-zinc-800 ring-1 ring-(--line-strong) ring-inset hover:bg-well dark:text-zinc-100',
+    ghost: 'font-medium text-zinc-600 hover:bg-well hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white',
   };
   return (
     <button
       ref={ref}
       type="button"
-      className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-40 ${styles[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-md px-3.5 py-2 text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-40 ${styles[variant]} ${className}`}
       {...rest}
     >
       {children}
@@ -73,15 +127,15 @@ export const Button = forwardRef(function Button({ variant = 'secondary', classN
   );
 });
 
-/** Two-or-more option segmented control. `stretch` fills the row on phones. */
+/** Joined buttons for picking one of a few options; the pick is underlined in the accent. `stretch` fills the row on phones. */
 export function Segmented({ options, value, onChange, label, size = 'md', stretch = false }) {
   return (
     <div
       role="radiogroup"
       aria-label={label}
-      className={`${stretch ? 'flex w-full md:inline-flex md:w-auto' : 'inline-flex'} rounded-xl bg-zinc-950/5 p-1 ring-1 ring-zinc-950/5 ring-inset dark:bg-white/[0.05] dark:ring-white/10`}
+      className={`${stretch ? 'flex w-full md:inline-flex md:w-auto' : 'inline-flex'} overflow-hidden rounded-md border border-(--line-strong)`}
     >
-      {options.map((o) => {
+      {options.map((o, i) => {
         const selected = o.value === value;
         return (
           <button
@@ -90,12 +144,14 @@ export function Segmented({ options, value, onChange, label, size = 'md', stretc
             role="radio"
             aria-checked={selected}
             onClick={() => onChange(o.value)}
-            className={`inline-flex items-center rounded-lg font-medium whitespace-nowrap transition focus-visible:outline-2 focus-visible:outline-emerald-500 ${
-              size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm'
-            } ${stretch ? 'max-md:flex-1 max-md:justify-center max-md:px-1 max-md:text-[13px] max-[400px]:px-0.5! max-[400px]:text-xs! max-[340px]:text-[11px]!' : ''} ${
+            className={`inline-flex items-center justify-center whitespace-nowrap transition focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 ${
+              i ? 'border-l border-(--line-strong)' : ''
+            } ${size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm'} ${
+              stretch ? 'max-md:flex-1 max-md:px-1 max-md:text-[13px] max-[400px]:px-0.5! max-[400px]:text-xs! max-[340px]:text-[11px]!' : ''
+            } ${
               selected
-                ? 'bg-white text-zinc-900 shadow-[0_1px_2px_rgb(0_0_0/0.08),0_4px_12px_-4px_rgb(0_0_0/0.12)] ring-1 ring-zinc-950/5 dark:bg-white/[0.12] dark:text-emerald-300 dark:ring-white/10'
-                : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
+                ? 'bg-zinc-950/[0.05] font-semibold text-zinc-950 shadow-[inset_0_-2px_0_var(--accent)] dark:bg-white/[0.07] dark:text-white'
+                : 'font-medium text-zinc-600 hover:bg-well hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
             }`}
           >
             {o.icon && <o.icon className="mr-1.5 size-3.5 max-sm:hidden" aria-hidden />}
@@ -198,35 +254,12 @@ export function SelectField({ id, label, tip, value, onChange, children }) {
 export function Stat({ label, value, sub, tip, className = '' }) {
   return (
     <div className={className}>
-      <div className="eyebrow flex items-center gap-1">
+      <div className="caption flex items-center gap-1">
         {label}
         {tip && <InfoTip k={tip} />}
       </div>
       <div className="tabular mt-1 text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">{value}</div>
       {sub && <div className="tabular text-[11px] text-zinc-500 dark:text-zinc-400">{sub}</div>}
-    </div>
-  );
-}
-
-/**
- * A headline number in a 2×2 (phones) or 1×4 (desktop) grid, with a plain
- * sentence saying what it means. `base` shows the saved value during a what-if.
- */
-export function KpiTile({ label, tip, value, valueClass, meaning, extra, base }) {
-  return (
-    <div className="border-hairline p-4 sm:p-5 max-lg:odd:border-r max-lg:[&:nth-child(-n+2)]:border-b lg:[&:not(:last-child)]:border-r">
-      <dt className="flex items-center gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-        {label}
-        {tip && <InfoTip k={tip} />}
-      </dt>
-      <dd className={`mt-1.5 text-[26px] leading-none font-semibold tracking-tight sm:text-[32px] ${valueClass || 'text-zinc-900 dark:text-white'}`}>{value}</dd>
-      {extra}
-      <dd className="mt-2 text-xs leading-snug text-zinc-600 dark:text-zinc-400">{meaning}</dd>
-      {base && (
-        <dd className="tabular mt-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
-          Before what-if: <span className="font-medium text-zinc-700 dark:text-zinc-200">{base}</span>
-        </dd>
-      )}
     </div>
   );
 }
@@ -269,7 +302,7 @@ export function ConfirmButton({ label, title, body, confirmLabel, onConfirm, cla
         <div
           role="alertdialog"
           aria-label={title}
-          className={`glass-strong pop absolute top-full z-50 mt-2 w-72 rounded-2xl p-4 text-left ${align === 'right' ? 'right-0' : 'left-0'}`}
+          className={`popover pop absolute top-full z-50 mt-2 w-72 rounded-2xl p-4 text-left ${align === 'right' ? 'right-0' : 'left-0'}`}
         >
           <p className="text-sm font-semibold text-zinc-900 dark:text-white">{title}</p>
           <p className="mt-1 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">{body}</p>
@@ -295,9 +328,9 @@ export function ConfirmButton({ label, title, body, confirmLabel, onConfirm, cla
 }
 
 /** Marks a starter deal that ships with the app; it disappears once edited. */
-export function ExampleTag() {
+export function ExampleTag({ className = '' }) {
   return (
-    <span className="shrink-0 rounded-md bg-zinc-950/[0.06] px-1.5 py-px text-[10px] font-semibold tracking-wide text-zinc-500 uppercase dark:bg-white/10 dark:text-zinc-400">
+    <span className={`shrink-0 rounded-[3px] px-1.5 py-px text-[11px] font-medium tracking-normal text-zinc-500 ring-1 ring-(--line-strong) ring-inset dark:text-zinc-400 ${className}`}>
       Example
     </span>
   );
@@ -306,7 +339,7 @@ export function ExampleTag() {
 /** Placeholder while a section's code loads. */
 export function SkeletonCard({ className = 'h-96' }) {
   return (
-    <div className={`glass overflow-hidden rounded-3xl ${className}`} aria-hidden>
+    <div className={`panel overflow-hidden rounded-3xl ${className}`} aria-hidden>
       <div className="skeleton h-full w-full" />
     </div>
   );

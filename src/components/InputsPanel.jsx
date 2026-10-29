@@ -1,8 +1,8 @@
-import { Building2, ChevronDown, Copy, Hammer, Landmark, MapPin, PencilRuler, Receipt, Share2, SlidersHorizontal, Trash2, TrendingUp, Wallet, Wrench } from 'lucide-react';
+import { ChevronDown, Copy, Share2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { UNIT_TYPES, switchRules } from '../lib/presets.js';
 import { money, percent } from '../lib/format.js';
-import { Card, CardHeader, FieldLabel, NumberField, Segmented, SelectField } from './ui.jsx';
+import { Card, CardHeader, FieldLabel, LedgerLine, NumberField, Segmented, SelectField } from './ui.jsx';
 import { InfoTip } from './motion.jsx';
 import RentHelper from './RentHelper.jsx';
 
@@ -12,50 +12,37 @@ import RentHelper from './RentHelper.jsx';
  * when the deal's inputs first show, so a group never snaps shut while
  * you change the setting that opened it.
  */
-function Section({ icon: Icon, title, summary, children, collapsible = false, defaultOpen = true }) {
+function Section({ title, summary, children, collapsible = false, defaultOpen = true }) {
   const [startOpen] = useState(defaultOpen);
-  const heading = (
-    <span className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.12em] text-zinc-700 uppercase dark:text-zinc-300">
-      <Icon className="size-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
-      {title}
-    </span>
-  );
+  const heading = <span className="block text-sm font-semibold text-zinc-900 dark:text-white">{title}</span>;
   if (collapsible) {
     return (
-      <details open={startOpen} className="group border-t border-hairline px-6 py-4">
+      <details open={startOpen} className="group border-t border-hairline px-5 py-3.5">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
           <span className="block min-w-0">
             {heading}
-            {summary && <span className="tabular mt-1 block truncate pl-6 text-xs text-zinc-500 group-open:hidden dark:text-zinc-400">{summary}</span>}
+            {summary && <span className="tabular mt-0.5 block truncate text-xs text-zinc-500 group-open:hidden dark:text-zinc-400">{summary}</span>}
           </span>
-          <ChevronDown className="size-4 shrink-0 text-zinc-400 transition-transform group-open:rotate-180" aria-hidden />
+          <ChevronDown className="size-4 shrink-0 text-zinc-500 transition-transform group-open:rotate-180 dark:text-zinc-400" aria-hidden />
         </summary>
-        <div className="mt-4 grid grid-cols-2 gap-3">{children}</div>
+        <div className="mt-3.5 grid grid-cols-2 gap-3">{children}</div>
       </details>
     );
   }
   return (
-    <div className="border-t border-hairline px-6 py-5">
+    <div className="border-t border-hairline px-5 py-4">
       {heading}
-      <div className="mt-4 grid grid-cols-2 gap-3">{children}</div>
+      <div className="mt-3.5 grid grid-cols-2 gap-3">{children}</div>
     </div>
   );
 }
 
-function Derived({ label, value, strong }) {
-  return (
-    <div
-      className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-xs ${
-        strong ? 'bg-emerald-500/10 ring-1 ring-emerald-600/15 ring-inset dark:bg-emerald-400/10 dark:ring-emerald-300/15' : 'bg-well'
-      }`}
-    >
-      <span className={strong ? 'font-medium text-emerald-900 dark:text-emerald-100' : 'text-zinc-500 dark:text-zinc-400'}>{label}</span>
-      <span className="tabular font-semibold text-zinc-800 dark:text-zinc-200">{value}</span>
-    </div>
-  );
+/** Figures worked out from the inputs, as ledger lines under them. */
+function Derived({ children }) {
+  return <div className="col-span-2 text-[13px]">{children}</div>;
 }
 
-const iconBtn = 'rounded-lg p-1.5 text-zinc-500 transition dark:text-zinc-400 hover:bg-zinc-950/5 hover:text-zinc-700 dark:hover:bg-white/10 dark:hover:text-zinc-200';
+const iconBtn = 'rounded-md p-1.5 text-zinc-500 transition dark:text-zinc-400 hover:bg-well hover:text-zinc-700 dark:hover:text-zinc-200';
 const pct = (v) => `${Number((Number(v) || 0).toFixed(2))}%`;
 
 export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onDelete, onShare }) {
@@ -70,7 +57,6 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
     // Keyed by deal so each deal's groups start open or folded by its own settings.
     <Card key={deal.id} id="sec-inputs">
       <CardHeader
-        icon={PencilRuler}
         title="Deal inputs"
         subtitle="Saves as you type."
         actions={
@@ -90,7 +76,7 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
                 onClick={onDelete}
                 aria-label="Delete deal"
                 title="Delete deal"
-                className="rounded-lg p-1.5 text-zinc-500 transition dark:text-zinc-400 hover:bg-red-500/10 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:hover:text-red-400"
+                className="rounded-md p-1.5 text-zinc-500 transition dark:text-zinc-400 hover:bg-red-500/10 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:hover:text-red-400"
               >
                 <Trash2 className="size-4" aria-hidden />
               </button>
@@ -98,7 +84,7 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
           </>
         }
       />
-      <div className="px-6 pt-5 pb-5">
+      <div className="px-5 py-4">
         <FieldLabel htmlFor={id('name')}>Deal name</FieldLabel>
         <input
           id={id('name')}
@@ -108,7 +94,7 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
         />
       </div>
 
-      <Section icon={Building2} title="The property">
+      <Section title="The property">
         <div className="col-span-2">
           <NumberField id={id('price')} label="Purchase price" prefix="$" value={deal.price} onChange={set('price')} step={5000} decimals={0} />
         </div>
@@ -150,13 +136,13 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
           {ca && rents && <RentHelper rents={rents} onPick={set('rentPerUnit')} />}
         </div>
         {a.units > 1 && (
-          <div className="col-span-2">
-            <Derived label={`Total rent for ${a.units} units`} value={`${money(a.grossRent)}/mo`} />
-          </div>
+          <Derived>
+            <LedgerLine label={`Total rent for ${a.units} units`} value={`${money(a.grossRent)}/mo`} />
+          </Derived>
         )}
       </Section>
 
-      <Section icon={Landmark} title="Your loan">
+      <Section title="Your loan">
         <NumberField id={id('down')} label="Down payment" suffix="%" value={deal.downPct} onChange={set('downPct')} max={100} step={1} hint={money(a.downPayment)} />
         <NumberField
           id={id('rate')}
@@ -178,13 +164,13 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
             ))}
           </SelectField>
         </div>
-        <div className="col-span-2 grid grid-cols-2 gap-2">
-          <Derived label="Loan" value={money(a.loanAmount)} />
-          <Derived label="Payment" value={`${money(a.pi)}/mo`} />
-        </div>
+        <Derived>
+          <LedgerLine label="Loan" value={money(a.loanAmount)} />
+          <LedgerLine label="Payment" value={`${money(a.pi)}/mo`} />
+        </Derived>
       </Section>
 
-      <Section icon={Receipt} title={ca ? 'Taxes, insurance & utilities' : 'Taxes, insurance & HOA'}>
+      <Section title={ca ? 'Taxes, insurance & utilities' : 'Taxes, insurance & HOA'}>
         <NumberField id={id('tax')} label="Property taxes" prefix="$" suffix="/yr" value={deal.taxesAnnual} onChange={set('taxesAnnual')} step={100} decimals={0} hint={`${money(a.taxes)}/mo`} />
         <NumberField id={id('ins')} label="Insurance" prefix="$" suffix="/yr" value={deal.insuranceAnnual} onChange={set('insuranceAnnual')} step={100} decimals={0} hint={`${money(a.insurance)}/mo`} />
         <NumberField
@@ -199,21 +185,22 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
           decimals={0}
           hint={ca ? undefined : 'Leave at 0 if there are none'}
         />
-        <Derived label="Loan, taxes & insurance (PITIA)" value={`${money(a.pitia)}/mo`} />
+        <Derived>
+          <LedgerLine label="Loan, taxes & insurance (PITIA)" value={`${money(a.pitia)}/mo`} />
+        </Derived>
       </Section>
 
-      <Section icon={Wrench} title="Running costs" collapsible defaultOpen={false} summary={`${pct(opexPct)} of rent · ${money(a.opex.total)}/mo`}>
+      <Section title="Running costs" collapsible defaultOpen={false} summary={`${pct(opexPct)} of rent · ${money(a.opex.total)}/mo`}>
         <NumberField id={id('mgmt')} label="Property management" suffix="%" value={deal.mgmtPct} onChange={set('mgmtPct')} max={50} step={0.5} hint={`${money(a.opex.management)}/mo to a manager`} />
         <NumberField id={id('maint')} label="Maintenance & repairs" suffix="%" value={deal.maintPct} onChange={set('maintPct')} max={50} step={0.5} hint={`${money(a.opex.maintenance)}/mo for repairs`} />
         <NumberField id={id('vac')} label="Empty months (vacancy)" suffix="%" value={deal.vacancyPct} onChange={set('vacancyPct')} max={50} step={0.5} hint={`${money(a.opex.vacancy)}/mo set aside`} />
         <NumberField id={id('capex')} label="Big replacements (CapEx)" suffix="%" value={deal.capexPct} onChange={set('capexPct')} max={50} step={0.5} hint={`${money(a.opex.capex)}/mo for roof, furnace…`} />
-        <div className="col-span-2">
-          <Derived label={`Running costs (${pct(opexPct)} of rent)`} value={`${money(a.opex.total)}/mo`} />
-        </div>
+        <Derived>
+          <LedgerLine label={`Running costs (${pct(opexPct)} of rent)`} value={`${money(a.opex.total)}/mo`} />
+        </Derived>
       </Section>
 
       <Section
-        icon={Wallet}
         title="Cash at closing"
         collapsible
         defaultOpen={false}
@@ -245,14 +232,13 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
             hint={`${money(a.reserves)} kept in the bank, not spent`}
           />
         </div>
-        <div className="col-span-2 grid gap-2">
-          <Derived label="Cash invested (down + closing + repairs)" value={money(a.cashInvested)} />
-          <Derived label="Cash needed incl. reserves" value={money(a.cashNeeded)} strong />
-        </div>
+        <Derived>
+          <LedgerLine label="Cash invested (down + closing + repairs)" value={money(a.cashInvested)} />
+          <LedgerLine label="Cash needed incl. reserves" value={money(a.cashNeeded)} sum />
+        </Derived>
       </Section>
 
       <Section
-        icon={SlidersHorizontal}
         title="Loan extras"
         collapsible
         defaultOpen={a.interestOnly || Boolean(prepay)}
@@ -282,13 +268,12 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
             <option value="5-4-3-2-1">5-4-3-2-1 (5 years)</option>
           </SelectField>
         </div>
-        <div className="col-span-2">
-          <Derived label="Loan-to-value" value={percent(a.ltv, 1)} />
-        </div>
+        <Derived>
+          <LedgerLine label="Loan-to-value" value={percent(a.ltv, 1)} />
+        </Derived>
       </Section>
 
       <Section
-        icon={Hammer}
         title="Fix-up & refinance"
         collapsible
         defaultOpen={valueAdd}
@@ -346,7 +331,6 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
       </Section>
 
       <Section
-        icon={TrendingUp}
         title="Growth & selling"
         collapsible
         defaultOpen={false}
@@ -390,7 +374,6 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
       </Section>
 
       <Section
-        icon={MapPin}
         title="About this deal"
         collapsible
         defaultOpen={false}

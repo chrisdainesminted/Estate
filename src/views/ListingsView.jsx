@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, ArrowRight, Check, ChevronDown, ExternalLink, Eye, EyeOff, Landmark, Radar, RotateCcw, SlidersHorizontal, Target, TrendingDown } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Check, ChevronDown, ExternalLink, Eye, EyeOff, Radar, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { DEFAULT_MARKET, LISTING_TYPES, MARKET, SORTS, droppedInLatestRun, isNew, lensTargets, listingPageUrl, rankListings, siteName, typeOf } from '../lib/market.js';
 import { listingSentence } from '../lib/explain.js';
 import { money, percent } from '../lib/format.js';
-import { Button, Card, CardHeader, DscrChip, NumberField, Segmented, SelectField, SkeletonCard, signedClass } from '../components/ui.jsx';
+import { Button, Card, CardHeader, DscrChip, NumberField, Segmented, SelectField, SkeletonCard, ViewHeader, signedClass } from '../components/ui.jsx';
 import { InfoTip } from '../components/motion.jsx';
 
 const KIND = { 1: 'House', 2: 'Duplex', 3: 'Triplex', 4: 'Fourplex' };
+// Shorter type names so the three filters fit across a phone.
+const SHORT_TYPE = { single: 'Singles' };
 const RENT_TEXT = { stated: 'Rents as listed', mixed: 'Some rents estimated', estimated: 'Rents estimated' };
 const STALE_AFTER = 36 * 3600 * 1000;
 // The best few show first; the rest are a tap away.
@@ -27,22 +29,22 @@ const median = (values) => {
   return v.length % 2 ? v[mid] : (v[mid - 1] + v[mid]) / 2;
 };
 
-const chip = (on) =>
-  `inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ring-1 ring-inset transition focus-visible:outline-2 focus-visible:outline-emerald-500 ${
+/** A filter that switches on and off; on, it gets a tick and a darker edge. */
+const toggle = (on) =>
+  `inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm ring-1 ring-inset transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 ${
     on
-      ? 'bg-emerald-700 text-white ring-emerald-800/40 dark:bg-emerald-400 dark:text-emerald-950'
-      : 'bg-white/60 text-zinc-700 ring-zinc-950/10 hover:bg-white dark:bg-white/[0.05] dark:text-zinc-300 dark:ring-white/10 dark:hover:bg-white/10'
+      ? 'bg-zinc-950/[0.05] font-semibold text-zinc-950 ring-zinc-500 dark:bg-white/[0.07] dark:text-white'
+      : 'font-medium text-zinc-600 ring-(--line-strong) hover:bg-well hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'
   }`;
 
-function Badge({ tone, icon: Icon, children }) {
-  const tones = {
-    green: 'bg-emerald-500/10 text-emerald-800 ring-emerald-600/20 dark:text-emerald-200 dark:ring-emerald-300/20',
-    blue: 'bg-sky-500/10 text-sky-800 ring-sky-600/20 dark:text-sky-200 dark:ring-sky-300/20',
-    gray: 'bg-zinc-950/[0.04] text-zinc-700 ring-zinc-950/10 dark:bg-white/[0.06] dark:text-zinc-300 dark:ring-white/10',
-  };
+function Tag({ accent, children }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap ring-1 ring-inset ${tones[tone]}`}>
-      {Icon && <Icon className="size-3" aria-hidden />}
+    <span
+      className={`inline-flex items-center gap-1 rounded-[3px] px-1.5 py-px text-[11px] font-medium whitespace-nowrap ring-1 ring-inset ${
+        accent ? 'text-emerald-800 ring-emerald-600/40 dark:text-emerald-300 dark:ring-emerald-400/40' : 'text-zinc-600 ring-(--line-strong) dark:text-zinc-300'
+      }`}
+    >
+      {accent && <Check className="size-3" aria-hidden />}
       {children}
     </span>
   );
@@ -51,7 +53,7 @@ function Badge({ tone, icon: Icon, children }) {
 function Metric({ label, tip, children, sub }) {
   return (
     <div className="min-w-0">
-      <dt className="eyebrow flex items-center gap-1">
+      <dt className="caption flex items-center gap-1">
         {label}
         {tip && <InfoTip k={tip} />}
       </dt>
@@ -71,7 +73,10 @@ function dayLabel(isoDate) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-function ListingRow({ s, rank, feed, imported, hidden, onAnalyze, onHide, onUnhide }) {
+const COLUMNS = 7;
+
+/** One listing as a table row; opening it adds a row under it with the details and what to do next. */
+function ListingRow({ s, rank, sort, feed, imported, hidden, onAnalyze, onHide, onUnhide }) {
   const [open, setOpen] = useState(false);
   const l = s.listing;
   const link = listingPageUrl(l.url, l.address);
@@ -79,135 +84,112 @@ function ListingRow({ s, rank, feed, imported, hidden, onAnalyze, onHide, onUnhi
   const confirmed = l.lastSeen ? `Confirmed for sale ${dayLabel(l.lastSeen)} on ${site}` : null;
   const drop = droppedInLatestRun(l, feed) ? s.drop : 0;
   const room = Number.isFinite(s.offer.price) ? s.offer.price - s.a.price : null;
-  const headingId = `listing-${l.id}`;
   const detailsId = `listing-${l.id}-details`;
-  const facts = [KIND[l.units] ?? `${l.units} units`, l.units > 1 && l.units <= 4 && `${l.units} units`, money(s.a.price)].filter(Boolean);
+  const kind = KIND[l.units] ?? `${l.units} units`;
   const more = [l.yearBuilt && `Built ${l.yearBuilt}`, l.mls && `MLS® ${l.mls}`].filter(Boolean);
-  const badges = s.meets || isNew(l, feed) || drop > 0 || hidden;
+  const tags = [s.meets && 'Beats your targets', isNew(l, feed) && 'New', drop > 0 && `Down ${money(drop)}`, hidden && 'Hidden'].filter(Boolean);
+  const cell = 'px-2 py-3 text-right align-top';
 
   return (
-    <li>
-      <article aria-labelledby={headingId} className={`glass rise rounded-3xl p-4 sm:p-5 ${hidden ? 'outline-1 outline-zinc-400/60 outline-dashed' : ''}`}>
-        <div className="flex gap-3 sm:gap-4">
-          <span
-            aria-hidden
-            className="tabular hidden size-8 shrink-0 place-items-center rounded-full bg-zinc-950/[0.05] text-sm font-semibold text-zinc-600 sm:grid dark:bg-white/[0.07] dark:text-zinc-300"
+    <>
+      {/* The row's click opens it; the address button gives keyboards and screen readers the same control. */}
+      <tr onClick={() => setOpen((v) => !v)} className={`cursor-pointer border-t border-hairline transition hover:bg-well ${open ? 'bg-well' : ''} ${hidden ? 'opacity-60' : ''}`}>
+        <td className="tabular hidden py-3 pr-1 pl-5 text-right align-top text-zinc-500 sm:table-cell dark:text-zinc-400">{rank}</td>
+        <td className="py-3 pr-2 pl-4 align-top sm:pl-3">
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-controls={open ? detailsId : undefined}
+            className="rounded-[3px] text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
           >
-            {rank}
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h3 id={headingId} className="text-base font-semibold tracking-tight text-zinc-950 dark:text-white">
-                  {l.address}
-                </h3>
-                <p className="tabular mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{facts.join(' · ')}</p>
-              </div>
-              <p className="shrink-0 text-right">
-                <span className={`tabular block text-lg leading-tight font-semibold ${signedClass(s.perDoor)}`}>{money(s.perDoor, { signed: true })}</span>
-                <span className="block text-[11px] text-zinc-500 dark:text-zinc-400">per door a month</span>
+            <span className="block font-medium text-zinc-950 dark:text-white">{l.address}</span>
+            <span className="tabular mt-0.5 block text-xs text-zinc-500 dark:text-zinc-400">
+              {kind}
+              <span className="md:hidden"> · {money(s.a.price)}</span>
+            </span>
+          </button>
+          {tags.length > 0 && (
+            <span className="mt-1.5 flex flex-wrap gap-1">
+              {tags.map((t, i) => (
+                <Tag key={t} accent={s.meets && i === 0}>
+                  {t}
+                </Tag>
+              ))}
+            </span>
+          )}
+        </td>
+        <td className={`${cell} hidden text-zinc-700 md:table-cell dark:text-zinc-300`}>{money(s.a.price)}</td>
+        <td className={`${cell} font-semibold ${signedClass(s.perDoor)}`}>{money(s.perDoor, { signed: true })}</td>
+        <td className={`${cell} hidden lg:table-cell`}>{s.lens === 'own' ? <span className="text-zinc-700 dark:text-zinc-300">{money(s.a.pi)}/mo</span> : <DscrChip status={s.a.status} dscr={s.a.dscr} size="sm" />}</td>
+        <td className={`${cell} ${sort === 'coc' ? 'font-semibold' : ''} ${signedClass(s.a.coc)}`}>{percent(s.a.coc, 1)}</td>
+        <td className="py-3 pr-3 pl-1 align-top sm:pr-4">
+          <ChevronDown className={`mt-0.5 size-4 text-zinc-500 transition-transform dark:text-zinc-400 ${open ? 'rotate-180' : ''}`} aria-hidden />
+        </td>
+      </tr>
+      {open && (
+        <tr id={detailsId} className="bg-well">
+          <td colSpan={COLUMNS} className="px-4 pt-1 pb-4 sm:px-5">
+            <div className="sm:pl-6">
+              <p className="max-w-3xl text-sm leading-snug text-zinc-800 dark:text-zinc-200">{listingSentence(s)}</p>
+              {l.highlights && <p className="mt-1.5 max-w-3xl text-sm text-zinc-600 dark:text-zinc-400">{l.highlights}</p>}
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{[...more, confirmed].filter(Boolean).join(' · ')}</p>
+              <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-6">
+                <Metric label="Cash flow / door" tip="netCashFlow" sub="a month, after every cost">
+                  <span className={signedClass(s.perDoor)}>{money(s.perDoor, { signed: true })}</span>
+                </Metric>
+                <Metric label="Asking" sub={`${money(s.a.price / s.a.units)} per door`}>
+                  {money(s.a.price)}
+                </Metric>
+                {s.lens === 'own' ? (
+                  <Metric label="Mortgage payment" tip="mortgagePayment" sub={`on a ${money(s.a.loanAmount)} loan`}>
+                    {money(s.a.pi)}/mo
+                  </Metric>
+                ) : (
+                  <Metric label="Lender DSCR" tip="dscr">
+                    <DscrChip status={s.a.status} dscr={s.a.dscr} size="sm" />
+                  </Metric>
+                )}
+                <Metric label="Cash-on-cash" tip="coc" sub={`on ${money(s.a.cashInvested)}${s.lens === 'own' ? ' of your own' : ''}`}>
+                  <span className={signedClass(s.a.coc)}>{percent(s.a.coc, 1)}</span>
+                </Metric>
+                <Metric label="Bought outright" tip="allCash" sub={`on ${money(s.cash.cashInvested)}, no loan`}>
+                  <span className={signedClass(s.cash.coc)}>{percent(s.cash.coc, 1)}</span>
+                </Metric>
+                <Metric label="Your max offer" tip="maxOffer" sub={room == null ? 'no targets set' : room >= 0 ? `${money(room)} of room` : `${money(-room)} over your max`}>
+                  {room == null ? '—' : money(s.offer.price)}
+                </Metric>
+              </dl>
+              <p className="mt-3 flex items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                {RENT_TEXT[s.rentSource]}
+                {s.taxesEstimated && ', taxes estimated'}
+                <InfoTip k="listingRents" />
               </p>
-            </div>
-            {badges && (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {s.meets && (
-                  <Badge tone="green" icon={Check}>
-                    Beats your targets
-                  </Badge>
-                )}
-                {isNew(l, feed) && <Badge tone="blue">New</Badge>}
-                {drop > 0 && (
-                  <Badge tone="blue" icon={TrendingDown}>
-                    Down {money(drop)}
-                  </Badge>
-                )}
-                {hidden && <Badge tone="gray">Hidden</Badge>}
-              </div>
-            )}
-            <p className="mt-2 text-sm leading-snug text-zinc-700 dark:text-zinc-300">{listingSentence(s)}</p>
-
-            <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              <Button variant="primary" className="px-2.5 py-1.5" onClick={() => onAnalyze(l)}>
-                {imported ? 'Open deal' : s.lens === 'own' ? 'Open in Cash' : 'Analyze'} <ArrowRight className="size-4" aria-hidden />
-              </Button>
-              {link && (
-                <a
-                  href={link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-xl px-2 py-1.5 text-sm font-medium text-emerald-700 transition hover:bg-emerald-500/10 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:text-emerald-300"
-                >
-                  View on {site} <ExternalLink className="size-3.5" aria-hidden />
-                  <span className="sr-only">(opens in a new tab)</span>
-                </a>
-              )}
-              <button
-                type="button"
-                aria-expanded={open}
-                aria-controls={open ? detailsId : undefined}
-                onClick={() => setOpen((v) => !v)}
-                className="inline-flex items-center gap-1 rounded-xl px-2 py-1.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-950/5 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white"
-              >
-                Details
-                <ChevronDown className={`size-4 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
-                <span className="sr-only">for {l.address}</span>
-              </button>
-            </div>
-
-            {open && (
-              <div id={detailsId} className="mt-3 border-t border-hairline pt-3">
-                {l.highlights && <p className="text-sm text-zinc-600 dark:text-zinc-400">{l.highlights}</p>}
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                  {[...more, confirmed].filter(Boolean).join(' · ')}
-                </p>
-                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-6">
-                  <Metric label="Cash flow / door" tip="netCashFlow" sub="a month, after every cost">
-                    <span className={signedClass(s.perDoor)}>{money(s.perDoor, { signed: true })}</span>
-                  </Metric>
-                  <Metric label="Asking" sub={`${money(s.a.price / s.a.units)} per door`}>
-                    {money(s.a.price)}
-                  </Metric>
-                  {s.lens === 'own' ? (
-                    <Metric label="Mortgage payment" tip="mortgagePayment" sub={`on a ${money(s.a.loanAmount)} loan`}>
-                      {money(s.a.pi)}/mo
-                    </Metric>
-                  ) : (
-                    <Metric label="Lender DSCR" tip="dscr">
-                      <DscrChip status={s.a.status} dscr={s.a.dscr} size="sm" />
-                    </Metric>
-                  )}
-                  <Metric label="Cash-on-cash" tip="coc" sub={`on ${money(s.a.cashInvested)}${s.lens === 'own' ? ' of your own' : ''}`}>
-                    <span className={signedClass(s.a.coc)}>{percent(s.a.coc, 1)}</span>
-                  </Metric>
-                  <Metric label="Bought outright" tip="allCash" sub={`on ${money(s.cash.cashInvested)}, no loan`}>
-                    <span className={signedClass(s.cash.coc)}>{percent(s.cash.coc, 1)}</span>
-                  </Metric>
-                  <Metric label="Your max offer" tip="maxOffer" sub={room == null ? 'no targets set' : room >= 0 ? `${money(room)} of room` : `${money(-room)} over your max`}>
-                    {room == null ? '—' : money(s.offer.price)}
-                  </Metric>
-                </dl>
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                  <p className="flex items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400">
-                    {RENT_TEXT[s.rentSource]}
-                    {s.taxesEstimated && ', taxes estimated'}
-                    <InfoTip k="listingRents" />
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => (hidden ? onUnhide(l) : onHide(l))}
-                    className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-medium text-zinc-600 transition hover:bg-zinc-950/5 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white"
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Button variant="primary" className="px-3 py-1.5" onClick={() => onAnalyze(l)}>
+                  {imported ? 'Open deal' : s.lens === 'own' ? 'Open in Cash' : 'Analyze'} <ArrowRight className="size-4" aria-hidden />
+                </Button>
+                {link && (
+                  <a
+                    href={link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium text-emerald-700 transition hover:bg-well focus-visible:outline-2 focus-visible:outline-emerald-500 dark:text-emerald-300"
                   >
-                    {hidden ? <Eye className="size-3.5" aria-hidden /> : <EyeOff className="size-3.5" aria-hidden />}
-                    {hidden ? 'Show this listing again' : 'Hide this listing'}
-                    <span className="sr-only"> ({l.address})</span>
-                  </button>
-                </div>
+                    View on {site} <ExternalLink className="size-3.5" aria-hidden />
+                    <span className="sr-only">(opens in a new tab)</span>
+                  </a>
+                )}
+                <Button variant="ghost" className="px-2.5 py-1.5" onClick={() => (hidden ? onUnhide(l) : onHide(l))}>
+                  {hidden ? <Eye className="size-3.5" aria-hidden /> : <EyeOff className="size-3.5" aria-hidden />}
+                  {hidden ? 'Show this listing again' : 'Hide this listing'}
+                  <span className="sr-only"> ({l.address})</span>
+                </Button>
               </div>
-            )}
-          </div>
-        </div>
-      </article>
-    </li>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
@@ -216,10 +198,10 @@ function Assumptions({ market, onMarket }) {
   const rent = (beds, label) => (
     <NumberField id={`mkt-rent-${beds}`} label={label} prefix="$" suffix="/mo" value={market.rents[beds]} onChange={(v) => onMarket({ rents: { ...market.rents, [beds]: v } })} step={25} decimals={0} />
   );
+  const legend = 'mb-3 border-b border-hairline pb-1.5 text-sm font-semibold text-zinc-900 dark:text-white';
   return (
-    <Card id="listing-assumptions" className="rise">
+    <Card id="listing-assumptions">
       <CardHeader
-        icon={SlidersHorizontal}
         title="How listings are underwritten"
         subtitle="Applies to every listing here and to your morning alert. Targets come from the Max offer card on Analyze."
         actions={
@@ -228,10 +210,10 @@ function Assumptions({ market, onMarket }) {
           </Button>
         }
       />
-      <div className="grid gap-8 p-6 lg:grid-cols-3">
+      <div className="grid gap-8 p-5 lg:grid-cols-3">
         <fieldset className="grid grid-cols-2 content-start gap-3">
-          <legend className="eyebrow mb-3">Financing</legend>
-          <p className="col-span-2 -mt-1 text-xs font-medium text-zinc-800 dark:text-zinc-200">DSCR loan</p>
+          <legend className={`${legend} w-full`}>Financing</legend>
+          <p className="col-span-2 text-xs font-medium text-zinc-800 dark:text-zinc-200">DSCR loan</p>
           {f('dscrDownPct', { label: 'Down payment', suffix: '%', max: 100, step: 1, decimals: 1 })}
           {f('dscrRate', { label: 'Interest rate', suffix: '%', max: 30, step: 0.125, decimals: 3, hint: 'Usually above a regular mortgage' })}
           <p className="col-span-2 mt-1 text-xs font-medium text-zinc-800 dark:text-zinc-200">Own money, 20% down</p>
@@ -246,7 +228,7 @@ function Assumptions({ market, onMarket }) {
           {f('closingPct', { label: 'Other closing costs', tip: 'landTransferTax', suffix: '%', max: 10, step: 0.25, hint: 'Plus land transfer tax' })}
         </fieldset>
         <fieldset className="grid grid-cols-2 content-start gap-3">
-          <legend className="eyebrow mb-3">Costs</legend>
+          <legend className={`${legend} w-full`}>Costs</legend>
           {f('insurancePerUnit', { label: 'Insurance', prefix: '$', suffix: '/unit/yr', step: 50, decimals: 0, hint: 'At least $1,500 a property' })}
           {f('utilitiesPerUnit', { label: 'Owner-paid utilities', tip: 'utilities', prefix: '$', suffix: '/unit/mo', step: 5, decimals: 0, hint: '2+ unit buildings only' })}
           {f('mgmtPct', { label: 'Management', suffix: '% of rent', max: 50, step: 0.5, decimals: 1 })}
@@ -256,8 +238,8 @@ function Assumptions({ market, onMarket }) {
           <div className="col-span-2">{f('taxPct', { label: 'Property tax if not listed', suffix: '% of price', max: 5, step: 0.05, hint: 'Most listings state their taxes' })}</div>
         </fieldset>
         <fieldset className="grid grid-cols-2 content-start gap-3">
-          <legend className="eyebrow mb-3">Market rents</legend>
-          <p className="col-span-2 -mt-1 text-xs text-zinc-600 dark:text-zinc-400">Used only where a listing doesn’t state a unit’s current rent.</p>
+          <legend className={`${legend} w-full`}>Market rents</legend>
+          <p className="col-span-2 text-xs text-zinc-600 dark:text-zinc-400">Used only where a listing doesn’t state a unit’s current rent.</p>
           {rent(0, 'Bachelor')}
           {rent(1, '1 bedroom')}
           {rent(2, '2 bedrooms')}
@@ -272,7 +254,7 @@ function Assumptions({ market, onMarket }) {
 function Notice({ icon: Icon = Radar, title, children }) {
   return (
     <Card className="p-8 text-center sm:p-12">
-      <Icon className="mx-auto size-8 text-emerald-600 dark:text-emerald-400" aria-hidden />
+      <Icon className="mx-auto size-7 text-zinc-500 dark:text-zinc-400" aria-hidden />
       <h3 className="mt-4 text-lg font-semibold text-zinc-950 dark:text-white">{title}</h3>
       <div className="mx-auto mt-2 max-w-lg text-sm text-zinc-600 dark:text-zinc-400">{children}</div>
     </Card>
@@ -305,6 +287,7 @@ export default function ListingsView({ feedState, market, targets, importedIds, 
   const targetText = [counted.useDscr && `DSCR ${Number(counted.dscr).toFixed(2)}`, counted.useCashFlow && `$${counted.cashFlowPerDoor}/door`, counted.useCoc && `${counted.coc}% cash-on-cash`]
     .filter(Boolean)
     .join(' · ');
+  const th = 'px-2 py-2.5 text-right font-medium whitespace-nowrap';
 
   const toggleType = (key) => {
     const on = market.types.includes(key);
@@ -314,21 +297,10 @@ export default function ListingsView({ feedState, market, targets, importedIds, 
 
   return (
     <>
-      <div className="rise px-1 pt-2">
-        <p className="eyebrow">
-          Listings · {MARKET.city}, {MARKET.region}
-        </p>
-        <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-zinc-950 sm:text-3xl dark:text-white">Today’s best rentals</h2>
-        <p className="mt-1.5 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-          Thunder Bay properties for sale, found each morning and run through your numbers under Ontario rules. Most cash per door first.
-        </p>
-        {run && (
-          <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-            Updated {when(run.at)} · {active.length} listings, each linked to its own listing page and confirmed for sale in the last week · {freshCount} new ·{' '}
-            {dropCount} price {dropCount === 1 ? 'drop' : 'drops'}
-          </p>
-        )}
-      </div>
+      <ViewHeader title="Listings">
+        {MARKET.city}, {MARKET.region}: properties for sale, found each morning and run through your numbers under Ontario rules.
+        {run && ` Updated ${when(run.at)}.`}
+      </ViewHeader>
 
       {status === 'checking' && <SkeletonCard className="h-[28rem]" />}
       {status === 'local' && (
@@ -349,19 +321,17 @@ export default function ListingsView({ feedState, market, targets, importedIds, 
       {status === 'ready' && (
         <>
           {stale && (
-            <p className="rise flex items-start gap-2 rounded-2xl bg-amber-500/10 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-600/20 ring-inset dark:text-amber-100 dark:ring-amber-300/20">
+            <p className="rise flex items-start gap-2 rounded-md bg-amber-500/10 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-600/20 ring-inset dark:text-amber-100 dark:ring-amber-300/20">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
               The last update was {when(run.at)}. A morning run may have failed; the next one will try again.
             </p>
           )}
 
-          <Card delay={20} className="p-4 sm:p-5">
-            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+          <Card className="divide-y divide-hairline">
+            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3.5 sm:px-5">
               <div className="min-w-0 max-w-xl">
-                <p className="eyebrow flex items-center gap-1.5">
-                  <Landmark className="size-3.5" aria-hidden /> Count the income with
-                </p>
-                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                <p className="text-sm font-semibold text-zinc-900 dark:text-white">Count the income with</p>
+                <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
                   {market.lens === 'own'
                     ? `Your own money as a 20% down payment, with a regular mortgage at ${Number(market.rate)}%. No lender’s DSCR test: just the income and the return on your cash.`
                     : `A DSCR loan, where the lender qualifies the property on its rent: ${Number(market.dscrDownPct)}% down at ${Number(market.dscrRate)}%, and it has to pass the lender’s DSCR test.`}
@@ -377,61 +347,55 @@ export default function ListingsView({ feedState, market, targets, importedIds, 
                 ]}
               />
             </div>
-          </Card>
-
-          <Card delay={40} className="@container">
-            <dl className="grid grid-cols-2 @3xl:grid-cols-4">
-              {[
-                { label: 'Beat your targets', value: `${visible.filter((s) => s.meets).length} of ${visible.length}`, sub: targetText || 'No targets set' },
-                { label: 'Best cash flow', value: best ? `${money(best.perDoor, { signed: true })}/door` : '—', sub: best?.listing.address, cls: best ? signedClass(best.perDoor) : '' },
-                { label: 'In the latest update', value: `${freshCount} new`, sub: `${dropCount} price ${dropCount === 1 ? 'drop' : 'drops'}` },
-                { label: 'Typical asking price', value: money(median(visible.map((s) => s.a.price))), sub: `${money(median(visible.map((s) => s.a.price / s.a.units)))} per door` },
-              ].map((t, i) => (
-                <div key={t.label} className={`min-w-0 p-4 sm:p-5 ${i % 2 ? 'border-l border-hairline' : ''} ${i >= 2 ? 'border-t border-hairline @3xl:border-t-0 @3xl:border-l' : ''}`}>
-                  <dt className="eyebrow">{t.label}</dt>
-                  <dd className={`tabular mt-1 text-xl font-semibold tracking-tight text-zinc-950 dark:text-white ${t.cls ?? ''}`}>{t.value}</dd>
-                  {t.sub && <dd className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">{t.sub}</dd>}
-                </div>
-              ))}
-            </dl>
-          </Card>
-
-          <Card delay={80} className="p-4 sm:p-5">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-              <div role="group" aria-label="Property types" className="flex flex-wrap gap-1.5">
-                {LISTING_TYPES.map((t) => {
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5 px-4 py-3.5 sm:px-5">
+              <div role="group" aria-label="Property types" className="inline-flex overflow-hidden rounded-md border border-(--line-strong)">
+                {LISTING_TYPES.map((t, i) => {
                   const on = market.types.includes(t.key);
                   return (
-                    <button key={t.key} type="button" aria-pressed={on} onClick={() => toggleType(t.key)} className={chip(on)}>
-                      {on && <Check className="size-3.5" aria-hidden />}
-                      {t.label}
-                      <span className="tabular font-semibold">{countOf(t.key)}</span>
+                    <button
+                      key={t.key}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => toggleType(t.key)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap transition focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 ${
+                        i ? 'border-l border-(--line-strong)' : ''
+                      } ${on ? 'bg-zinc-950/[0.05] font-semibold text-zinc-950 dark:bg-white/[0.07] dark:text-white' : 'font-medium text-zinc-500 hover:bg-well hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'}`}
+                    >
+                      {SHORT_TYPE[t.key] ? (
+                        <>
+                          <span className="sm:hidden">{SHORT_TYPE[t.key]}</span>
+                          <span className="max-sm:hidden">{t.label}</span>
+                        </>
+                      ) : (
+                        t.label
+                      )}
+                      <span className={`tabular ${on ? 'text-emerald-700 dark:text-emerald-400' : ''}`}>{countOf(t.key)}</span>
                     </button>
                   );
                 })}
               </div>
-              <button type="button" aria-pressed={onlyMeets} onClick={() => setOnlyMeets((v) => !v)} className={chip(onlyMeets)}>
-                <Target className="size-3.5" aria-hidden />
+              <button type="button" aria-pressed={onlyMeets} onClick={() => setOnlyMeets((v) => !v)} className={toggle(onlyMeets)}>
+                {onlyMeets && <Check className="size-3.5" aria-hidden />}
                 Beats my targets only
               </button>
               {hiddenCount > 0 && (
-                <button type="button" aria-pressed={showHidden} onClick={() => setShowHidden((v) => !v)} className={chip(showHidden)}>
-                  <Eye className="size-3.5" aria-hidden />
+                <button type="button" aria-pressed={showHidden} onClick={() => setShowHidden((v) => !v)} className={toggle(showHidden)}>
+                  {showHidden && <Check className="size-3.5" aria-hidden />}
                   Show hidden ({hiddenCount})
                 </button>
               )}
               <div className="flex flex-wrap items-center gap-2 md:ml-auto">
-                <label htmlFor="listing-sort" className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                <label htmlFor="listing-sort" className="text-xs font-medium text-zinc-600 max-sm:sr-only dark:text-zinc-400">
                   Sort
                 </label>
-                <select id="listing-sort" value={sort} onChange={(e) => setSort(e.target.value)} className="field px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100">
+                <select id="listing-sort" value={sort} onChange={(e) => setSort(e.target.value)} className="field px-3 py-1.5 text-sm text-zinc-900 dark:text-zinc-100">
                   {Object.entries(SORTS).map(([key, s]) => (
                     <option key={key} value={key}>
                       {s.label}
                     </option>
                   ))}
                 </select>
-                <Button onClick={() => setEditing((v) => !v)} aria-expanded={editing} aria-controls="listing-assumptions">
+                <Button className="py-1.5" onClick={() => setEditing((v) => !v)} aria-expanded={editing} aria-controls="listing-assumptions">
                   <SlidersHorizontal className="size-4" aria-hidden /> Assumptions
                 </Button>
               </div>
@@ -440,34 +404,82 @@ export default function ListingsView({ feedState, market, targets, importedIds, 
 
           {editing && <Assumptions market={market} onMarket={onMarket} />}
 
-          {shown.length > 0 ? (
-            <ol className="space-y-3" aria-label="Listings, best first">
-              {(showAll ? shown : shown.slice(0, FIRST_PAGE)).map((s, i) => (
-                <ListingRow
-                  key={s.listing.id}
-                  s={s}
-                  rank={i + 1}
-                  feed={feed}
-                  imported={importedIds.has(s.listing.id)}
-                  hidden={hiddenSet.has(s.listing.id)}
-                  onAnalyze={onAnalyze}
-                  onHide={onHide}
-                  onUnhide={onUnhide}
-                />
+          <Card className="@container">
+            <dl className="grid grid-cols-2 @3xl:grid-cols-4">
+              {[
+                { label: 'Beat your targets', value: `${visible.filter((s) => s.meets).length} of ${visible.length}`, sub: targetText || 'No targets set' },
+                { label: 'Best cash flow', value: best ? `${money(best.perDoor, { signed: true })}/door` : '—', sub: best?.listing.address, cls: best ? signedClass(best.perDoor) : '' },
+                { label: 'In the latest update', value: `${freshCount} new`, sub: `${dropCount} price ${dropCount === 1 ? 'drop' : 'drops'}` },
+                { label: 'Typical asking price', value: money(median(visible.map((s) => s.a.price))), sub: `${money(median(visible.map((s) => s.a.price / s.a.units)))} per door` },
+              ].map((t, i) => (
+                <div key={t.label} className={`min-w-0 px-4 py-3.5 sm:px-5 ${i % 2 ? 'border-l border-hairline' : ''} ${i >= 2 ? 'border-t border-hairline @3xl:border-t-0 @3xl:border-l' : ''}`}>
+                  <dt className="caption">{t.label}</dt>
+                  <dd className={`tabular mt-1 text-lg font-semibold tracking-tight text-zinc-950 dark:text-white ${t.cls ?? ''}`}>{t.value}</dd>
+                  {t.sub && <dd className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">{t.sub}</dd>}
+                </div>
               ))}
-            </ol>
+            </dl>
+          </Card>
+
+          {shown.length > 0 ? (
+            <Card className="overflow-hidden">
+              <table className="w-full text-sm">
+                <caption className="sr-only">Listings, best first. Open a row for its details.</caption>
+                <thead>
+                  <tr className="caption border-b-[3px] border-double border-rule">
+                    <th scope="col" className="hidden py-2.5 pr-1 pl-5 text-right font-medium sm:table-cell">
+                      <span aria-hidden>#</span>
+                      <span className="sr-only">Rank</span>
+                    </th>
+                    <th scope="col" className="py-2.5 pr-2 pl-4 text-left font-medium sm:pl-3">
+                      Address
+                    </th>
+                    <th scope="col" className={`${th} hidden md:table-cell`}>
+                      Price
+                    </th>
+                    <th scope="col" className={th}>
+                      Per door{sort === 'perDoor' && <span aria-hidden> ↓</span>}
+                    </th>
+                    <th scope="col" className={`${th} hidden lg:table-cell`}>
+                      {market.lens === 'own' ? 'Mortgage' : 'Lender DSCR'}
+                    </th>
+                    <th scope="col" className={th}>
+                      Return{sort === 'coc' && <span aria-hidden> ↓</span>}
+                    </th>
+                    <th scope="col" className="w-8 pr-3 sm:pr-4">
+                      <span className="sr-only">Details</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="tabular">
+                  {(showAll ? shown : shown.slice(0, FIRST_PAGE)).map((s, i) => (
+                    <ListingRow
+                      key={s.listing.id}
+                      s={s}
+                      rank={i + 1}
+                      sort={sort}
+                      feed={feed}
+                      imported={importedIds.has(s.listing.id)}
+                      hidden={hiddenSet.has(s.listing.id)}
+                      onAnalyze={onAnalyze}
+                      onHide={onHide}
+                      onUnhide={onUnhide}
+                    />
+                  ))}
+                </tbody>
+              </table>
+              {!showAll && shown.length > FIRST_PAGE && (
+                <div className="border-t border-hairline px-4 py-2 sm:px-5">
+                  <Button variant="ghost" className="-ml-2.5" onClick={() => setShowAll(true)}>
+                    Show all {shown.length} listings <ChevronDown className="size-4" aria-hidden />
+                  </Button>
+                </div>
+              )}
+            </Card>
           ) : (
             <Notice title={active.length ? 'Nothing matches these filters' : 'No listings saved yet'}>
               {active.length ? 'Turn on more property types, or show every listing instead of only the ones that beat your targets.' : 'The next morning run will fill this in.'}
             </Notice>
-          )}
-
-          {!showAll && shown.length > FIRST_PAGE && (
-            <div className="flex justify-center">
-              <Button onClick={() => setShowAll(true)}>
-                Show all {shown.length} listings <ChevronDown className="size-4" aria-hidden />
-              </Button>
-            </div>
           )}
 
           <p className="px-1 text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">

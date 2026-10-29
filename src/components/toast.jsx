@@ -30,7 +30,7 @@ function ToastItem({ t, close }) {
 
   return (
     <div
-      className="glass-strong pop pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-2xl py-2.5 pr-2 pl-3.5 text-sm text-zinc-800 dark:text-zinc-100"
+      className="popover pop pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-2xl py-2.5 pr-2 pl-3.5 text-sm text-zinc-800 dark:text-zinc-100"
       // Hovering or focusing pauses the countdown so Undo stays reachable.
       onMouseEnter={() => clearTimeout(timer.current)}
       onMouseLeave={start}

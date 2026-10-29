@@ -2,7 +2,7 @@
 // written for someone who has never heard of DSCR. The (i) tips keep the
 // textbook definitions; these say what this deal's number means for you.
 
-import { loanConstant, paybackYears } from './finance.js';
+import { loanConstant } from './finance.js';
 import { money, percent } from './format.js';
 
 // Under 50¢ a month either way counts as breaking even.
@@ -52,12 +52,6 @@ export function breakevenSentence(a) {
   return null;
 }
 
-/** DSCR as a plain ratio: dollars of rent per dollar of payment. */
-export function dscrMeaning(a) {
-  if (!Number.isFinite(a.dscr)) return 'There’s no loan payment, tax or insurance for the rent to cover.';
-  return `Rent brings in ${money(Math.max(a.dscr, 0), { cents: true })} for every $1 of loan payment, tax and insurance.`;
-}
-
 /** What each DSCR band means to a lender. */
 export const BAND_MEANINGS = {
   negative: 'Rent doesn’t cover the payment, so most lenders say no.',
@@ -65,26 +59,6 @@ export const BAND_MEANINGS = {
   sweet: 'The range most DSCR lenders look for.',
   strong: 'Comfortable coverage. Lenders like this.',
 };
-
-export function cashFlowMeaning(a) {
-  const yearly = money(Math.abs(a.annualCashFlow));
-  if (a.netCashFlow >= EVEN) return `What you keep each month after the loan and every running cost: ${yearly} a year.`;
-  if (a.netCashFlow <= -EVEN) return `What you’d pay in each month to cover the loan and running costs: ${yearly} a year.`;
-  return 'You’d about break even each month after the loan and every running cost.';
-}
-
-export function cocMeaning(a, targets) {
-  if (!(a.cashInvested > 0)) return 'You put no cash in, so there’s nothing to measure the return against.';
-  const goal = targets?.useCoc ? ` Your target is ${Number(targets.coc)}%.` : '';
-  return `${money(a.annualCashFlow, { signed: true })} a year on the ${money(a.cashInvested)} you put in.${goal}`;
-}
-
-export function cashInMeaning(a) {
-  const parts = [`${money(a.downPayment)} down`, `${money(a.closingCosts)} closing costs`];
-  if (a.rehab > 0) parts.push(`${money(a.rehab)} repairs`);
-  const reserves = a.reserves > 0 ? ` Lenders also want ${money(a.reserves)} kept in the bank.` : '';
-  return `${parts.join(' + ')}.${reserves}`;
-}
 
 /** Rent, minus what the lender counts, minus what the lender ignores. */
 export function rentFlowMeaning(a) {
@@ -171,23 +145,6 @@ function ownListingSentence(s, cash) {
   return room == null ? first : `${first} Asking is ${money(Math.abs(room))} ${room >= 0 ? 'under' : 'over'} your max offer.`;
 }
 
-/** The portfolio's monthly cash flow, across every owned property. */
-export function portfolioCashMeaning(p) {
-  const yearly = money(Math.abs(p.annualCashFlow));
-  if (p.netCashFlow >= EVEN) return `What all your rentals put in your pocket each month after every cost: ${yearly} a year.`;
-  if (p.netCashFlow <= -EVEN) return `What you pay in each month to keep all your rentals running: ${yearly} a year.`;
-  return 'Your rentals about break even each month after every cost.';
-}
-
-export function portfolioDscrMeaning(p) {
-  if (!Number.isFinite(p.dscr)) return 'There’s no loan payment, tax or insurance for the rent to cover.';
-  return `Across all your loans, rent brings in ${money(Math.max(p.dscr, 0), { cents: true })} for every $1 of payment. Lenders check this before your next loan.`;
-}
-
-export function equityMeaning(p) {
-  return `What you’d own after paying off the loans: ${money(p.value)} of property, less ${money(p.debt)} owed.`;
-}
-
 /** Who wins what among compared deals: monthly cash, the lender's view, and profit at sale. */
 export function compareSummary(items) {
   if (items.length < 2) return [];
@@ -207,11 +164,6 @@ export function compareSummary(items) {
 
 const downText = (c) => `${percent(c.price > 0 ? c.downPayment / c.price : 0, 0)} down`;
 
-function aboutYears(y) {
-  const n = Math.max(Math.round(y), 1);
-  return `about ${n} year${n === 1 ? '' : 's'}`;
-}
-
 /** The deal with 20% down in one sentence: what it pays you after the mortgage, and the return on your cash. */
 export function cashSentence(c) {
   const pay = `the ${money(c.pi)} mortgage payment`;
@@ -220,16 +172,6 @@ export function cashSentence(c) {
   }
   if (c.netCashFlow <= -EVEN) return `With ${downText(c)}, it would cost you about ${money(-c.netCashFlow)} a month: the rent doesn’t cover ${pay} plus taxes, insurance and running costs.`;
   return `With ${downText(c)}, it only breaks even: the rent just covers ${pay} and every cost.`;
-}
-
-export function mortgageMeaning(c, deal) {
-  return `Principal and interest on ${an(money(c.loanAmount))} loan (the price minus your ${downText(c)}) at ${Number(deal.rate)}% over ${Number(deal.termYears)} years.`;
-}
-
-/** The cash you put in, and how long cash flow takes to pay it back. */
-export function ownCashMeaning(c) {
-  const years = paybackYears(c);
-  return `${cashInMeaning(c)} ${years ? `Cash flow pays it back in ${aboutYears(years)}.` : 'Cash flow alone never pays it back.'}`;
 }
 
 /**

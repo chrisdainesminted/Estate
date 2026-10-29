@@ -33,12 +33,12 @@ export default function Sheet({ open, onClose, title, children, desktop = false 
   if (!open) return null;
   return (
     <div className={`fixed inset-0 z-[70] print:hidden ${desktop ? '' : 'lg:hidden'}`}>
-      <div className="pop absolute inset-0 bg-zinc-950/35 backdrop-blur-[2px] dark:bg-black/55" onClick={onClose} aria-hidden />
+      <div className="pop absolute inset-0 bg-zinc-950/40 dark:bg-black/60" onClick={onClose} aria-hidden />
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`sheet glass-strong absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-3xl ${desktop ? 'lg:inset-x-auto lg:top-4 lg:right-4 lg:bottom-4 lg:max-h-none lg:w-[30rem] lg:rounded-3xl' : ''}`}
+        className={`sheet popover absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-3xl ${desktop ? 'lg:inset-x-auto lg:top-4 lg:right-4 lg:bottom-4 lg:max-h-none lg:w-[30rem] lg:rounded-3xl' : ''}`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className="flex items-center justify-between gap-3 border-b border-hairline px-5 pt-3 pb-3">
@@ -48,7 +48,7 @@ export default function Sheet({ open, onClose, title, children, desktop = false 
             ref={closeBtn}
             type="button"
             onClick={onClose}
-            className="mt-1 inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-500/10 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:text-emerald-300"
+            className="mt-1 inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-semibold text-emerald-700 transition hover:bg-well focus-visible:outline-2 focus-visible:outline-emerald-500 dark:text-emerald-300"
           >
             Done
             <X className="size-4" aria-hidden />

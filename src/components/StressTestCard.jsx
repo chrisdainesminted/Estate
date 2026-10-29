@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Grid3x3 } from 'lucide-react';
 import { analyzeDeal, breakevenRate, stressGrid } from '../lib/finance.js';
 import { DSCR_BANDS } from '../lib/dscr.js';
 import { stressSentence } from '../lib/explain.js';
@@ -38,7 +37,6 @@ export default function StressTestCard({ deal, adj, onPick }) {
   return (
     <Section
       id="sec-stress"
-      icon={Grid3x3}
       title="Stress test"
       meaning={stressSentence(a, base.rate, beRate)}
       subtitle="Rent and rate moving together. Tap a cell to try it as your what-if."

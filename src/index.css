@@ -3,10 +3,19 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-sans: 'Geist', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 
-  /* Theme-aware neutrals; redefined for dark mode below. */
-  --color-hairline: rgb(9 9 11 / 0.07);
+  /* The ledger look keeps corners tight: panels, fields and buttons all sit at 4–6px. */
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 4px;
+  --radius-2xl: 6px;
+  --radius-3xl: 6px;
+
+  /* Theme-aware lines and fills; redefined for dark mode below. Rules are the
+     stronger lines of a ledger: dotted leaders and the double rule under a total. */
+  --color-hairline: #e4e4e7;
+  --color-rule: #a1a1aa;
   --color-well: rgb(9 9 11 / 0.035);
 }
 
@@ -14,34 +23,33 @@
 
 :root {
   color-scheme: light;
-  --page: #f4f4f5;
-  --glass: rgb(255 255 255 / 0.7);
-  --glass-strong: rgb(255 255 255 / 0.9);
-  --glass-border: rgb(255 255 255 / 0.85);
-  --glass-edge: rgb(9 9 11 / 0.07);
-  --glass-highlight: rgb(255 255 255 / 0.95);
-  --glass-shadow: 0 30px 60px -32px rgb(9 9 11 / 0.22), 0 6px 16px -8px rgb(9 9 11 / 0.08);
-  --accent: #059669;
-  --accent-glow: rgb(16 185 129 / 0.18);
+  --page: #fafaf9;
+  --panel: #ffffff;
+  --raised: #ffffff;
+  --popover: #ffffff;
+  --line-strong: #d4d4d8;
+  --accent: #047857;
+  --accent-ink: #ffffff;
+  --focus-ring: rgb(4 120 87 / 0.2);
   --track: rgb(9 9 11 / 0.1);
-  /* Secondary text runs a touch darker than stock zinc-500 so it keeps 4.5:1 on tinted glass and wells. */
+  /* Secondary text runs a touch darker than stock zinc-500 so it keeps 4.5:1 on panels and wells. */
   --color-zinc-500: #67676f;
 }
 
-/* Onyx: near-black, neutral surfaces; green is kept for accents. */
+/* Onyx: near-black, flat panels, green kept for accents. */
 html.dark {
   color-scheme: dark;
-  --page: #0a0a0b;
-  --glass: rgb(255 255 255 / 0.04);
-  --glass-strong: rgb(20 20 22 / 0.94);
-  --glass-border: rgb(255 255 255 / 0.08);
-  --glass-edge: rgb(0 0 0 / 0.45);
-  --glass-highlight: rgb(255 255 255 / 0.06);
-  --glass-shadow: 0 40px 80px -40px rgb(0 0 0 / 0.95);
+  --page: #0b0b0c;
+  --panel: #0f0f11;
+  --raised: #131315;
+  --popover: #141416;
+  --line-strong: #2c2c30;
   --accent: #34d399;
-  --accent-glow: rgb(52 211 153 / 0.2);
+  --accent-ink: #0b0b0c;
+  --focus-ring: rgb(52 211 153 / 0.25);
   --track: rgb(255 255 255 / 0.12);
-  --color-hairline: rgb(255 255 255 / 0.07);
+  --color-hairline: #232326;
+  --color-rule: #4a4a52;
   --color-well: rgb(255 255 255 / 0.04);
   --color-zinc-500: oklch(55.2% 0.016 285.938);
 }
@@ -49,7 +57,6 @@ html.dark {
 body {
   background: var(--page);
   @apply text-zinc-900 antialiased dark:text-zinc-100;
-  font-feature-settings: 'ss01', 'cv11';
 }
 
 .tabular {
@@ -78,101 +85,43 @@ body::before {
   background: var(--page);
 }
 
-/* ---------- Backdrop: one faint green glow + grid + grain ---------- */
-
-.app-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  overflow: hidden;
-  pointer-events: none;
-  background:
-    radial-gradient(52rem 34rem at 6% -8%, rgb(16 185 129 / 0.1), transparent 70%),
-    radial-gradient(60rem 38rem at 80% 110%, rgb(9 9 11 / 0.04), transparent 70%),
-    var(--page);
-}
-
-html.dark .app-backdrop {
-  background:
-    radial-gradient(52rem 34rem at 6% -8%, rgb(16 185 129 / 0.09), transparent 70%),
-    radial-gradient(48rem 30rem at 100% 0%, rgb(255 255 255 / 0.03), transparent 70%),
-    var(--page);
-}
-
-.app-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(var(--color-hairline) 1px, transparent 1px),
-    linear-gradient(90deg, var(--color-hairline) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(ellipse 85% 60% at 50% 0%, #000 25%, transparent 75%);
-}
-
-.app-grain {
-  position: absolute;
-  inset: 0;
-  opacity: 0.06;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-/* ---------- Glass surfaces ---------- */
+/* ---------- Surfaces ---------- */
 
 @layer components {
-  .glass {
-    background: var(--glass);
-    -webkit-backdrop-filter: blur(24px) saturate(170%);
-    backdrop-filter: blur(24px) saturate(170%);
-    border: 1px solid var(--glass-border);
-    box-shadow:
-      inset 0 1px 0 0 var(--glass-highlight),
-      0 0 0 1px var(--glass-edge),
-      var(--glass-shadow);
+  /* A flat panel with a hairline edge. */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--color-hairline);
   }
 
-  .glass-strong {
-    background: var(--glass-strong);
-    -webkit-backdrop-filter: blur(28px) saturate(180%);
-    backdrop-filter: blur(28px) saturate(180%);
-    border: 1px solid var(--glass-border);
-    box-shadow:
-      inset 0 1px 0 0 var(--glass-highlight),
-      0 0 0 1px var(--glass-edge),
-      0 20px 40px -16px rgb(0 0 0 / 0.25);
+  /* Menus, tips, toasts and sheets: lifted just enough to separate from the page. */
+  .popover {
+    background: var(--popover);
+    border: 1px solid var(--line-strong);
+    box-shadow: 0 16px 40px -20px rgb(9 9 11 / 0.35);
+  }
+  html.dark .popover {
+    box-shadow: 0 16px 40px -16px rgb(0 0 0 / 0.85);
   }
 
-  .eyebrow {
-    @apply text-[11px] font-medium tracking-[0.12em] text-zinc-500 uppercase dark:text-zinc-400;
+  /* A small label over a number or a column. */
+  .caption {
+    @apply text-xs font-medium text-zinc-500 dark:text-zinc-400;
   }
 
-  /* Form controls share one glass field style. */
+  /* Form controls share one boxed field style. */
   .field {
-    border-radius: 0.75rem;
-    background: rgb(255 255 255 / 0.55);
-    box-shadow: inset 0 0 0 1px rgb(9 9 11 / 0.1);
-    transition:
-      background-color 0.15s ease,
-      box-shadow 0.15s ease;
-  }
-  html.dark .field {
-    background: rgb(255 255 255 / 0.04);
-    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.1);
+    border-radius: 4px;
+    background: var(--raised);
+    box-shadow: inset 0 0 0 1px var(--line-strong);
+    transition: box-shadow 0.15s ease;
   }
   .field:focus-within,
   .field:focus {
     outline: none;
-    background: rgb(255 255 255 / 0.88);
     box-shadow:
       inset 0 0 0 1.5px var(--accent),
-      0 0 0 4px var(--accent-glow);
-  }
-  html.dark .field:focus-within,
-  html.dark .field:focus {
-    background: rgb(255 255 255 / 0.07);
-    box-shadow:
-      inset 0 0 0 1.5px var(--accent),
-      0 0 0 4px var(--accent-glow);
+      0 0 0 3px var(--focus-ring);
   }
 }
 
@@ -190,40 +139,36 @@ html.dark .app-backdrop {
   outline: none;
 }
 .range::-webkit-slider-runnable-track {
-  height: 6px;
-  border-radius: 999px;
+  height: 4px;
+  border-radius: 2px;
   background: var(--range-bg, var(--track));
 }
 .range::-moz-range-track {
-  height: 6px;
-  border-radius: 999px;
+  height: 4px;
+  border-radius: 2px;
   background: var(--range-bg, var(--track));
 }
 .range::-webkit-slider-thumb {
   -webkit-appearance: none;
-  margin-top: -7px;
+  margin-top: -8px;
   width: 20px;
   height: 20px;
   border-radius: 999px;
-  background: #fff;
+  background: var(--panel);
   border: 2px solid var(--accent);
-  box-shadow: 0 0 0 5px var(--accent-glow), 0 2px 8px rgb(0 0 0 / 0.25);
-  transition: box-shadow 0.15s ease;
 }
 .range::-moz-range-thumb {
   width: 16px;
   height: 16px;
   border-radius: 999px;
-  background: #fff;
+  background: var(--panel);
   border: 2px solid var(--accent);
-  box-shadow: 0 0 0 5px var(--accent-glow), 0 2px 8px rgb(0 0 0 / 0.25);
 }
-.range:hover::-webkit-slider-thumb,
 .range:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 8px var(--accent-glow), 0 2px 10px rgb(0 0 0 / 0.3);
+  box-shadow: 0 0 0 4px var(--focus-ring);
 }
 .range:focus-visible::-moz-range-thumb {
-  box-shadow: 0 0 0 8px var(--accent-glow), 0 2px 10px rgb(0 0 0 / 0.3);
+  box-shadow: 0 0 0 4px var(--focus-ring);
 }
 
 .thin-scroll {
@@ -231,32 +176,21 @@ html.dark .app-backdrop {
   scrollbar-color: var(--color-hairline) transparent;
 }
 
-@media (prefers-reduced-transparency: reduce) {
-  .glass,
-  .glass-strong {
-    background: var(--glass-strong);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-}
-
 /* ---------- Motion ---------- */
 
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(12px);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
 
 @keyframes pop {
   from {
     opacity: 0;
-    transform: translateY(-6px) scale(0.98);
+    transform: translateY(-4px);
   }
   to {
     opacity: 1;
@@ -265,10 +199,10 @@ html.dark .app-backdrop {
 }
 
 .rise {
-  animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: rise 0.18s ease-out both;
 }
 .pop {
-  animation: pop 0.18s ease-out both;
+  animation: pop 0.14s ease-out both;
 }
 
 @keyframes sheet-up {
@@ -280,17 +214,17 @@ html.dark .app-backdrop {
   }
 }
 .sheet {
-  animation: sheet-up 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: sheet-up 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
-/* Toasts sit above the phone's "Edit deal" button and the home indicator. */
+/* Phones keep the tabs, and on a deal its result, fixed at the bottom. The
+   Dock sets --dock to its height (home indicator included); toasts and the
+   page end clear it. */
 .toast-stack {
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  padding-bottom: calc(max(var(--dock, 0px), env(safe-area-inset-bottom, 0px)) + 16px);
 }
-@media (max-width: 1023px) {
-  .toast-stack {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 84px);
-  }
+.dock-space {
+  padding-bottom: calc(max(var(--dock, 0px), env(safe-area-inset-bottom, 0px)) + 24px);
 }
 
 /* Jump targets (command palette) land below the header, which sticks from lg up. */
@@ -299,7 +233,7 @@ html.dark .app-backdrop {
 }
 @media (min-width: 1024px) {
   [id^='sec-'] {
-    scroll-margin-top: 104px;
+    scroll-margin-top: 80px;
   }
 }
 

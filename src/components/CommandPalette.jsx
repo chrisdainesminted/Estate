@@ -84,12 +84,12 @@ export default function CommandPalette({ onClose, commands }) {
   let lastGroup = null;
   return (
     <div className="fixed inset-0 z-[80] print:hidden" role="presentation">
-      <div className="pop absolute inset-0 bg-zinc-950/30 backdrop-blur-[2px] dark:bg-black/50" onMouseDown={onClose} aria-hidden />
+      <div className="pop absolute inset-0 bg-zinc-950/40 dark:bg-black/60" onMouseDown={onClose} aria-hidden />
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Search deals and commands"
-        className="glass-strong pop absolute left-1/2 flex max-h-[min(70vh,560px)] w-[min(640px,calc(100%-32px))] -translate-x-1/2 flex-col overflow-hidden rounded-3xl"
+        className="popover pop absolute left-1/2 flex max-h-[min(70vh,560px)] w-[min(640px,calc(100%-32px))] -translate-x-1/2 flex-col overflow-hidden rounded-3xl"
         style={{ top: 'calc(env(safe-area-inset-top, 0px) + min(14vh, 120px))' }}
       >
         <div className="flex items-center gap-3 border-b border-hairline px-4 py-3.5">
@@ -111,7 +111,7 @@ export default function CommandPalette({ onClose, commands }) {
             spellCheck={false}
             className="min-w-0 flex-1 bg-transparent text-base text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-white"
           />
-          <kbd className="hidden rounded-md bg-zinc-950/[0.06] px-1.5 py-0.5 font-sans text-[11px] text-zinc-500 sm:block dark:bg-white/10 dark:text-zinc-400">Esc</kbd>
+          <kbd className="hidden rounded-[3px] px-1.5 py-0.5 font-sans text-[11px] text-zinc-500 ring-1 ring-(--line-strong) ring-inset sm:block dark:text-zinc-400">Esc</kbd>
         </div>
         <ul ref={list} id="command-list" role="listbox" aria-label="Results" className="thin-scroll flex-1 overflow-y-auto p-2">
           {results.length === 0 && <li className="px-3 py-8 text-center text-sm text-zinc-500">Nothing matches “{query}”.</li>}
@@ -121,16 +121,16 @@ export default function CommandPalette({ onClose, commands }) {
             const selected = i === active;
             return (
               <li key={c.id} role="presentation">
-                {header && <div className="eyebrow px-3 pt-3 pb-1.5">{header}</div>}
+                {header && <div className="caption px-3 pt-3 pb-1.5">{header}</div>}
                 <div
                   id={`cmd-${c.id}`}
                   role="option"
                   aria-selected={selected}
                   onMouseMove={() => setActive(i)}
                   onClick={() => run(c)}
-                  className={`flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 ${selected ? 'bg-emerald-500/10 dark:bg-emerald-400/10' : ''}`}
+                  className={`flex cursor-pointer items-center gap-3 rounded-[3px] px-3 py-2 ${selected ? 'bg-zinc-950/[0.06] dark:bg-white/[0.08]' : ''}`}
                 >
-                  <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-zinc-950/[0.05] text-zinc-600 dark:bg-white/[0.07] dark:text-zinc-300">
+                  <span className="grid size-6 shrink-0 place-items-center text-zinc-500 dark:text-zinc-400">
                     <c.icon className="size-4" aria-hidden />
                   </span>
                   <span className="min-w-0 flex-1 truncate text-sm font-medium text-zinc-900 dark:text-white">{c.label}</span>

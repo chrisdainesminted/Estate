@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
-import { AlertTriangle, CalendarClock, LineChart, Repeat, ShoppingCart, Sprout } from 'lucide-react';
+import { AlertTriangle, CalendarClock, Repeat } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { simulateGrowth } from '../lib/growth.js';
 import { chartTheme, niceScale } from '../lib/chartTheme.js';
 import { compactMoney, money } from '../lib/format.js';
-import { Card, CardHeader, KpiTile, NumberField, Segmented, SelectField, signedClass } from './ui.jsx';
-import { CHART_ANIMATE, Num } from './motion.jsx';
-import { Section } from './Section.jsx';
+import { Card, CardHeader, LedgerLine, NumberField, Segmented, SelectField, SummaryCard, ViewHeader, signedClass } from './ui.jsx';
+import { CHART_ANIMATE } from './motion.jsx';
+import { Section, SectionGroup } from './Section.jsx';
 
 const YEARS = 10;
 
@@ -27,7 +27,7 @@ function MiniTooltip({ active, payload, fmt, label: title }) {
   if (!active || !payload?.length) return null;
   const r = payload[0].payload;
   return (
-    <div className="glass-strong rounded-xl px-3 py-2 text-xs">
+    <div className="popover rounded-xl px-3 py-2 text-xs">
       <div className="text-zinc-500 dark:text-zinc-400">{monthLabel(r.month)}</div>
       <div className="tabular font-semibold text-zinc-900 dark:text-white">
         {title}: {fmt(payload[0].value)}
@@ -103,66 +103,66 @@ export default function PlanView({ owned, deals, plan, onPlan, dark, onOpen }) {
 
   return (
     <div className="space-y-6">
-      <Card className="relative overflow-hidden">
-        <div aria-hidden className="pointer-events-none absolute -top-40 -right-24 size-[28rem] rounded-full bg-radial from-emerald-500/20 via-emerald-400/5 to-transparent to-70% blur-2xl" />
-        <div className="relative flex flex-wrap items-start justify-between gap-5 px-5 pt-6 sm:px-7 sm:pt-7">
-          <div className="min-w-0">
-            <p className="eyebrow">Growth plan</p>
-            <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-zinc-950 sm:text-[34px] sm:leading-tight dark:text-white">{title}</h2>
-            <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-              Buying “{template?.deal.name ?? 'no deal'}” whenever your cash covers the down payment, closing, rehab and every lender’s reserves. Prices and
-              rents move with the deal’s own growth rates.
+      <ViewHeader title="Growth plan">
+        Buying “{template?.deal.name ?? 'no deal'}” whenever your cash covers the down payment, closing, rehab and every lender’s reserves. Prices and rents move with
+        the deal’s own growth rates.
+      </ViewHeader>
+
+      <SummaryCard
+        head={
+          <>
+            <h3 className="text-xl font-semibold tracking-tight text-zinc-950 sm:text-2xl dark:text-white">{title}</h3>
+            <p className={`mt-4 flex items-center gap-1.5 text-[15px] font-semibold ${next ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-300'}`}>
+              <CalendarClock className="size-4 shrink-0" aria-hidden />
+              {next ? (next.month === 0 ? 'You can buy the next one now' : `Next purchase ${monthLabel(next.month)}`) : 'Not affordable yet'}
             </p>
-          </div>
-          <span
-            className={`inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-semibold ring-1 ring-inset backdrop-blur ${
-              next
-                ? 'bg-emerald-500/10 text-emerald-800 ring-emerald-600/25 dark:bg-emerald-400/15 dark:text-emerald-200 dark:ring-emerald-300/25'
-                : 'bg-amber-400/15 text-amber-800 ring-amber-500/30 dark:text-amber-200 dark:ring-amber-300/25'
-            }`}
-          >
-            <CalendarClock className="size-4" aria-hidden />
-            {next ? (next.month === 0 ? 'You can buy now' : `Next purchase ${monthLabel(next.month)}`) : 'Not affordable yet'}
-          </span>
+            <p className="mt-1 max-w-3xl text-sm leading-relaxed text-zinc-800 dark:text-zinc-200">
+              {next
+                ? `That’s when your cash first covers it: ${money(next.cashInvested)} to buy, plus ${money(next.reserves)} kept for the lender.`
+                : 'Your cash never covers another purchase. Add cash or savings, or pick a cheaper deal.'}
+            </p>
+          </>
+        }
+      >
+        <div className="thin-scroll overflow-x-auto">
+          <table className="w-full max-w-2xl text-sm">
+            <caption className="sr-only">Your rentals today and in {YEARS} years</caption>
+            <thead>
+              <tr className="caption border-b border-hairline">
+                <th scope="col" className="py-2 text-left font-medium">
+                  <span className="sr-only">Measure</span>
+                </th>
+                <th scope="col" className="py-2 pl-4 text-right font-medium">Today</th>
+                <th scope="col" className="py-2 pl-4 text-right font-medium">In {YEARS} years</th>
+              </tr>
+            </thead>
+            <tbody className="tabular">
+              {[
+                ['Doors', sim.start.doors, sim.end.doors, String],
+                ['Cash flow a month', sim.start.monthlyCashFlow, sim.end.monthlyCashFlow, (v) => money(v, { signed: true }), true],
+                ['Equity', sim.start.equity, sim.end.equity, compactMoney],
+                ['Cash on hand', sim.start.cash, sim.end.cash, compactMoney],
+              ].map(([label, now, later, fmt, signed]) => (
+                <tr key={label} className="border-b border-hairline last:border-b-0">
+                  <th scope="row" className="py-2 text-left font-normal text-zinc-700 dark:text-zinc-300">
+                    {label}
+                  </th>
+                  <td className={`py-2 pl-4 text-right ${signed ? signedClass(now) : 'text-zinc-700 dark:text-zinc-300'}`}>{fmt(now)}</td>
+                  <td className={`py-2 pl-4 text-right font-semibold ${signed ? signedClass(later) : 'text-zinc-950 dark:text-white'}`}>{fmt(later)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+            {doorsAdded} more {doorsAdded === 1 ? 'door' : 'doors'} from {sim.purchases.length} {sim.purchases.length === 1 ? 'purchase' : 'purchases'}.
+          </p>
         </div>
-        <dl className="relative mt-6 grid grid-cols-2 border-t border-hairline lg:grid-cols-4">
-          <KpiTile
-            label="Next purchase"
-            value={next ? (next.month === 0 ? 'Now' : `${next.month} ${next.month === 1 ? 'month' : 'months'}`) : '—'}
-            meaning={
-              next
-                ? `When your cash first covers the next one: ${money(next.cashInvested)} to buy, plus ${money(next.reserves)} kept for the lender.`
-                : 'Your cash never covers another purchase. Add cash or savings, or pick a cheaper deal.'
-            }
-          />
-          <KpiTile
-            label="Doors in 10 years"
-            value={<Num value={sim.end.doors} format={(v) => Math.round(v).toString()} />}
-            meaning={`${sim.start.doors} today, plus ${doorsAdded} from ${sim.purchases.length} ${sim.purchases.length === 1 ? 'purchase' : 'purchases'}.`}
-          />
-          <KpiTile
-            label="Cash flow in 10 years"
-            value={
-              <>
-                <Num value={sim.end.monthlyCashFlow} format={(v) => money(v, { signed: true })} />
-                <span className="ml-1 text-sm font-medium tracking-normal text-zinc-500 dark:text-zinc-400">/mo</span>
-              </>
-            }
-            valueClass={signedClass(sim.end.monthlyCashFlow)}
-            meaning={`What all your rentals would bring in each month by then, ${sim.end.monthlyCashFlow >= sim.start.monthlyCashFlow ? 'up' : 'down'} from ${money(sim.start.monthlyCashFlow, { signed: true })} today.`}
-          />
-          <KpiTile
-            label="Equity in 10 years"
-            value={<Num value={sim.end.equity} format={(v) => compactMoney(v)} />}
-            meaning={`What you’d own after the loans by then, from ${compactMoney(sim.start.equity)} today. Plus ${compactMoney(sim.end.cash)} in cash.`}
-          />
-        </dl>
-      </Card>
+      </SummaryCard>
 
       <div className="grid gap-6 lg:grid-cols-12">
         <Card delay={80} className="lg:col-span-4 xl:col-span-3">
-          <CardHeader icon={Sprout} title="Your plan" subtitle="Saved with your deals." />
-          <div className="grid gap-4 p-6">
+          <CardHeader title="Your plan" subtitle="Saved with your deals." />
+          <div className="grid gap-4 p-5">
             <NumberField id="plan-cash" label="Cash on hand today" prefix="$" value={plan.cashOnHand} onChange={(v) => onPlan({ cashOnHand: v })} step={5000} decimals={0} />
             <NumberField id="plan-save" label="Saved from income each month" prefix="$" suffix="/mo" value={plan.monthlySavings} onChange={(v) => onPlan({ monthlySavings: v })} step={250} decimals={0} />
             <div>
@@ -196,33 +196,28 @@ export default function PlanView({ owned, deals, plan, onPlan, dark, onOpen }) {
               hint="0 means keep buying"
             />
             {t && (
-              <div className="grid gap-1.5 rounded-2xl bg-well p-3.5 text-xs">
-                <div className="flex justify-between gap-3">
-                  <span className="text-zinc-500 dark:text-zinc-400">Each purchase today</span>
-                  <span className="tabular font-semibold text-zinc-900 dark:text-white">{money(t.cashNeeded)}</span>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <span className="text-zinc-500 dark:text-zinc-400">Adds per month</span>
-                  <span className={`tabular font-semibold ${signedClass(t.netCashFlow)}`}>{money(t.netCashFlow, { signed: true })}</span>
-                </div>
+              <div className="text-sm">
+                <LedgerLine label="Each purchase today" value={money(t.cashNeeded)} />
+                <LedgerLine label="Adds per month" value={money(t.netCashFlow, { signed: true })} valueClass={signedClass(t.netCashFlow)} />
                 {template.refi && (
-                  <div className="flex justify-between gap-3">
-                    <span className="text-zinc-500 dark:text-zinc-400">After its refinance</span>
-                    <span className={`tabular font-semibold ${signedClass(template.refi.netCashFlow)}`}>{money(template.refi.netCashFlow, { signed: true })}</span>
-                  </div>
+                  <LedgerLine label="After its refinance" value={money(template.refi.netCashFlow, { signed: true })} valueClass={signedClass(template.refi.netCashFlow)} />
                 )}
                 {template.deal.refiEnabled && (
-                  <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
+                  <p className="mt-1.5 flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-300">
                     <Repeat className="size-3.5" aria-hidden /> Refinance cash recycles into the next purchase
-                  </div>
+                  </p>
                 )}
-                <button type="button" onClick={() => onOpen(template.deal.id)} className="mt-1 text-left font-medium text-emerald-700 hover:underline dark:text-emerald-300">
+                <button
+                  type="button"
+                  onClick={() => onOpen(template.deal.id)}
+                  className="mt-2 rounded text-left text-sm font-medium text-emerald-700 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:text-emerald-300"
+                >
                   Open this deal
                 </button>
               </div>
             )}
             {t && (t.netCashFlow < 0 || template.refi?.netCashFlow < 0) && (
-              <p className="flex gap-2 rounded-2xl bg-amber-400/10 p-3 text-xs leading-relaxed text-amber-900 ring-1 ring-amber-500/25 ring-inset dark:text-amber-100">
+              <p className="flex gap-2 rounded-md bg-amber-400/10 p-3 text-xs leading-relaxed text-amber-900 ring-1 ring-amber-500/25 ring-inset dark:text-amber-100">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
                 {t.netCashFlow < 0
                   ? 'This deal loses money each month, so every copy shrinks your cash flow and slows the next purchase.'
@@ -232,9 +227,9 @@ export default function PlanView({ owned, deals, plan, onPlan, dark, onOpen }) {
           </div>
         </Card>
 
-        <div className="min-w-0 space-y-3 lg:col-span-8 xl:col-span-9">
-          <Section id="plan-charts" icon={LineChart} title="Ten years at a glance" meaning="Doors, monthly cash flow and equity, month by month. Each step up is a purchase." subtitle="Each measure is on its own scale.">
-            <div className="grid gap-6 p-6 md:grid-cols-3">
+        <SectionGroup className="min-w-0 self-start lg:col-span-8 xl:col-span-9">
+          <Section id="plan-charts" title="Ten years at a glance" meaning="Doors, monthly cash flow and equity, month by month. Each step up is a purchase." subtitle="Each measure is on its own scale.">
+            <div className="grid gap-6 p-5 md:grid-cols-3">
               <MiniChart data={sim.monthly} dataKey="doors" title="Doors" fmt={(v) => Math.round(v).toString()} dark={dark} step />
               <MiniChart data={sim.monthly} dataKey="monthlyCashFlow" title="Cash flow /mo" fmt={compactMoney} dark={dark} step />
               <MiniChart data={sim.monthly} dataKey="equity" title="Equity" fmt={compactMoney} dark={dark} />
@@ -243,7 +238,6 @@ export default function PlanView({ owned, deals, plan, onPlan, dark, onOpen }) {
 
           <Section
             id="plan-purchases"
-            icon={ShoppingCart}
             title="Purchases"
             value={sim.purchases.length ? `${sim.purchases.length} in ten years` : null}
             meaning={
@@ -255,8 +249,8 @@ export default function PlanView({ owned, deals, plan, onPlan, dark, onOpen }) {
             {sim.purchases.length > 0 && (
               <div tabIndex={0} role="region" aria-label="Purchases table" className="thin-scroll max-h-96 overflow-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500">
                 <table className="w-full min-w-[620px] text-sm">
-                  <thead className="sticky top-0 bg-(--glass-strong) backdrop-blur-xl">
-                    <tr className="eyebrow">
+                  <thead className="sticky top-0 bg-(--panel)">
+                    <tr className="caption">
                       {['#', 'When', 'Price', 'Cash in', 'Adds /mo', 'Doors after'].map((h, i) => (
                         <th key={h} className={`px-4 py-3 font-medium first:pl-6 last:pr-6 ${i < 2 ? 'text-left' : 'text-right'}`}>
                           {h}
@@ -283,14 +277,13 @@ export default function PlanView({ owned, deals, plan, onPlan, dark, onOpen }) {
 
           <Section
             id="plan-years"
-            icon={CalendarClock}
             title="Year by year"
             meaning="Doors, cash flow, equity and cash at the end of each year. Reserves are cash you keep but can’t spend."
           >
             <div tabIndex={0} role="region" aria-label="Year-by-year table" className="thin-scroll overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500">
               <table className="w-full min-w-[620px] text-sm">
                 <thead>
-                  <tr className="eyebrow">
+                  <tr className="caption">
                     {['Year', 'Doors', 'Cash flow /mo', 'Equity', 'Cash on hand', 'Reserves held'].map((h, i) => (
                       <th key={h} className={`px-4 py-3 font-medium first:pl-6 last:pr-6 ${i ? 'text-right' : 'text-left'}`}>
                         {h}
@@ -313,7 +306,7 @@ export default function PlanView({ owned, deals, plan, onPlan, dark, onOpen }) {
               </table>
             </div>
           </Section>
-        </div>
+        </SectionGroup>
       </div>
     </div>
   );

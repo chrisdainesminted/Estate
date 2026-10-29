@@ -8,7 +8,7 @@ function Group({ title, items, activeId, onPick }) {
   if (!items.length) return null;
   return (
     <div className="py-1.5">
-      <div className="eyebrow px-3 pt-1 pb-1.5">
+      <div className="caption px-3 pt-1 pb-1.5">
         {title} · {items.length}
       </div>
       {items.map(({ deal, a }) => {
@@ -20,8 +20,8 @@ function Group({ title, items, activeId, onPick }) {
             role="option"
             aria-selected={selected}
             onClick={() => onPick(deal.id)}
-            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition ${
-              selected ? 'bg-emerald-500/10 dark:bg-emerald-400/10' : 'hover:bg-zinc-950/[0.04] dark:hover:bg-white/[0.06]'
+            className={`flex w-full items-center gap-3 rounded-[3px] px-3 py-2 text-left transition ${
+              selected ? 'bg-zinc-950/[0.05] dark:bg-white/[0.07]' : 'hover:bg-well'
             }`}
           >
             <span className="grid size-5 shrink-0 place-items-center text-emerald-600 dark:text-emerald-400">{selected && <Check className="size-4" aria-hidden />}</span>
@@ -83,11 +83,9 @@ export default function DealPicker({ items, activeId, onSelect, onNew }) {
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full min-w-0 items-center gap-2.5 rounded-xl bg-white/60 py-1.5 pr-2.5 pl-2 text-left ring-1 ring-zinc-950/10 transition ring-inset hover:bg-white/90 md:w-72 lg:w-60 xl:w-72 dark:bg-white/[0.06] dark:ring-white/10 dark:hover:bg-white/10"
+        className="flex w-full min-w-0 items-center gap-2.5 rounded-md py-1.5 pr-2.5 pl-3 text-left ring-1 ring-(--line-strong) transition ring-inset hover:bg-well focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 lg:w-60 xl:w-72"
       >
-        <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-zinc-950 text-white dark:bg-white dark:text-zinc-950">
-          <Home className="size-3.5" aria-hidden />
-        </span>
+        <Home className="size-4 shrink-0 text-zinc-500 dark:text-zinc-400" aria-hidden />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm leading-tight font-semibold text-zinc-900 dark:text-white">{current.deal.name}</span>
           <span className="tabular block text-[11px] leading-tight text-zinc-500 dark:text-zinc-400">
@@ -98,7 +96,7 @@ export default function DealPicker({ items, activeId, onSelect, onNew }) {
       </button>
 
       {open && (
-        <div className="glass-strong pop absolute top-full right-0 left-0 z-50 mt-2 w-auto overflow-hidden rounded-2xl md:left-auto md:w-[380px]">
+        <div className="popover pop absolute top-full right-0 left-0 z-50 mt-2 w-auto overflow-hidden rounded-2xl md:left-auto md:w-[380px]">
           <div className="flex items-center gap-2 border-b border-hairline px-3 py-2.5">
             <Search className="size-4 text-zinc-400" aria-hidden />
             <input
@@ -122,7 +120,7 @@ export default function DealPicker({ items, activeId, onSelect, onNew }) {
                 onNew();
                 setOpen(false);
               }}
-              className="flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-400/10"
+              className="flex w-full items-center justify-center gap-1.5 rounded-[3px] py-2 text-sm font-semibold text-emerald-700 transition hover:bg-well dark:text-emerald-300"
             >
               <Plus className="size-4" aria-hidden /> New deal
             </button>

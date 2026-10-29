@@ -1,65 +1,33 @@
-import { Scale } from 'lucide-react';
 import { DSCR_BANDS } from '../lib/dscr.js';
 import { BAND_MEANINGS, rentFlowMeaning } from '../lib/explain.js';
 import { money, percent, ratio } from '../lib/format.js';
-import { DscrChip, Stat, signedClass } from './ui.jsx';
+import { DscrChip, LedgerHeading, LedgerLine, Stat, signedClass } from './ui.jsx';
 import { Section } from './Section.jsx';
-
-function Line({ label, value, strong, muted, indent }) {
-  return (
-    <div
-      className={`flex items-baseline justify-between gap-3 py-1 text-sm ${indent ? 'pl-3' : ''} ${
-        strong ? 'border-t border-hairline pt-2 font-semibold text-zinc-900 dark:text-zinc-100' : ''
-      } ${muted ? 'text-zinc-500 dark:text-zinc-400' : 'text-zinc-700 dark:text-zinc-300'}`}
-    >
-      <span>{label}</span>
-      <span className="tabular">{value}</span>
-    </div>
-  );
-}
-
-/** Thin proportional bar showing how much of gross rent each outflow eats. */
-function WaterfallRow({ label, amount, rent, kind }) {
-  const width = rent > 0 ? Math.min(Math.abs(amount) / rent, 1) * 100 : 0;
-  const bar = { income: 'bg-zinc-400 dark:bg-zinc-500', debt: 'bg-zinc-800 dark:bg-zinc-200', opex: 'bg-amber-500 dark:bg-amber-400' }[kind];
-  return (
-    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-1">
-      <span className="truncate text-sm text-zinc-700 dark:text-zinc-300">{label}</span>
-      <span className="tabular text-right text-sm text-zinc-700 dark:text-zinc-300">
-        {kind === 'income' ? money(amount) : `−${money(amount)}`}
-      </span>
-      <div className="col-span-2 h-1.5 rounded-full bg-well">
-        <div className={`h-1.5 rounded-full ${bar}`} style={{ width: `${width}%` }} />
-      </div>
-    </div>
-  );
-}
 
 export default function LenderVsReality({ a }) {
   const haircut = a.grossRent - a.lenderRent;
   return (
     <Section
       id="sec-lender"
-      icon={Scale}
       title="Where the rent goes"
       value={`${money(a.netCashFlow, { signed: true })}/mo`}
       valueClass={signedClass(a.netCashFlow)}
       meaning={rentFlowMeaning(a)}
       subtitle="Lenders approve on the loan payment, taxes and insurance (PITIA). Your bank account also pays the running costs."
     >
-      <div className="grid gap-6 p-5 @2xl:grid-cols-2">
-        <div>
-          <h3 className="mb-2 eyebrow">What the lender sees</h3>
-          <Line label="Gross monthly rent" value={money(a.grossRent)} />
-          {haircut > 0 && <Line label="Lender rent haircut" value={`−${money(haircut)}`} muted indent />}
+      <div className="grid gap-8 p-5 @2xl:grid-cols-2">
+        <div className="text-sm">
+          <LedgerHeading>What the lender sees</LedgerHeading>
+          <LedgerLine label="Gross monthly rent" value={money(a.grossRent)} />
+          {haircut > 0 && <LedgerLine label="Lender rent haircut" value={money(-haircut)} muted />}
           <div className="mt-2" />
-          <Line label={a.interestOnly ? `Interest only (first ${a.ioYears} yrs)` : 'Principal & interest'} value={money(a.pi, { cents: true })} indent />
-          <Line label="Property taxes" value={money(a.taxes, { cents: true })} indent />
-          <Line label="Insurance" value={money(a.insurance, { cents: true })} indent />
-          <Line label="HOA" value={money(a.hoa, { cents: true })} indent />
-          <Line label="PITIA" value={money(a.pitia, { cents: true })} strong />
-          <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-well px-3 py-2.5">
-            <span className="text-sm text-zinc-600 dark:text-zinc-300">
+          <LedgerLine label={a.interestOnly ? `Interest only (first ${a.ioYears} yrs)` : 'Principal & interest'} value={money(a.pi, { cents: true })} />
+          <LedgerLine label="Property taxes" value={money(a.taxes, { cents: true })} />
+          <LedgerLine label="Insurance" value={money(a.insurance, { cents: true })} />
+          <LedgerLine label="HOA" value={money(a.hoa, { cents: true })} />
+          <LedgerLine label="PITIA" value={money(a.pitia, { cents: true })} sum />
+          <div className="mt-3 flex items-center justify-between gap-2 rounded-md bg-well px-3 py-2.5">
+            <span className="tabular text-zinc-600 dark:text-zinc-300">
               DSCR = {money(a.lenderRent)} ÷ {money(a.pitia)}
             </span>
             <DscrChip status={a.status} dscr={a.dscr} size="sm" />
@@ -68,11 +36,11 @@ export default function LenderVsReality({ a }) {
             {DSCR_BANDS.map((b) => (
               <div
                 key={b.key}
-                className={`grid grid-cols-[auto_5.5rem_minmax(0,1fr)] items-baseline gap-2 rounded-lg px-2 py-1 ${
-                  b.key === a.status.key ? 'bg-white/70 text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white' : 'text-zinc-500 dark:text-zinc-400'
+                className={`grid grid-cols-[auto_5.5rem_minmax(0,1fr)] items-baseline gap-2 rounded-[3px] px-2 py-1 ${
+                  b.key === a.status.key ? 'bg-well text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400'
                 }`}
               >
-                <span className="size-2 translate-y-[-1px] rounded-sm" style={{ background: b.color }} aria-hidden />
+                <span className="size-2 translate-y-[-1px] rounded-[2px]" style={{ background: b.color }} aria-hidden />
                 <dt className="tabular">{b.short}</dt>
                 <dd>
                   <span className="font-medium">{b.label}.</span> {BAND_MEANINGS[b.key]}
@@ -82,18 +50,20 @@ export default function LenderVsReality({ a }) {
           </dl>
         </div>
 
-        <div>
-          <h3 className="mb-2 eyebrow">What actually hits your account</h3>
-          <WaterfallRow label="Gross monthly rent" amount={a.grossRent} rent={a.grossRent} kind="income" />
-          <WaterfallRow label="PITIA" amount={a.pitia} rent={a.grossRent} kind="debt" />
-          <WaterfallRow label="Property management" amount={a.opex.management} rent={a.grossRent} kind="opex" />
-          <WaterfallRow label="Maintenance & repairs" amount={a.opex.maintenance} rent={a.grossRent} kind="opex" />
-          <WaterfallRow label="Vacancy reserve" amount={a.opex.vacancy} rent={a.grossRent} kind="opex" />
-          <WaterfallRow label="CapEx reserve" amount={a.opex.capex} rent={a.grossRent} kind="opex" />
-          <div className="mt-2 flex items-baseline justify-between border-t border-hairline pt-2">
-            <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Real net cash flow</span>
-            <span className={`tabular text-lg font-semibold ${signedClass(a.netCashFlow)}`}>{money(a.netCashFlow, { signed: true, cents: true })}</span>
-          </div>
+        <div className="text-sm">
+          <LedgerHeading>What actually hits your account</LedgerHeading>
+          <LedgerLine label="Gross monthly rent" value={money(a.grossRent)} />
+          <LedgerLine label="PITIA" value={money(-a.pitia)} />
+          <LedgerLine label="Property management" value={money(-a.opex.management)} />
+          <LedgerLine label="Maintenance & repairs" value={money(-a.opex.maintenance)} />
+          <LedgerLine label="Vacancy reserve" value={money(-a.opex.vacancy)} />
+          <LedgerLine label="CapEx reserve" value={money(-a.opex.capex)} />
+          <LedgerLine
+            label="Real net cash flow"
+            value={money(a.netCashFlow, { signed: true, cents: true })}
+            valueClass={`text-lg ${signedClass(a.netCashFlow)}`}
+            total
+          />
         </div>
       </div>
 

@@ -54,11 +54,11 @@ export function verdict(a) {
   return { key: 'good', tone: 'good', label: 'Makes money each month' };
 }
 
-// Soft glow behind a summary card, keyed to the verdict's tone.
-export const TONE_GLOW = {
-  bad: 'from-red-500/20 via-red-400/5',
-  warn: 'from-amber-400/20 via-amber-300/5',
-  good: 'from-emerald-500/20 via-emerald-400/5',
+// Verdict text, keyed to its tone.
+export const TONE_TEXT = {
+  bad: 'text-red-700 dark:text-red-400',
+  warn: 'text-amber-700 dark:text-amber-300',
+  good: 'text-emerald-700 dark:text-emerald-400',
 };
 
 export const TONE_CLASSES = {

@@ -1,22 +1,9 @@
-import { AlertTriangle, Repeat } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { refiMeaning } from '../lib/explain.js';
 import { money, percent, ratio } from '../lib/format.js';
-import { DscrChip, Stat, signedClass } from './ui.jsx';
-import { InfoTip, Num } from './motion.jsx';
+import { DscrChip, Figure, LedgerLine, Stat, signedClass } from './ui.jsx';
+import { Num } from './motion.jsx';
 import { Section } from './Section.jsx';
-
-function Step({ label, value, op, strong, tip }) {
-  return (
-    <div className={`flex items-baseline justify-between gap-3 py-1.5 text-sm ${strong ? 'mt-1 border-t border-hairline pt-2.5 font-semibold text-zinc-900 dark:text-white' : 'text-zinc-600 dark:text-zinc-300'}`}>
-      <span className="flex items-center gap-1">
-        {op && <span className="tabular w-3 text-zinc-500 dark:text-zinc-400">{op}</span>}
-        {label}
-        {tip && <InfoTip k={tip} />}
-      </span>
-      <span className="tabular">{value}</span>
-    </div>
-  );
-}
 
 /** The planned cash-out refinance: what it pays off, what it hands back, and the deal on the new loan. */
 export default function RefiCard({ refi, a, deal }) {
@@ -25,44 +12,33 @@ export default function RefiCard({ refi, a, deal }) {
   return (
     <Section
       id="sec-refi"
-      icon={Repeat}
       title={`Cash-out refinance after ${yrs}`}
       value={refi.cashOut >= 0 ? `${money(refi.cashOut)} out` : `${money(-refi.cashOut)} in`}
       valueClass={signedClass(refi.cashOut)}
       meaning={refiMeaning(refi, a)}
       subtitle={`${Number(deal.refiLtv)}% of the value at that point, at ${Number(deal.refiRate)}% over ${deal.refiTermYears} years.`}
-      className="overflow-hidden"
     >
-      <div className="grid gap-8 p-6 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-        <div>
-          <Step label={`Value after ${yrs}`} value={money(refi.value)} />
-          <Step label={`New loan (${Number(deal.refiLtv)}% LTV)`} value={money(refi.newLoan)} />
-          <Step op="−" label="Pay off the original loan" value={money(refi.oldBalance)} />
-          {refi.penalty > 0 && <Step op="−" label="Prepayment penalty" tip="prepay" value={money(refi.penalty)} />}
-          <Step op="−" label={`Refinance costs (${Number(deal.refiCostPct)}%)`} value={money(refi.costs)} />
-          <div className="mt-1 flex items-baseline justify-between gap-3 border-t border-hairline pt-3">
-            <span className="text-sm font-semibold text-zinc-900 dark:text-white">{refi.cashOut >= 0 ? 'Cash out to you' : 'Cash you’d need to bring'}</span>
-            <span className={`tabular text-2xl font-semibold tracking-tight ${signedClass(refi.cashOut)}`}>
-              <Num value={Math.abs(refi.cashOut)} format={(v) => money(v)} />
-            </span>
-          </div>
+      <div className="grid gap-8 p-5 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+        <div className="text-sm">
+          <LedgerLine label={`Value after ${yrs}`} value={money(refi.value)} />
+          <LedgerLine label={`New loan (${Number(deal.refiLtv)}% LTV)`} value={money(refi.newLoan)} />
+          <LedgerLine label="Pay off the original loan" value={money(-refi.oldBalance)} />
+          {refi.penalty > 0 && <LedgerLine label="Prepayment penalty" tip="prepay" value={money(-refi.penalty)} />}
+          <LedgerLine label={`Refinance costs (${Number(deal.refiCostPct)}%)`} value={money(-refi.costs)} />
+          <LedgerLine
+            label={refi.cashOut >= 0 ? 'Cash out to you' : 'Cash you’d need to bring'}
+            value={<Num value={Math.abs(refi.cashOut)} format={(v) => money(v)} />}
+            valueClass={`text-2xl tracking-tight ${signedClass(refi.cashOut)}`}
+            total
+          />
         </div>
 
         <div className="grid content-start gap-4">
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500/15 via-emerald-400/5 to-transparent p-6 ring-1 ring-emerald-600/15 ring-inset dark:from-emerald-400/15 dark:ring-emerald-300/15">
-            <div className="eyebrow flex items-center gap-1">
-              Cash left in the deal
-              <InfoTip k="cashLeft" />
-            </div>
-            <div className="mt-2 text-5xl font-semibold tracking-tight text-zinc-950 dark:text-white">
-              {refi.allCashBack ? 'All back' : <Num value={refi.cashLeft} format={(v) => money(v)} />}
-            </div>
-            <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">
-              {refi.allCashBack
-                ? `You recover all ${money(a.cashInvested)} you put in, plus ${money(-refi.cashLeft)}, and still own the property with ${money(refi.equityAfter)} of equity.`
-                : `Of the ${money(a.cashInvested)} you put in, ${money(Math.max(refi.cashOut, 0))} comes back. Equity after the refinance: ${money(refi.equityAfter)}.`}
-            </p>
-          </div>
+          <Figure label="Cash left in the deal" tip="cashLeft" value={refi.allCashBack ? 'All back' : <Num value={refi.cashLeft} format={(v) => money(v)} />}>
+            {refi.allCashBack
+              ? `You recover all ${money(a.cashInvested)} you put in, plus ${money(-refi.cashLeft)}, and still own the property with ${money(refi.equityAfter)} of equity.`
+              : `Of the ${money(a.cashInvested)} you put in, ${money(Math.max(refi.cashOut, 0))} comes back. Equity after the refinance: ${money(refi.equityAfter)}.`}
+          </Figure>
 
           <div className="grid grid-cols-2 gap-4 px-1 @lg:grid-cols-4 @3xl:grid-cols-2 @5xl:grid-cols-4">
             <Stat label="New payment" value={money(refi.payment)} sub={`was ${money(a.pi)}`} />
@@ -77,7 +53,7 @@ export default function RefiCard({ refi, a, deal }) {
           </div>
 
           {(lenderNo || refi.netCashFlow < 0) && (
-            <p className="flex gap-2 rounded-2xl bg-amber-400/10 p-3.5 text-xs leading-relaxed text-amber-900 ring-1 ring-amber-500/25 ring-inset dark:text-amber-100">
+            <p className="flex gap-2 rounded-md bg-amber-400/10 p-3.5 text-xs leading-relaxed text-amber-900 ring-1 ring-amber-500/25 ring-inset dark:text-amber-100">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
               {lenderNo
                 ? `A DSCR lender is unlikely to approve this refinance: the new loan's DSCR is ${ratio(refi.dscr)}. Try a lower LTV.`

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { MessageSquareText, RefreshCw, Sparkles, Square } from 'lucide-react';
+import { MessageSquareText, RefreshCw, Square } from 'lucide-react';
 import { capability } from '../lib/runtime.js';
 import { buildOpinionPrompt, parseOpinion } from '../lib/opinion.js';
 import { Button } from './ui.jsx';
@@ -78,7 +78,6 @@ export default function SecondOpinion({ item, targets }) {
   return (
     <Section
       id="sec-opinion"
-      icon={Sparkles}
       title="Second opinion"
       meaning={
         busy
@@ -87,7 +86,6 @@ export default function SecondOpinion({ item, targets }) {
             ? 'Claude’s review is ready: a verdict, the risks and what to double-check.'
             : 'Ask Claude to check this deal’s numbers and assumptions, like an underwriter would.'
       }
-      className="relative overflow-hidden"
       actions={
         busy ? (
           <Button onClick={() => ctl.current?.abort()}>
@@ -100,8 +98,7 @@ export default function SecondOpinion({ item, targets }) {
         ) : null
       }
     >
-      <div aria-hidden className="pointer-events-none absolute -top-32 -right-20 size-80 rounded-full bg-radial from-violet-400/20 via-sky-300/10 to-transparent to-70% blur-2xl" />
-      <div className="relative p-6">
+      <div className="p-5">
         {state.phase === 'idle' ? (
           <div className="flex flex-wrap items-center justify-between gap-4">
             <p className="max-w-xl text-sm text-zinc-600 dark:text-zinc-400">
@@ -127,7 +124,7 @@ export default function SecondOpinion({ item, targets }) {
               <div className="grid max-w-3xl gap-1.5 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
                 {blocks.map((b, i) =>
                   b.type === 'heading' ? (
-                    <h3 key={i} className="eyebrow mt-3 first:mt-0">
+                    <h3 key={i} className="caption mt-3 first:mt-0">
                       <Spans spans={b.spans} />
                     </h3>
                   ) : b.type === 'bullet' ? (

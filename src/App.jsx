@@ -17,7 +17,6 @@ import {
   LayoutDashboard,
   ListTree,
   Moon,
-  Pencil,
   Plus,
   Radar,
   RotateCcw,
@@ -35,8 +34,8 @@ import { useTheme } from './hooks/useTheme.js';
 import { useExports } from './hooks/useExports.js';
 import { useMediaQuery, prefersReducedMotion } from './hooks/useMediaQuery.js';
 import { useMarket } from './hooks/useMarket.js';
-import { OWN_DOWN_PCT, analyzeDeal, applyAdjustments, isNeutralAdjustment, maxOffer, projectDeal, refiAnalysis, saleAnalysis } from './lib/finance.js';
-import { money, ratio } from './lib/format.js';
+import { OWN_DOWN_PCT, analyzeDeal, applyAdjustments, isNeutralAdjustment, maxOffer, ownMoney, projectDeal, refiAnalysis, saleAnalysis } from './lib/finance.js';
+import { money, percent, ratio } from './lib/format.js';
 import { DEFAULT_DEAL, MAX_COMPARE, switchRules } from './lib/presets.js';
 import { listingToDeal, normalizeMarket, rankListings } from './lib/market.js';
 import { quickDeal } from './lib/quick.js';
@@ -58,10 +57,11 @@ import DealMemo from './components/DealMemo.jsx';
 import CommandPalette, { shortcutLabel } from './components/CommandPalette.jsx';
 import Sheet from './components/Sheet.jsx';
 import Welcome from './components/Welcome.jsx';
-import { SectionsContext, useSectionsState } from './components/Section.jsx';
+import { SectionGroup, SectionsContext, useSectionsState } from './components/Section.jsx';
+import Dock from './components/Dock.jsx';
 import Logo, { LogoMark } from './components/Logo.jsx';
 import { useToast } from './components/toast.jsx';
-import { Button, ConfirmButton, Segmented, SkeletonCard } from './components/ui.jsx';
+import { Button, ConfirmButton, SkeletonCard, signedClass } from './components/ui.jsx';
 
 // Views and charts load on demand so the first screen arrives quickly.
 const PortfolioView = lazy(() => import('./components/PortfolioView.jsx'));
@@ -184,7 +184,12 @@ function useStoredView() {
 }
 
 const headerIcon =
-  'inline-flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-sm font-medium text-zinc-600 transition hover:bg-zinc-950/5 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white';
+  'inline-flex items-center gap-1.5 rounded-md px-2.5 py-2 text-sm font-medium text-zinc-600 transition hover:bg-well hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:text-zinc-300 dark:hover:text-white';
+
+const tabClass = (current) =>
+  `flex shrink-0 items-center gap-1.5 border-b-2 px-3 text-sm whitespace-nowrap transition focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 ${
+    current ? 'border-(--accent) font-semibold text-zinc-950 dark:text-white' : 'border-transparent font-medium text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white'
+  }`;
 
 export default function App() {
   const lib = useDeals();
@@ -346,7 +351,7 @@ export default function App() {
   const revealTabs = () => {
     showAllTabs();
     // The More button goes away: hand focus to the first tab it brought out.
-    requestAnimationFrame(() => document.querySelector(`nav[aria-label="Views"] [role="radio"]:nth-child(${BASIC_VIEWS.size + 1})`)?.focus());
+    requestAnimationFrame(() => document.querySelector(`header nav[aria-label="Views"] button:nth-child(${BASIC_VIEWS.size + 1})`)?.focus());
   };
   const importedIds = useMemo(() => new Set(deals.map((d) => d.listingId).filter(Boolean)), [deals]);
   // A listing opens as a deal with the loan its view counts: a DSCR loan on
@@ -500,6 +505,16 @@ export default function App() {
     />
   );
 
+  // On a phone, the bar above the tabs keeps the deal's result in view: the
+  // DSCR loan on Analyze (with any what-if), your own 20% down on Cash.
+  const own = useMemo(() => analyzeDeal(ownMoney(active)), [active]);
+  const dockResult =
+    view === 'analyze'
+      ? { value: money(a.netCashFlow, { signed: true }), valueClass: signedClass(a.netCashFlow), sub: `${percent(a.coc, 1)} return · DSCR ${ratio(a.dscr)}` }
+      : view === 'cash'
+        ? { value: money(own.netCashFlow, { signed: true }), valueClass: signedClass(own.netCashFlow), sub: `${percent(own.coc, 1)} return · ${money(own.pi)} mortgage` }
+        : null;
+
   const inputs = (
     <InputsPanel
       deal={active}
@@ -515,46 +530,41 @@ export default function App() {
   return (
     <SectionsContext.Provider value={sections}>
       <div className="relative min-h-screen print:hidden">
-        <div aria-hidden className="app-backdrop">
-          <div className="app-grid" />
-          <div className="app-grain" />
-        </div>
         <a
           href="#main"
-          className="sr-only z-[100] rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+          className="sr-only z-[100] rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
         >
           Skip to content
         </a>
 
-        <header className="gutter relative z-30 pt-3 lg:sticky lg:top-[env(safe-area-inset-top,0px)]">
-          <div className="glass mx-auto flex max-w-[1500px] flex-wrap items-center gap-x-4 gap-y-2.5 rounded-2xl px-3 py-2.5 sm:px-4">
-            <h1 className="shrink-0">
+        <header className="relative z-30 border-b border-hairline bg-(--page) lg:sticky lg:top-[env(safe-area-inset-top,0px)]">
+          <div className="gutter mx-auto flex max-w-[1500px] flex-wrap items-center gap-x-5 gap-y-2 py-2 lg:flex-nowrap lg:py-0">
+            <h1 className="shrink-0 lg:py-3">
               <Logo />
             </h1>
 
-            {/* Phones and tablets: views get their own row. From lg up everything shares one row; icons drop until xl to make room. */}
-            <nav
-              aria-label="Views"
-              className="order-3 flex w-full items-center gap-1.5 overflow-x-auto lg:order-none lg:w-auto lg:min-w-0 lg:flex-1 lg:justify-center-safe lg:max-xl:[&_svg]:hidden"
-            >
-              <div className="min-w-0 flex-1 md:flex-none">
-                <Segmented label="View" value={view} onChange={setView} options={tabs} stretch />
-              </div>
+            {/* From lg up the views are text tabs here; phones and tablets get them along the bottom (Dock). */}
+            <nav aria-label="Views" className="thin-scroll hidden min-w-0 flex-1 self-stretch overflow-x-auto lg:flex">
+              {tabs.map((v) => (
+                <button key={v.value} type="button" aria-current={v.value === view ? 'page' : undefined} onClick={() => setView(v.value)} className={tabClass(v.value === view)}>
+                  {v.label}
+                </button>
+              ))}
               {!tabsUnlocked && (
-                <button type="button" onClick={revealTabs} className={`${headerIcon} shrink-0`} aria-label="More tabs: Portfolio, Compare and Plan" title="More tabs">
+                <button type="button" onClick={revealTabs} className={tabClass(false)} aria-label="More tabs: Portfolio, Compare and Plan" title="More tabs">
                   <Ellipsis className="size-4" aria-hidden /> More
                 </button>
               )}
             </nav>
 
-            <div className="order-4 w-full md:order-none md:ml-auto md:w-auto lg:ml-0">
+            <div className="order-4 w-full pb-1 lg:order-none lg:w-auto lg:pb-0">
               <DealPicker items={baseItems} activeId={activeId} onSelect={pickDeal} onNew={newDeal} />
             </div>
 
-            <div className="ml-auto flex items-center gap-1 md:ml-0">
+            <div className="ml-auto flex items-center gap-1 lg:ml-0">
               <button type="button" onClick={() => setPaletteOpen(true)} className={headerIcon} aria-label="Search deals and commands" title={`Search (${shortcutLabel})`}>
                 <Search className="size-4" aria-hidden />
-                <kbd className="hidden rounded-md bg-zinc-950/[0.06] px-1.5 py-0.5 font-sans text-[11px] text-zinc-500 min-[1400px]:inline dark:bg-white/10 dark:text-zinc-400">{shortcutLabel}</kbd>
+                <kbd className="hidden rounded-[3px] px-1.5 py-0.5 font-sans text-[11px] text-zinc-500 ring-1 ring-(--line-strong) ring-inset min-[1400px]:inline dark:text-zinc-400">{shortcutLabel}</kbd>
               </button>
               {/* On phones, export and start-over live in the search menu to keep the header to one row. */}
               <div className="max-sm:hidden">
@@ -642,7 +652,6 @@ export default function App() {
                 deal={current.deal}
                 a={a}
                 base={neutral ? null : base.a}
-                targets={targets}
                 onShare={() => setShareOpen(true)}
                 whatIf={neutral ? null : { text: whatIfSummary(active, adj) ?? 'Testing new numbers.', onReset: () => setAdj(NO_ADJ), onApply: applyWhatIf }}
               />
@@ -650,7 +659,7 @@ export default function App() {
               <div className="grid gap-6 lg:grid-cols-12">
                 {isDesktop && (
                   <aside className="lg:col-span-4 xl:col-span-3" aria-label="Deal inputs">
-                    <div className="thin-scroll lg:sticky lg:top-28 lg:max-h-[calc(100vh-8.5rem)] lg:overflow-y-auto lg:rounded-3xl">{inputs}</div>
+                    <div className="thin-scroll lg:sticky lg:top-20 lg:max-h-[calc(100vh-6.5rem)] lg:overflow-y-auto lg:rounded-md">{inputs}</div>
                   </aside>
                 )}
 
@@ -664,22 +673,24 @@ export default function App() {
                       {allOpen ? 'Close all' : 'Open all'}
                     </Button>
                   </div>
-                  <LenderVsReality a={a} />
-                  <MaxOfferCard
-                    deal={current.deal}
-                    targets={targets}
-                    onTargets={(patch) => lib.updateSettings('targets', patch)}
-                    onUsePrice={(price) => withUndo(`Price set to ${money(price)}`, () => lib.updateDeal(active.id, { price }))}
-                  />
-                  {sliders}
-                  <StressTestCard deal={active} adj={adj} onPick={(p) => setAdj((x) => ({ ...x, ...p }))} />
-                  <Suspense fallback={<SkeletonCard className="h-20" />}>
-                    <ProjectionChart rows={current.rows} a={a} deal={current.deal} dark={dark} appreciationPct={Number(current.deal.appreciationPct)} />
-                  </Suspense>
-                  {current.refi && <RefiCard refi={current.refi} a={a} deal={current.deal} />}
-                  <ExitCard sale={current.sale} deal={current.deal} />
-                  <TaxCard deal={current.deal} tax={lib.settings.tax} onTax={(patch) => lib.updateSettings('tax', patch)} />
-                  <SecondOpinion item={current} targets={targets} />
+                  <SectionGroup>
+                    <LenderVsReality a={a} />
+                    <MaxOfferCard
+                      deal={current.deal}
+                      targets={targets}
+                      onTargets={(patch) => lib.updateSettings('targets', patch)}
+                      onUsePrice={(price) => withUndo(`Price set to ${money(price)}`, () => lib.updateDeal(active.id, { price }))}
+                    />
+                    {sliders}
+                    <StressTestCard deal={active} adj={adj} onPick={(p) => setAdj((x) => ({ ...x, ...p }))} />
+                    <Suspense fallback={<div className="skeleton h-16" />}>
+                      <ProjectionChart rows={current.rows} a={a} deal={current.deal} dark={dark} appreciationPct={Number(current.deal.appreciationPct)} />
+                    </Suspense>
+                    {current.refi && <RefiCard refi={current.refi} a={a} deal={current.deal} />}
+                    <ExitCard sale={current.sale} deal={current.deal} />
+                    <TaxCard deal={current.deal} tax={lib.settings.tax} onTax={(patch) => lib.updateSettings('tax', patch)} />
+                    <SecondOpinion item={current} targets={targets} />
+                  </SectionGroup>
                 </div>
               </div>
             </>
@@ -689,7 +700,7 @@ export default function App() {
             <div className="grid gap-6 lg:grid-cols-12">
               {isDesktop && (
                 <aside className="lg:col-span-4 xl:col-span-3" aria-label="Deal inputs">
-                  <div className="thin-scroll lg:sticky lg:top-28 lg:max-h-[calc(100vh-8.5rem)] lg:overflow-y-auto lg:rounded-3xl">{inputs}</div>
+                  <div className="thin-scroll lg:sticky lg:top-20 lg:max-h-[calc(100vh-6.5rem)] lg:overflow-y-auto lg:rounded-md">{inputs}</div>
                 </aside>
               )}
               <div className="min-w-0 lg:col-span-8 xl:col-span-9">
@@ -710,23 +721,12 @@ export default function App() {
           )}
 
           {(view === 'analyze' || view === 'cash') && !isDesktop && (
-            // display: contents keeps main's space-y margin off these fixed overlays.
-            <div className="contents">
-              <button
-                type="button"
-                onClick={() => setSheetOpen(true)}
-                className="fixed z-40 inline-flex items-center gap-2 rounded-full bg-gradient-to-b from-emerald-600 to-emerald-700 px-5 py-3.5 text-sm font-semibold text-white shadow-[0_16px_32px_-12px_rgb(5_150_105/0.8),inset_0_1px_0_rgb(255_255_255/0.25)] ring-1 ring-emerald-800/40 transition ring-inset focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 active:scale-[0.98] print:hidden"
-                style={{ right: 'max(16px, env(safe-area-inset-right, 0px))', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
-              >
-                <Pencil className="size-4" aria-hidden /> Edit deal
-              </button>
-              <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={`Edit “${active.name}”`}>
-                {inputs}
-              </Sheet>
-            </div>
+            <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={`Edit “${active.name}”`}>
+              {inputs}
+            </Sheet>
           )}
 
-          <footer className="mt-4 flex flex-col gap-4 border-t border-hairline pt-6 pb-24 text-xs leading-relaxed text-zinc-500 sm:flex-row sm:items-start lg:pb-10 dark:text-zinc-400">
+          <footer className="dock-space mt-4 flex flex-col gap-4 border-t border-hairline pt-6 text-xs leading-relaxed text-zinc-500 sm:flex-row sm:items-start dark:text-zinc-400">
             <div className="flex shrink-0 flex-col gap-2">
               <div className="flex items-center gap-2">
                 <LogoMark className="size-6" />
@@ -742,6 +742,7 @@ export default function App() {
             </p>
           </footer>
         </main>
+        {!isDesktop && <Dock views={VIEWS} view={view} onView={setView} result={dockResult} onEdit={() => setSheetOpen(true)} />}
       </div>
 
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} commands={commands} />}
@@ -753,7 +754,7 @@ export default function App() {
             country={homeRules}
             rents={rents}
             onQuickCheck={quickCheck}
-            moreHidden={!tabsUnlocked}
+            moreHidden={isDesktop && !tabsUnlocked}
             onShowAll={showAllTabs}
           />
         </Suspense>

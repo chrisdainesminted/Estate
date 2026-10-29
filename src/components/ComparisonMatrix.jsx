@@ -1,11 +1,11 @@
-import { AlertTriangle, Check, Copy, Columns3, Pencil, Plus, TrendingUp, Trophy, X } from 'lucide-react';
+import { AlertTriangle, Check, Copy, Columns3, Pencil, Plus, Trophy, X } from 'lucide-react';
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { chartTheme, niceScale } from '../lib/chartTheme.js';
 import { TONE_CLASSES, verdict } from '../lib/dscr.js';
 import { compactMoney, money, percent } from '../lib/format.js';
 import { MAX_COMPARE } from '../lib/presets.js';
 import { Button, Card, CardHeader, DscrChip, signedClass } from './ui.jsx';
-import { Section } from './Section.jsx';
+import { Section, SectionGroup } from './Section.jsx';
 import { compareSummary } from '../lib/explain.js';
 import { CHART_ANIMATE, InfoTip } from './motion.jsx';
 
@@ -78,7 +78,7 @@ export function CompareSelector({ items, compare, slotOf, onToggle, dark }) {
   return (
     <Card delay={40} className="px-5 py-4 sm:px-6">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <span className="eyebrow mr-1">
+        <span className="caption mr-1">
           Comparing {compare.length} of {MAX_COMPARE}
         </span>
         {items.map(({ deal }) => {
@@ -92,14 +92,14 @@ export function CompareSelector({ items, compare, slotOf, onToggle, dark }) {
               disabled={!on && full}
               onClick={() => onToggle(deal.id)}
               title={!on && full ? `Remove a deal first: up to ${MAX_COMPARE} side by side` : undefined}
-              className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${
+              className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-40 ${
                 on
-                  ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950'
-                  : 'bg-white/50 text-zinc-700 ring-1 ring-zinc-950/10 ring-inset hover:bg-white/80 dark:bg-white/[0.05] dark:text-zinc-300 dark:ring-white/10 dark:hover:bg-white/10'
+                  ? 'bg-zinc-950/[0.05] font-semibold text-zinc-950 ring-1 ring-zinc-500 ring-inset dark:bg-white/[0.07] dark:text-white'
+                  : 'font-medium text-zinc-700 ring-1 ring-(--line-strong) ring-inset hover:bg-well dark:text-zinc-300'
               }`}
             >
               {on ? (
-                <span className="size-2.5 rounded-full ring-2 ring-white/40" style={{ background: theme.series[slot] }} aria-hidden />
+                <span className="size-2.5 rounded-[2px]" style={{ background: theme.series[slot] }} aria-hidden />
               ) : (
                 <Plus className="size-3.5 opacity-60" aria-hidden />
               )}
@@ -117,7 +117,7 @@ function CompareTooltip({ active, payload, label, items, theme }) {
   if (!active || !payload?.length) return null;
   const row = payload[0].payload;
   return (
-    <div className="glass-strong min-w-56 rounded-2xl p-3.5 text-xs">
+    <div className="popover min-w-56 rounded-2xl p-3.5 text-xs">
       <div className="mb-1.5 font-semibold text-zinc-900 dark:text-zinc-100">Profit if sold in year {label}</div>
       {items.map((x) => (
         <div key={x.deal.id} className="flex items-center justify-between gap-4 py-0.5">
@@ -210,8 +210,8 @@ function CompareChart({ items, dark }) {
   );
 }
 
-const iconBtn = 'rounded-md p-1 text-zinc-500 transition dark:text-zinc-400 hover:bg-zinc-950/5 hover:text-zinc-700 dark:hover:bg-white/10 dark:hover:text-zinc-200';
-const stickyCell = 'max-lg:sticky max-lg:left-0 max-lg:z-10 max-lg:bg-(--glass-strong) max-lg:backdrop-blur-xl';
+const iconBtn = 'rounded-md p-1 text-zinc-500 transition dark:text-zinc-400 hover:bg-well hover:text-zinc-700 dark:hover:text-zinc-200';
+const stickyCell = 'max-lg:sticky max-lg:left-0 max-lg:z-10 max-lg:bg-(--panel)';
 
 export default function ComparisonMatrix({ items, activeId, onEdit, onDuplicate, onRemove, onAdd, canAdd, dark, adjusted }) {
   const theme = chartTheme(dark);
@@ -229,7 +229,6 @@ export default function ComparisonMatrix({ items, activeId, onEdit, onDuplicate,
     <div className="space-y-6">
       <Card delay={120}>
         <CardHeader
-          icon={Columns3}
           title="Side-by-side comparison"
           subtitle={adjusted ? 'Showing what-if values from the sensitivity sliders.' : 'Best value in each row is marked with a trophy.'}
           actions={
@@ -256,7 +255,7 @@ export default function ComparisonMatrix({ items, activeId, onEdit, onDuplicate,
           <table className="w-full min-w-[560px] text-sm">
             <thead>
               <tr>
-                <th className={`eyebrow w-52 px-6 py-4 text-left font-medium ${stickyCell}`}>Metric</th>
+                <th className={`caption w-52 px-6 py-4 text-left font-medium ${stickyCell}`}>Metric</th>
                 {items.map((x) => (
                   <th key={x.deal.id} className="px-4 py-3 text-right align-top">
                     <div className="flex items-center justify-end gap-2">
@@ -291,7 +290,7 @@ export default function ComparisonMatrix({ items, activeId, onEdit, onDuplicate,
                 if (row.group) {
                   return (
                     <tr key={row.group} className="bg-well">
-                      <th colSpan={items.length + 1} className="eyebrow sticky left-0 px-6 py-2 text-left">
+                      <th colSpan={items.length + 1} className="caption sticky left-0 px-6 py-2 text-left">
                         {row.group}
                       </th>
                     </tr>
@@ -329,7 +328,7 @@ export default function ComparisonMatrix({ items, activeId, onEdit, onDuplicate,
                   const v = verdict(x.a);
                   return (
                     <td key={x.deal.id} className="px-4 py-3 text-right">
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ring-1 ring-inset ${TONE_CLASSES[v.tone]}`}>
+                      <span className={`inline-flex items-center gap-1 rounded-[3px] px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap ring-1 ring-inset ${TONE_CLASSES[v.tone]}`}>
                         {v.key === 'trap' && <AlertTriangle className="size-3" aria-hidden />}
                         {v.label}
                       </span>
@@ -342,17 +341,18 @@ export default function ComparisonMatrix({ items, activeId, onEdit, onDuplicate,
         </div>
       </Card>
 
-      <Section
-        id="cmp-profit"
-        icon={TrendingUp}
-        title="Profit if you sell, by year"
-        meaning="What each deal would leave you with if sold in any year. Where a line crosses $0 is the earliest a sale breaks even."
-        subtitle="Cash flow + sale price − selling costs − loan payoff − cash invested."
-      >
-        <div className="p-6">
-          <CompareChart items={items} dark={dark} />
-        </div>
-      </Section>
+      <SectionGroup>
+        <Section
+          id="cmp-profit"
+          title="Profit if you sell, by year"
+          meaning="What each deal would leave you with if sold in any year. Where a line crosses $0 is the earliest a sale breaks even."
+          subtitle="Cash flow + sale price − selling costs − loan payoff − cash invested."
+        >
+          <div className="p-5">
+            <CompareChart items={items} dark={dark} />
+          </div>
+        </Section>
+      </SectionGroup>
     </div>
   );
 }

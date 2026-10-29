@@ -8,9 +8,9 @@ function MenuItem({ icon: Icon, title, sub, onClick, busy }) {
       role="menuitem"
       onClick={onClick}
       disabled={busy}
-      className="flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-zinc-950/[0.04] disabled:opacity-60 dark:hover:bg-white/[0.06]"
+      className="flex w-full items-start gap-3 rounded-[3px] px-3 py-2.5 text-left transition hover:bg-well disabled:opacity-60"
     >
-      <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+      <span className="mt-0.5 grid size-5 shrink-0 place-items-center text-zinc-500 dark:text-zinc-400">
         {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Icon className="size-4" aria-hidden />}
       </span>
       <span>
@@ -46,13 +46,13 @@ export default function ExportMenu({ current, count, exports }) {
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         title="Export"
-        className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-sm font-medium text-zinc-600 transition hover:bg-zinc-950/5 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white"
+        className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-2 text-sm font-medium text-zinc-600 transition hover:bg-well hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:text-zinc-300 dark:hover:text-white"
       >
         <Download className="size-4" aria-hidden />
         <span className="max-[1400px]:sr-only">Export</span>
       </button>
       {open && (
-        <div role="menu" className="glass-strong pop absolute top-full right-0 z-50 mt-2 w-72 rounded-2xl p-1.5">
+        <div role="menu" className="popover pop absolute top-full right-0 z-50 mt-2 w-72 rounded-2xl p-1.5">
           <MenuItem
             icon={FileText}
             title="Deal memo (PDF)"

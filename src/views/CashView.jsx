@@ -1,25 +1,14 @@
 import { useMemo } from 'react';
-import { AlertTriangle, ArrowDownToLine, ArrowLeftRight, CalendarClock, CheckCircle2, ListOrdered, Scale, Target, XCircle } from 'lucide-react';
+import { AlertTriangle, ArrowDownToLine, CheckCircle2, XCircle } from 'lucide-react';
 import { OWN_DOWN_PCT, allCash, analyzeDeal, loanConstant, maxOffer, ownMoney, paybackYears, projectDeal, saleAnalysis } from '../lib/finance.js';
-import {
-  cashFlowMeaning,
-  cashRankingMeaning,
-  cashRentMeaning,
-  cashSaleMeaning,
-  cashSentence,
-  cashYearsMeaning,
-  cocMeaning,
-  leverageMeaning,
-  mortgageMeaning,
-  offerMeaning,
-  ownCashMeaning,
-} from '../lib/explain.js';
-import { TONE_CLASSES, TONE_GLOW } from '../lib/dscr.js';
+import { cashRankingMeaning, cashRentMeaning, cashSaleMeaning, cashSentence, cashYearsMeaning, leverageMeaning, offerMeaning } from '../lib/explain.js';
+import { TONE_TEXT } from '../lib/dscr.js';
 import { money, percent } from '../lib/format.js';
 import { UNIT_TYPES } from '../lib/presets.js';
-import { Button, Card, ExampleTag, KpiTile, NumberField, signedClass } from '../components/ui.jsx';
+import { Button, ExampleTag, Figure, LedgerLine, NumberField, SummaryCard, ViewHeader, signedClass } from '../components/ui.jsx';
 import { InfoTip, Num } from '../components/motion.jsx';
-import { Section } from '../components/Section.jsx';
+import { Section, SectionGroup } from '../components/Section.jsx';
+import DealLedgers from '../components/DealLedgers.jsx';
 import { TargetRow } from '../components/MaxOfferCard.jsx';
 import TaxCard from '../components/TaxCard.jsx';
 
@@ -27,7 +16,6 @@ const YEARS = 10;
 
 const yearsText = (y) => (y == null ? 'Never' : `${y < 10 ? y.toFixed(1) : Math.round(y)} years`);
 const irrText = (x) => (Number.isFinite(x) ? percent(x, 1) : '—');
-const perMonth = <span className="ml-1 text-sm font-medium tracking-normal text-zinc-500 dark:text-zinc-400">/mo</span>;
 
 /** How the deal with 20% down stacks up against your cash-on-cash target. */
 function cashVerdict(c, targets) {
@@ -38,110 +26,64 @@ function cashVerdict(c, targets) {
     : { tone: 'warn', icon: AlertTriangle, label: `Below your ${Number(targets.coc)}% target` };
 }
 
-function CashSummary({ deal, c, targets }) {
+function CashSummary({ deal, own, c, targets }) {
   const v = cashVerdict(c, targets);
   const type = UNIT_TYPES.find((u) => u.key === deal.unitType);
+  const years = paybackYears(c);
   const facts = [
-    money(c.price),
     type?.key === 'multiplex' ? `Multiplex, ${c.units} units` : type?.label,
-    `${money(c.grossRent)}/mo rent`,
+    money(c.price),
     `${OWN_DOWN_PCT}% down, ${Number(deal.rate)}% over ${deal.termYears} years`,
     deal.country === 'ca' && 'Ontario rules',
   ].filter(Boolean);
   return (
-    <Card id="cash-summary" className="relative overflow-hidden">
-      <div aria-hidden className={`pointer-events-none absolute -top-40 -right-24 size-[28rem] rounded-full bg-radial ${TONE_GLOW[v.tone]} to-transparent to-70% blur-2xl`} />
-      <div className="relative px-5 pt-5 sm:px-7 sm:pt-6">
-        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-          <div className="min-w-0">
-            <p className="eyebrow">Your own money, {OWN_DOWN_PCT}% down</p>
-            <h3 className="mt-1 flex min-w-0 items-center gap-2 text-2xl font-semibold tracking-tight text-zinc-950 sm:text-3xl dark:text-white">
-              <span className="truncate">{deal.name}</span>
-              {deal.example && <ExampleTag />}
-            </h3>
-          </div>
-          <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ring-1 ring-inset backdrop-blur ${TONE_CLASSES[v.tone]}`}>
-            <v.icon className="size-4" aria-hidden />
+    <SummaryCard
+      id="cash-summary"
+      head={
+        <>
+          <h3 className="text-xl font-semibold tracking-tight break-words text-zinc-950 sm:text-2xl dark:text-white">
+            {deal.name}
+            {deal.example && <ExampleTag className="ml-2 inline-block align-middle" />}
+          </h3>
+          <p className="tabular mt-1 text-xs text-zinc-500 dark:text-zinc-400">{facts.join(' · ')}</p>
+          <p className={`mt-4 flex items-center gap-1.5 text-[15px] font-semibold ${TONE_TEXT[v.tone]}`}>
+            <v.icon className="size-4 shrink-0" aria-hidden />
             {v.label}
-          </span>
-        </div>
-        <p className="tabular mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">{facts.join(' · ')}</p>
-        {deal.estimated && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Taxes and insurance are estimated from the price: edit the deal once you know the real numbers.</p>}
-        <p className="mt-4 max-w-3xl text-[15px] leading-relaxed font-medium text-zinc-900 sm:text-base dark:text-zinc-100">{cashSentence(c)}</p>
-      </div>
-      <dl className="relative mt-5 grid grid-cols-2 border-t border-hairline lg:grid-cols-4">
-        <KpiTile
-          label="Monthly cash flow"
-          tip="netCashFlow"
-          value={
-            <>
-              <Num value={c.netCashFlow} format={(x) => money(x, { signed: true })} />
-              {perMonth}
-            </>
-          }
-          valueClass={signedClass(c.netCashFlow)}
-          meaning={cashFlowMeaning(c)}
-        />
-        <KpiTile label="Cash-on-cash return" tip="coc" value={<Num value={c.coc} format={(x) => percent(x, 1)} />} valueClass={signedClass(c.coc)} meaning={cocMeaning(c, targets)} />
-        <KpiTile
-          label="Mortgage payment"
-          tip="mortgagePayment"
-          value={
-            <>
-              <Num value={c.pi} format={(x) => money(x)} />
-              {perMonth}
-            </>
-          }
-          meaning={mortgageMeaning(c, deal)}
-        />
-        <KpiTile label="Cash you put in" tip="cashInvested" value={<Num value={c.cashInvested} format={(x) => money(x)} />} meaning={ownCashMeaning(c)} />
-      </dl>
-    </Card>
+          </p>
+          <p className="mt-1 max-w-3xl text-sm leading-relaxed text-zinc-800 dark:text-zinc-200">{cashSentence(c)}</p>
+          {deal.estimated && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Taxes and insurance are estimated from the price: edit the deal once you know the real numbers.</p>}
+        </>
+      }
+    >
+      <DealLedgers deal={own} a={c} lender={false} heading="h4">
+        <LedgerLine label="Cash flow pays it back in" value={years ? yearsText(years) : 'Never'} />
+      </DealLedgers>
+    </SummaryCard>
   );
 }
 
 /** Rent, then the mortgage payment and each cost of owning it, as a share of the rent. */
 function RentSection({ deal, c }) {
-  const costs = [
-    ['Mortgage payment', c.pi, true],
-    ['Property taxes', c.taxes],
-    ['Insurance', c.insurance],
-    ...(c.hoa > 0 ? [[deal.country === 'ca' ? 'Condo fees & utilities' : 'HOA', c.hoa]] : []),
-    ['Property management', c.opex.management],
-    ['Maintenance & repairs', c.opex.maintenance],
-    ['Vacancy reserve', c.opex.vacancy],
-    ['CapEx reserve', c.opex.capex],
-  ];
-  const share = (v) => (c.grossRent > 0 ? `${Math.min(Math.abs(v) / c.grossRent, 1) * 100}%` : '0%');
   return (
     <Section
       id="cash-rent"
-      icon={Scale}
       title="Where the rent goes"
       value={`${money(c.netCashFlow, { signed: true })}/mo`}
       valueClass={signedClass(c.netCashFlow)}
       meaning={cashRentMeaning(c)}
       subtitle="The mortgage payment comes first, then the costs of owning the property."
     >
-      <div className="grid gap-1 p-5">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-1">
-          <span className="text-sm text-zinc-700 dark:text-zinc-300">Rent</span>
-          <span className="tabular text-sm text-zinc-700 dark:text-zinc-300">{money(c.grossRent)}</span>
-          <div className="col-span-2 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-500" />
-        </div>
-        {costs.map(([label, v, loan]) => (
-          <div key={label} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-1">
-            <span className="truncate text-sm text-zinc-700 dark:text-zinc-300">{label}</span>
-            <span className="tabular text-sm text-zinc-700 dark:text-zinc-300">−{money(v)}</span>
-            <div className="col-span-2 h-1.5 rounded-full bg-well">
-              <div className={`h-1.5 rounded-full ${loan ? 'bg-zinc-800 dark:bg-zinc-200' : 'bg-amber-500 dark:bg-amber-400'}`} style={{ width: share(v) }} />
-            </div>
-          </div>
-        ))}
-        <div className="mt-2 flex items-baseline justify-between border-t border-hairline pt-2">
-          <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Left for you each month</span>
-          <span className={`tabular text-lg font-semibold ${signedClass(c.netCashFlow)}`}>{money(c.netCashFlow, { signed: true })}</span>
-        </div>
+      <div className="max-w-xl p-5 text-sm">
+        <LedgerLine label="Rent" value={money(c.grossRent)} />
+        <LedgerLine label="Mortgage payment" value={money(-c.pi)} />
+        <LedgerLine label="Property taxes" value={money(-c.taxes)} />
+        <LedgerLine label="Insurance" value={money(-c.insurance)} />
+        {c.hoa > 0 && <LedgerLine label={deal.country === 'ca' ? 'Condo fees & utilities' : 'HOA'} value={money(-c.hoa)} />}
+        <LedgerLine label="Property management" value={money(-c.opex.management)} />
+        <LedgerLine label="Maintenance & repairs" value={money(-c.opex.maintenance)} />
+        <LedgerLine label="Vacancy reserve" value={money(-c.opex.vacancy)} />
+        <LedgerLine label="CapEx reserve" value={money(-c.opex.capex)} />
+        <LedgerLine label="Left for you each month" value={money(c.netCashFlow, { signed: true })} valueClass={`text-lg ${signedClass(c.netCashFlow)}`} total />
       </div>
     </Section>
   );
@@ -161,7 +103,6 @@ function LeverageSection({ c, cash, sale, cashSale }) {
   return (
     <Section
       id="cash-leverage"
-      icon={ArrowLeftRight}
       title="Mortgage or all cash?"
       value={`${percent(c.coc, 1)} vs ${percent(cash.coc, 1)}`}
       meaning={leverageMeaning(cash, c)}
@@ -171,7 +112,7 @@ function LeverageSection({ c, cash, sale, cashSale }) {
         <table className="w-full text-sm">
           <caption className="sr-only">This deal with {OWN_DOWN_PCT}% down, and bought with all cash</caption>
           <thead>
-            <tr className="eyebrow">
+            <tr className="caption">
               <th scope="col" className="py-1.5 text-left font-medium">
                 <span className="sr-only">Measure</span>
               </th>
@@ -209,7 +150,6 @@ function CashOfferSection({ deal, own, targets, onTargets, onUsePrice }) {
   return (
     <Section
       id="cash-offer"
-      icon={Target}
       title="Most you should pay"
       value={m.price == null || !m.feasible ? null : finite ? money(m.price) : 'No limit'}
       meaning={offerMeaning(m, asking)}
@@ -236,12 +176,8 @@ function CashOfferSection({ deal, own, targets, onTargets, onUsePrice }) {
           <p className="px-1 text-[11px] text-zinc-500 dark:text-zinc-400">These are the same targets the Analyze tab uses.</p>
         </div>
         {finite && (
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500/15 via-emerald-400/5 to-transparent p-6 ring-1 ring-emerald-600/15 ring-inset dark:from-emerald-400/15 dark:ring-emerald-300/15">
-            <div className="eyebrow">Pay up to</div>
-            <div className="mt-1.5 text-4xl font-semibold tracking-tight text-zinc-950 sm:text-5xl dark:text-white">
-              <Num value={m.price} format={(v) => money(v)} />
-            </div>
-            <p className={`tabular mt-2 text-sm font-medium ${m.price >= asking ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
+          <Figure label="Pay up to" value={<Num value={m.price} format={(v) => money(v)} />}>
+            <p className={`tabular text-sm font-medium ${m.price >= asking ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
               {m.price >= asking ? `Asking works, with ${money(m.price - asking)} of room` : `${money(asking - m.price)} under asking (${percent((m.price - asking) / asking, 1)})`}
             </p>
             {Math.abs(rounded - asking) >= 500 && (
@@ -249,7 +185,7 @@ function CashOfferSection({ deal, own, targets, onTargets, onUsePrice }) {
                 <ArrowDownToLine className="size-4" aria-hidden /> Use {money(rounded)} as the price
               </Button>
             )}
-          </div>
+          </Figure>
         )}
       </div>
     </Section>
@@ -262,7 +198,6 @@ function YearsSection({ deal, c, rows, sale }) {
   return (
     <Section
       id="cash-years"
-      icon={CalendarClock}
       title={`Cash flow over ${rows.length} years`}
       value={money(last.cumCashFlow, { signed: true })}
       valueClass={signedClass(last.cumCashFlow)}
@@ -272,7 +207,7 @@ function YearsSection({ deal, c, rows, sale }) {
         <table className="w-full text-sm">
           <caption className="sr-only">Cash flow by year, with {OWN_DOWN_PCT}% down</caption>
           <thead>
-            <tr className="eyebrow">
+            <tr className="caption">
               {['Year', 'Cash flow', 'So far', 'Cash back'].map((h, i) => (
                 <th key={h} scope="col" className={`px-2 py-3 font-medium first:pl-4 last:pr-4 sm:px-4 sm:first:pl-5 sm:last:pr-5 ${i ? 'text-right' : 'text-left'}`}>
                   {h}
@@ -314,7 +249,6 @@ function DealRanking({ items, activeId, onSelect }) {
   return (
     <Section
       id="cash-deals"
-      icon={ListOrdered}
       title={`Your deals with ${OWN_DOWN_PCT}% down`}
       value={`${ranked.length} ${ranked.length === 1 ? 'deal' : 'deals'}`}
       meaning={cashRankingMeaning(ranked[0])}
@@ -327,11 +261,11 @@ function DealRanking({ items, activeId, onSelect }) {
               type="button"
               onClick={() => onSelect(deal.id)}
               aria-current={deal.id === activeId ? 'true' : undefined}
-              className={`flex w-full items-center gap-3 px-5 py-3 text-left transition hover:bg-zinc-950/[0.025] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 dark:hover:bg-white/[0.03] ${
-                deal.id === activeId ? 'bg-emerald-500/[0.06]' : ''
+              className={`flex w-full items-center gap-3 px-5 py-3 text-left transition hover:bg-well focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 ${
+                deal.id === activeId ? 'bg-well' : ''
               }`}
             >
-              <span aria-hidden className="tabular grid size-7 shrink-0 place-items-center rounded-full bg-zinc-950/[0.05] text-xs font-semibold text-zinc-600 dark:bg-white/[0.07] dark:text-zinc-300">
+              <span aria-hidden className="tabular w-5 shrink-0 text-right text-sm font-semibold text-zinc-500 dark:text-zinc-400">
                 {i + 1}
               </span>
               <span className="min-w-0 flex-1">
@@ -365,25 +299,21 @@ export default function CashView({ deal, items, targets, onTargets, tax, onTax, 
 
   return (
     <div className="space-y-6">
-      <div className="rise px-1 pt-1">
-        <p className="eyebrow">Your money · {OWN_DOWN_PCT}% down</p>
-        <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-zinc-950 sm:text-3xl dark:text-white">What your cash earns</h2>
-        <p className="mt-1.5 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-          Any deal with your own money as a {OWN_DOWN_PCT}% down payment and a regular mortgage for the rest, at the deal’s rate and term. No DSCR: just the cash flow after the
-          mortgage payment, and the return on the cash you put in.
-        </p>
-      </div>
+      <ViewHeader title={`Your money, ${OWN_DOWN_PCT}% down`}>
+        Any deal with your own money as a {OWN_DOWN_PCT}% down payment and a regular mortgage for the rest, at the deal’s rate and term. No lender’s DSCR test: just the
+        cash flow after the mortgage payment, and the return on your cash.
+      </ViewHeader>
 
-      <CashSummary deal={deal} c={c} targets={targets} />
+      <CashSummary deal={deal} own={own} c={c} targets={targets} />
 
-      <div className="space-y-3">
+      <SectionGroup>
         <RentSection deal={deal} c={c} />
         <LeverageSection c={c} cash={cash} sale={sale} cashSale={cashSale} />
         <CashOfferSection deal={deal} own={own} targets={targets} onTargets={onTargets} onUsePrice={onUsePrice} />
         <YearsSection deal={deal} c={c} rows={rows} sale={sale} />
         <TaxCard id="cash-tax" deal={own} tax={tax} onTax={onTax} />
         <DealRanking items={items} activeId={deal.id} onSelect={onSelect} />
-      </div>
+      </SectionGroup>
     </div>
   );
 }

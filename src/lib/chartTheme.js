@@ -1,7 +1,7 @@
-// Chart colors per theme. Categorical slots are validated against the card
-// glass card surfaces (~#f8faf9 light / ~#101513 dark) for lightness, chroma,
-// CVD and contrast; slot
-// order is fixed and follows the deal (or the return component), never rank.
+// Chart colors per theme. Categorical slots are validated against the panel
+// surfaces (#ffffff light / #0f0f11 dark) for lightness, chroma, CVD and
+// contrast; slot order is fixed and follows the deal (or the return
+// component), never rank.
 
 export const CHART_THEME = {
   light: {
@@ -10,7 +10,7 @@ export const CHART_THEME = {
     grid: '#e4e4e7',
     axis: '#d4d4d8',
     tick: '#71717a',
-    surface: '#f8faf9', // effective color of a glass card; used for 2px gaps and marker rings
+    surface: '#ffffff', // the panel color; used for 2px gaps and marker rings
     zero: '#a1a1aa',
   },
   dark: {
@@ -19,7 +19,7 @@ export const CHART_THEME = {
     grid: '#27272a',
     axis: '#3f3f46',
     tick: '#a1a1aa',
-    surface: '#101513',
+    surface: '#0f0f11',
     zero: '#71717a',
   },
 };

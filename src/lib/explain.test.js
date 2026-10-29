@@ -3,25 +3,16 @@ import { allCash, analyzeDeal, maxOffer, ownMoney, projectDeal, saleAnalysis, ta
 import { PRESET_DEALS } from './presets.js';
 import {
   breakevenSentence,
-  cashFlowMeaning,
-  cashInMeaning,
   cashRankingMeaning,
   cashRentMeaning,
   cashSaleMeaning,
   cashSentence,
   cashYearsMeaning,
-  cocMeaning,
   compareSummary,
   dealSentence,
-  dscrMeaning,
-  equityMeaning,
   leverageMeaning,
   listingSentence,
-  mortgageMeaning,
   offerMeaning,
-  ownCashMeaning,
-  portfolioCashMeaning,
-  portfolioDscrMeaning,
   saleMeaning,
   stressSentence,
   taxMeaning,
@@ -53,17 +44,6 @@ describe('dealSentence', () => {
 
 describe('number meanings', () => {
   const a = analyzeDeal(trap);
-
-  it('reads DSCR as rent per dollar of payment', () => {
-    expect(dscrMeaning(a)).toBe(`Rent brings in $${a.dscr.toFixed(2)} for every $1 of loan payment, tax and insurance.`);
-  });
-
-  it('explains cash flow, the return and the cash it takes', () => {
-    expect(cashFlowMeaning(a)).toMatch(/^What you’d pay in each month .* \$65 a year\.$/);
-    expect(cocMeaning(a, { useCoc: true, coc: 8 })).toBe('−\u2060$65 a year on the $70,000 you put in. Your target is 8%.');
-    expect(cocMeaning(a, { useCoc: false, coc: 8 })).not.toMatch(/target/);
-    expect(cashInMeaning(a)).toBe(`$62,500 down + $7,500 closing costs. Lenders also want ${'$' + Math.round(a.reserves).toLocaleString('en-US')} kept in the bank.`);
-  });
 
   it('gives the break-even rent, or the room before it', () => {
     expect(breakevenSentence(a)).toBe(`To break even, rent would need to be $${Math.round(a.breakevenRent).toLocaleString('en-US')} a month, up from $2,100.`);
@@ -135,14 +115,7 @@ describe('listingSentence', () => {
   });
 });
 
-describe('portfolio and compare meanings', () => {
-  it('speaks for the whole portfolio', () => {
-    const p = { netCashFlow: 951, annualCashFlow: 11418, dscr: 1.71, value: 620771, debt: 397867 };
-    expect(portfolioCashMeaning(p)).toBe('What all your rentals put in your pocket each month after every cost: $11,418 a year.');
-    expect(portfolioDscrMeaning(p)).toBe('Across all your loans, rent brings in $1.71 for every $1 of payment. Lenders check this before your next loan.');
-    expect(equityMeaning(p)).toBe('What you’d own after paying off the loans: $620,771 of property, less $397,867 owed.');
-  });
-
+describe('compare meanings', () => {
   it('names the winner on cash, lender approval and sale profit', () => {
     const item = (name, cf, dscr, profit) => ({ deal: { name }, a: { netCashFlow: cf, dscr }, sale: { profit, year: 10 } });
     const lines = compareSummary([item('A', -5, 1.29, 80909), item('B', 120, 1.15, 60000), item('C', 40, 1.4, 120000)]);
@@ -165,14 +138,10 @@ describe('the Cash tab: your own money, 20% down', () => {
     expect(c.pi).toBeCloseTo(1330.6, 1);
     expect(cashSentence(c)).toBe(`With 20% down, it would cost you about $${Math.round(-c.netCashFlow)} a month: the rent doesn’t cover the ${pay} mortgage payment plus taxes, insurance and running costs.`);
     expect(cashSentence(s)).toBe('With 20% down, $57,500 of your own money in all, it would pay you about $527 a month after the $1,331 mortgage payment and every cost: an 11.0% cash-on-cash return.');
-    expect(mortgageMeaning(analyzeDeal(ownMoney({ ...trap, price: 1000000 })), trap)).toMatch(/^Principal and interest on an \$800,000 loan /);
-    expect(mortgageMeaning(c, trap)).toBe('Principal and interest on a $200,000 loan (the price minus your 20% down) at 7% over 30 years.');
     expect(cashRentMeaning(c)).toBe(`Rent $2,100, minus the ${pay} mortgage payment, $375 for taxes and insurance, and $483 of running costs.`);
   });
 
   it('says how long the cash takes to come back', () => {
-    expect(ownCashMeaning(c)).toBe('$50,000 down + $7,500 closing costs. Cash flow alone never pays it back.');
-    expect(ownCashMeaning(s)).toBe(`$50,000 down + $7,500 closing costs. Cash flow pays it back in about ${Math.round(57500 / s.annualCashFlow)} years.`);
     expect(cashYearsMeaning(c, projectDeal(ownMoney(trap), 10), 0)).toMatch(/^Cash flow over 10 years adds up to −\u2060\$[\d,]+, so none of your cash comes back from it\.$/);
     expect(cashYearsMeaning(s, projectDeal(ownMoney(strong), 10), 0)).toMatch(/^Cash flow added up over 10 years: \d+% of your cash back(, all of it by year \d+)?\.$/);
     const sale = saleAnalysis(ownMoney(strong), projectDeal(ownMoney(strong), 10));

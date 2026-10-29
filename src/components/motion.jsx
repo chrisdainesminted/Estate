@@ -113,7 +113,7 @@ export function InfoTip({ k, className = '' }) {
         createPortal(
           <div
             aria-hidden
-            className="glass-strong pointer-events-none fixed z-[100] w-[272px] rounded-2xl px-3.5 py-3 text-left text-xs leading-relaxed normal-case tracking-normal text-zinc-600 dark:text-zinc-300"
+            className="popover pointer-events-none fixed z-[100] w-[272px] rounded-2xl px-3.5 py-3 text-left text-xs leading-relaxed normal-case tracking-normal text-zinc-600 dark:text-zinc-300"
             style={{ left: pos.left, top: pos.top, transform: `translate(-50%, ${pos.below ? '0' : '-100%'})` }}
           >
             <div className="mb-0.5 font-semibold text-zinc-900 dark:text-white">{entry.term}</div>

@@ -37,13 +37,10 @@ export default function HelpSheet({ onClose, views, country, rents, onQuickCheck
 
         <section aria-labelledby="help-tabs" className="space-y-3">
           <Heading id="help-tabs">What each tab does</Heading>
-          <dl className="divide-y divide-hairline rounded-2xl bg-well">
+          <dl className="divide-y divide-hairline rounded-md border border-hairline">
             {views.map((v) => (
               <div key={v.value} className="flex gap-3 px-4 py-3">
-                <dt className="flex w-24 shrink-0 items-center gap-2 self-start text-sm font-medium text-zinc-900 dark:text-white">
-                  <v.icon className="size-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
-                  {v.label}
-                </dt>
+                <dt className="w-20 shrink-0 self-start text-sm font-medium text-zinc-900 dark:text-white">{v.label}</dt>
                 <dd className="text-sm text-zinc-600 dark:text-zinc-400">{v.about}</dd>
               </div>
             ))}

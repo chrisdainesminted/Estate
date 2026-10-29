@@ -1,16 +1,16 @@
 import { useMemo } from 'react';
-import { ArrowDownToLine, Target } from 'lucide-react';
+import { ArrowDownToLine } from 'lucide-react';
 import { maxOffer } from '../lib/finance.js';
 import { offerMeaning } from '../lib/explain.js';
 import { money, percent } from '../lib/format.js';
-import { Button, NumberField } from './ui.jsx';
+import { Button, Figure, NumberField } from './ui.jsx';
 import { InfoTip, Num } from './motion.jsx';
 import { Section } from './Section.jsx';
 
 /** A target with an on/off switch; switched off, it no longer limits the offer. */
 export function TargetRow({ id, on, onToggle, children }) {
   return (
-    <div className={`flex items-end gap-3 rounded-2xl p-3 transition ${on ? 'bg-well' : 'opacity-60'}`}>
+    <div className={`flex items-end gap-3 rounded-md p-3 transition ${on ? 'bg-well' : 'opacity-60'}`}>
       <label htmlFor={`${id}-on`} className="flex shrink-0 cursor-pointer items-center pb-2.5">
         <input id={`${id}-on`} type="checkbox" checked={on} onChange={(e) => onToggle(e.target.checked)} className="size-4 accent-emerald-600" />
         <span className="sr-only">Use this target</span>
@@ -33,15 +33,14 @@ export default function MaxOfferCard({ deal, targets, onTargets, onUsePrice }) {
   return (
     <Section
       id="sec-offer"
-      icon={Target}
       title="Most you should pay"
       value={m.price == null || !m.feasible ? null : Number.isFinite(m.price) ? money(m.price) : 'No limit'}
       meaning={offerMeaning(m, asking)}
       subtitle="The highest price that still hits every target you switch on. Rent, taxes, insurance and rehab stay as entered."
     >
-      <div className="grid gap-6 p-6 @3xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+      <div className="grid gap-6 p-5 @3xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <div className="grid content-start gap-2">
-          <span className="eyebrow mb-1">Your targets</span>
+          <span className="caption mb-1">Your targets</span>
           <TargetRow id={`${deal.id}-t-dscr`} on={targets.useDscr} onToggle={(v) => onTargets({ useDscr: v })}>
             <NumberField id={`${deal.id}-t-dscr`} label="Lender DSCR at least" tip="dscr" value={targets.dscr} onChange={(v) => onTargets({ dscr: v })} max={5} step={0.05} decimals={2} />
           </TargetRow>
@@ -66,9 +65,9 @@ export default function MaxOfferCard({ deal, targets, onTargets, onUsePrice }) {
 
         <div className="flex flex-col">
           {m.price == null ? (
-            <p className="rounded-2xl bg-well p-5 text-sm text-zinc-600 dark:text-zinc-400">Turn on at least one target to see your max offer.</p>
+            <p className="rounded-md bg-well p-5 text-sm text-zinc-600 dark:text-zinc-400">Turn on at least one target to see your max offer.</p>
           ) : !m.feasible ? (
-            <div className="rounded-2xl bg-red-500/[0.07] p-5 ring-1 ring-red-500/20 ring-inset">
+            <div className="rounded-md bg-red-500/[0.07] p-5 ring-1 ring-red-500/20 ring-inset">
               <p className="text-sm font-semibold text-red-800 dark:text-red-200">No price works at these targets.</p>
               <p className="mt-1 text-sm text-red-800/80 dark:text-red-100/80">
                 Rent of {money((Number(deal.rentPerUnit) || 0) * (Number(deal.units) || 1))}/mo doesn’t cover taxes, insurance and operating costs with room for
@@ -76,32 +75,24 @@ export default function MaxOfferCard({ deal, targets, onTargets, onUsePrice }) {
               </p>
             </div>
           ) : (
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500/15 via-emerald-400/5 to-transparent p-6 ring-1 ring-emerald-600/15 ring-inset dark:from-emerald-400/15 dark:ring-emerald-300/15">
-              <div className="eyebrow">Offer up to</div>
-              <div className="mt-1.5 text-5xl font-semibold tracking-tight text-zinc-950 dark:text-white">
-                {Number.isFinite(m.price) ? <Num value={m.price} format={(v) => money(v)} /> : 'No limit'}
-              </div>
+            <Figure label="Offer up to" value={Number.isFinite(m.price) ? <Num value={m.price} format={(v) => money(v)} /> : 'No limit'}>
               {Number.isFinite(m.price) && (
-                <p className={`tabular mt-2 text-sm font-medium ${room >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
-                  {room >= 0
-                    ? `Asking works, with ${money(room)} of room`
-                    : `${money(-room)} under asking (${percent(room / asking, 1)})`}
+                <p className={`tabular text-sm font-medium ${room >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
+                  {room >= 0 ? `Asking works, with ${money(room)} of room` : `${money(-room)} under asking (${percent(room / asking, 1)})`}
                 </p>
               )}
-              <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-                Set by your {sorted[0].label} target.
-              </p>
+              <p className="mt-1">Set by your {sorted[0].label} target.</p>
               {Number.isFinite(m.price) && Math.abs(rounded - asking) >= 500 && (
                 <Button variant="primary" className="mt-4" onClick={() => onUsePrice(rounded)}>
                   <ArrowDownToLine className="size-4" aria-hidden /> Use {money(rounded)} as the price
                 </Button>
               )}
-            </div>
+            </Figure>
           )}
 
           {m.price != null && m.feasible && (
             <div className="mt-5 grid gap-3">
-              <span className="eyebrow flex items-center gap-1">
+              <span className="caption flex items-center gap-1">
                 Ceiling by target
                 <InfoTip k="maxOffer" />
               </span>
@@ -111,9 +102,9 @@ export default function MaxOfferCard({ deal, targets, onTargets, onUsePrice }) {
                     <span className={i === 0 ? 'font-semibold text-zinc-900 dark:text-white' : 'text-zinc-600 dark:text-zinc-300'}>{l.label}</span>
                     <span className="tabular font-medium text-zinc-900 dark:text-white">{Number.isFinite(l.price) ? money(l.price) : 'No limit'}</span>
                   </div>
-                  <div className="relative mt-1.5 h-1.5 rounded-full bg-well">
+                  <div className="relative mt-1.5 h-1.5 rounded-[1px] bg-well">
                     <div
-                      className={`h-1.5 rounded-full ${i === 0 ? 'bg-emerald-600 dark:bg-emerald-400' : 'bg-zinc-400/60 dark:bg-zinc-500'}`}
+                      className={`h-1.5 rounded-[1px] ${i === 0 ? 'bg-emerald-600 dark:bg-emerald-400' : 'bg-zinc-400/60 dark:bg-zinc-500'}`}
                       style={{ width: `${Number.isFinite(l.price) ? Math.min(l.price / maxBar, 1) * 100 : 100}%` }}
                     />
                     {/* Tick where the asking price sits. */}

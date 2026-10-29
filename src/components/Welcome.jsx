@@ -27,25 +27,23 @@ export default function Welcome({ country, rents, onQuickCheck }) {
   };
 
   return (
-    <Card className="relative overflow-hidden">
-      <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-24 size-[22rem] rounded-full bg-radial from-emerald-500/15 via-emerald-400/5 to-transparent to-70% blur-2xl" />
+    <Card className="relative">
       <button
         type="button"
         onClick={dismiss}
         aria-label="Dismiss welcome"
-        className="absolute top-3 right-3 grid size-8 place-items-center rounded-lg text-zinc-500 transition dark:text-zinc-400 hover:bg-zinc-950/5 hover:text-zinc-700 dark:hover:bg-white/10 dark:hover:text-zinc-200"
+        className="absolute top-3 right-3 grid size-8 place-items-center rounded-md text-zinc-500 transition dark:text-zinc-400 hover:bg-well hover:text-zinc-700 dark:hover:text-zinc-200"
       >
         <X className="size-4" aria-hidden />
       </button>
-      <div className="relative p-5 pr-12 sm:p-6 sm:pr-14">
-        <p className="eyebrow">Welcome to Bedrock</p>
-        <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-balance text-zinc-950 sm:text-xl dark:text-white">Would this rental make you money?</h2>
+      <div className="p-5 pr-12 sm:p-6 sm:pr-14">
+        <h2 className="text-lg font-semibold tracking-tight text-balance text-zinc-950 sm:text-xl dark:text-white">Would this rental make you money?</h2>
         <p className="mt-1 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
           Type a property’s price and rent. Bedrock fills in typical costs, which you can change later, then shows what you’d keep each month and whether a lender
           would lend on it.
         </p>
       </div>
-      <div className="relative max-w-2xl px-5 pb-5 sm:px-6 sm:pb-6">
+      <div className="max-w-2xl px-5 pb-5 sm:px-6 sm:pb-6">
         <QuickCheck
           idPrefix="welcome"
           country={country}
