@@ -1,1 +1,776 @@
-{"schema":1,"city":"Thunder Bay, ON","updatedAt":1793223674865,"lastRun":{"date":"2026-10-28","at":1793223674865,"found":23,"added":0,"seenAgain":23,"priceDrops":0,"priceRises":0,"removed":4,"rejected":0,"note":"Checked every listing by hand: 23 confirmed for sale on their own listing page, 4 that couldn't be confirmed removed"},"runs":[{"added":23,"at":1793204270597,"date":"2026-10-28","found":23,"note":"First run: 10 searches plus 1 extended retry (basement suites came back thin).","priceDrops":0,"priceRises":0,"removed":0,"seenAgain":0},{"added":4,"at":1793204963866,"date":"2026-10-28","found":26,"note":"10 standard searches; no stale listings to recheck","priceDrops":0,"priceRises":0,"removed":0,"seenAgain":22},{"date":"2026-10-28","at":1793223674865,"found":23,"added":0,"seenAgain":23,"priceDrops":0,"priceRises":0,"removed":4,"rejected":0,"note":"Checked every listing by hand: 23 confirmed for sale on their own listing page, 4 that couldn't be confirmed removed"}],"listings":[{"address":"228 Archibald Street S","beds":[2,2,2],"firstSeen":"2026-10-28","grossRent":null,"highlights":"Triplex; basement $1,900, upper $1,950, main vacant (offered $2,400)","id":"X13684758","lastSeen":"2026-10-28","mls":"X13684758","price":529900,"priceHistory":[{"date":"2026-10-28","price":529900}],"rents":[1900,1950,null],"source":"HonestDoor","status":"active","taxes":3675,"units":3,"url":"https://www.honestdoor.com/listing/228-archibald-st-s-thunder-bay-on-x13684758","yearBuilt":null},{"address":"334 Pearl Street","beds":[1,2,2],"firstSeen":"2026-10-28","grossRent":null,"highlights":"Legal downtown triplex, 1x1bd + 2x2bd, separate hydro meters","id":"TB2602251","lastSeen":"2026-10-28","mls":"TB2602251","price":489900,"priceHistory":[{"date":"2026-10-28","price":489900}],"rents":null,"source":"REW","status":"active","taxes":3416,"units":3,"url":"https://www.rew.ca/properties/334-pearl-street-thunder-bay-on","yearBuilt":1942},{"address":"129 McKellar Street N","beds":[2,1,1],"firstSeen":"2026-10-28","grossRent":null,"highlights":"Fully rented triplex, 2bd+1bd+1bd, furnaces ~2 yrs old","id":"TB2601723","lastSeen":"2026-10-28","mls":"TB2601723","price":480000,"priceHistory":[{"date":"2026-10-28","price":480000}],"rents":null,"source":"REALTOR.ca","status":"active","taxes":5053,"units":3,"url":"https://www.realtor.ca/real-estate/29965121/129-mckellar-st-n-thunder-bay","yearBuilt":1996},{"address":"397 Empire Avenue","beds":[2,2,2,2],"firstSeen":"2026-10-28","grossRent":null,"highlights":"New 2025 fourplex, 4 x 2 bed. Listing gives rents of $2,150-$2,250 incl. heat and hydro, but an ad offers two units for rent: confirm the rent roll.","id":"TB2601223","lastSeen":"2026-10-28","mls":"TB2601223","price":1490000,"priceHistory":[{"date":"2026-10-28","price":1490000}],"rents":[2250,2250,2150,2250],"source":"REW","status":"active","taxes":9857,"units":4,"url":"https://www.rew.ca/properties/397-empire-avenue-thunder-bay-on","yearBuilt":2025},{"address":"241 Syndicate Avenue N","beds":null,"firstSeen":"2026-10-28","grossRent":null,"highlights":"Legal duplex per City report, vacant, 4 bed 2.5 bath, 2022 furnace","id":"TB2602028","lastSeen":"2026-10-28","mls":"TB2602028","price":325000,"priceHistory":[{"date":"2026-10-28","price":325000}],"rents":null,"source":"REW","status":"active","taxes":null,"units":2,"url":"https://www.rew.ca/properties/241-syndicate-avenue-n-thunder-bay-on","yearBuilt":null},{"address":"65 Kenogami Avenue N","beds":[1,1],"firstSeen":"2026-10-28","grossRent":null,"highlights":"Port Arthur duplex on a 50x103 lot: 1 bed main-floor unit and 1 bed upper unit","id":"TB2601767","lastSeen":"2026-10-28","mls":"TB2601767","price":329900,"priceHistory":[{"date":"2026-10-28","price":329900}],"rents":null,"source":"OnePercent","status":"active","taxes":null,"units":2,"url":"https://ontario.onepercentrealty.com/properties/1551518178/THUNDER_BAY-65_Kenogami_Ave._N.","yearBuilt":1949},{"address":"218 Powley Street","beds":null,"firstSeen":"2026-10-28","grossRent":null,"highlights":"Bungalow with owner unit and two rental suites, separate entrances","id":"addr-218-powley-st","lastSeen":"2026-10-28","mls":null,"price":535000,"priceHistory":[{"date":"2026-10-28","price":535000}],"rents":null,"source":"REW","status":"active","taxes":null,"units":3,"url":"https://www.rew.ca/properties/218-powley-street-thunder-bay-on","yearBuilt":null},{"address":"142 College Street","beds":null,"firstSeen":"2026-10-28","grossRent":null,"highlights":"All-brick six-unit building, corner lot, 6,700 sq ft","id":"addr-142-college-st","lastSeen":"2026-10-28","mls":"TB2601133","price":639900,"priceHistory":[{"date":"2026-10-28","price":639900}],"rents":null,"source":"REW","status":"active","taxes":4182,"units":6,"url":"https://www.rew.ca/properties/142-college-street-thunder-bay-on","yearBuilt":1914},{"address":"12 Machar Avenue","beds":[3],"firstSeen":"2026-10-28","grossRent":null,"highlights":"Tenant-occupied 3 bed house, low taxes","id":"addr-12-machar-ave","lastSeen":"2026-10-28","mls":"TB2602031","price":209000,"priceHistory":[{"date":"2026-10-28","price":209000}],"rents":null,"source":"REW","status":"active","taxes":1673,"units":1,"url":"https://www.rew.ca/properties/12-machar-avenue-thunder-bay-on","yearBuilt":null},{"address":"325 Ray Boulevard","beds":[2],"firstSeen":"2026-10-28","grossRent":null,"highlights":"2 bed 2 bath 1.5 storey, detached garage","id":"addr-325-ray-blvd","lastSeen":"2026-10-28","mls":"TB2602195","price":299000,"priceHistory":[{"date":"2026-10-28","price":299000}],"rents":null,"source":"REW","status":"active","taxes":3289,"units":1,"url":"https://www.rew.ca/properties/325-ray-boulevard-thunder-bay-on","yearBuilt":1940},{"address":"237 Finlayson Street","beds":[3],"firstSeen":"2026-10-28","grossRent":null,"highlights":"Red brick 3 bed house, detached garage, large yard","id":"addr-237-finlayson-st","lastSeen":"2026-10-28","mls":null,"price":240000,"priceHistory":[{"date":"2026-10-28","price":240000}],"rents":null,"source":"REW","status":"active","taxes":2250,"units":1,"url":"https://www.rew.ca/properties/237-finlayson-street-thunder-bay-on","yearBuilt":null},{"address":"127 Court Street S","beds":[3],"firstSeen":"2026-10-28","grossRent":null,"highlights":"3 bed 1 bath; roof, HWT, paint done 2026","id":"addr-127-crt-st-s","lastSeen":"2026-10-28","mls":"TB2602204","price":283700,"priceHistory":[{"date":"2026-10-28","price":283700}],"rents":null,"source":"REW","status":"active","taxes":2481,"units":1,"url":"https://www.rew.ca/properties/127-court-street-s-thunder-bay-on","yearBuilt":null},{"address":"1830 Murray Avenue","beds":[3],"firstSeen":"2026-10-28","grossRent":null,"highlights":"Brick bungalow, 3 bed 2 bath, Hyde Park","id":"addr-1830-murray-ave","lastSeen":"2026-10-28","mls":"TB2601419","price":449900,"priceHistory":[{"date":"2026-10-28","price":449900}],"rents":null,"source":"REW","status":"active","taxes":3787,"units":1,"url":"https://www.rew.ca/properties/1830-murray-avenue-thunder-bay-on","yearBuilt":1953},{"address":"279 Dewe Avenue","beds":[2],"firstSeen":"2026-10-28","grossRent":null,"highlights":"2 bed 2 bath 1.5 storey, wired detached garage","id":"addr-279-dewe-ave","lastSeen":"2026-10-28","mls":"X13732116","price":389900,"priceHistory":[{"date":"2026-10-28","price":389900}],"rents":null,"source":"REW","status":"active","taxes":3635,"units":1,"url":"https://www.rew.ca/properties/279-dewe-avenue-thunder-bay-on","yearBuilt":null},{"address":"234 Amelia Street E","beds":[3],"firstSeen":"2026-10-28","grossRent":null,"highlights":"3 bed 2.5 bath, separate entrance, renovated","id":"addr-234-amelia-st-e","lastSeen":"2026-10-28","mls":"X13870924","price":479900,"priceHistory":[{"date":"2026-10-28","price":479900}],"rents":null,"source":"Square Yards","status":"active","taxes":3689,"units":1,"url":"https://www.squareyards.ca/sale/on/thunder-bay/westfort/234-amelia-st-street-e","yearBuilt":null},{"address":"290 Hodder Avenue","beds":[4],"firstSeen":"2026-10-28","grossRent":null,"highlights":"4-bedroom bungalow, newly listed.","id":"addr-290-hodder-ave","lastSeen":"2026-10-28","mls":"TB2602103","price":319900,"priceHistory":[{"date":"2026-10-28","price":319900}],"rents":null,"source":"REW","status":"active","taxes":3762,"units":1,"url":"https://www.rew.ca/properties/290-hodder-avenue-thunder-bay-on","yearBuilt":1955},{"address":"2089 Otway Street","beds":[4],"firstSeen":"2026-10-28","grossRent":null,"highlights":"4-bed, 3-bath, newly listed.","id":"addr-2089-otway-st","lastSeen":"2026-10-28","mls":"TB2602155","price":699900,"priceHistory":[{"date":"2026-10-28","price":699900}],"rents":null,"source":"REW","status":"active","taxes":6813,"units":1,"url":"https://www.rew.ca/properties/2089-otway-street-thunder-bay-on","yearBuilt":1989},{"address":"700 Francis Street","beds":[2],"firstSeen":"2026-10-28","grossRent":null,"highlights":"2 bed 1 bath bungalow, immediate possession","id":"addr-700-francis-st","lastSeen":"2026-10-28","mls":"TB2602148","price":289900,"priceHistory":[{"date":"2026-10-28","price":289900}],"rents":null,"source":"REW","status":"active","taxes":3192,"units":1,"url":"https://www.rew.ca/properties/700-francis-street-thunder-bay-on","yearBuilt":1948},{"address":"752 Leslie Avenue","beds":[3],"firstSeen":"2026-10-28","grossRent":null,"highlights":"3 bed 2 bath bungalow in Current River","id":"addr-752-leslie-ave","lastSeen":"2026-10-28","mls":"TB2601232","price":389900,"priceHistory":[{"date":"2026-10-28","price":389900}],"rents":null,"source":"OnePercent","status":"active","taxes":null,"units":1,"url":"https://ontario.onepercentrealty.com/properties/1545201892/THUNDER_BAY-752_Leslie_AVE","yearBuilt":1953},{"address":"4600 Mapleward Road","beds":[4],"firstSeen":"2026-10-28","grossRent":null,"highlights":"House on 4+ acres in the McIntyre area.","id":"addr-4600-mapleward-rd","lastSeen":"2026-10-28","mls":null,"price":729900,"priceHistory":[{"date":"2026-10-28","price":729900}],"rents":null,"source":"REW","status":"active","taxes":8966,"units":1,"url":"https://www.rew.ca/properties/4600-mapleward-road-thunder-bay-on","yearBuilt":1985},{"address":"345 Ray Boulevard","beds":null,"firstSeen":"2026-10-28","grossRent":null,"highlights":"Two-unit property with garage, needs work","id":"addr-345-ray-blvd","lastSeen":"2026-10-28","mls":"TB2600939","price":345000,"priceHistory":[{"date":"2026-10-28","price":345000}],"rents":null,"source":"REW","status":"active","taxes":4102,"units":2,"url":"https://www.rew.ca/properties/345-ray-boulevard-thunder-bay-on","yearBuilt":null},{"address":"320 First Avenue","beds":null,"firstSeen":"2026-10-28","grossRent":null,"highlights":"3 bed 2 bath, finished basement with separate entrance and second kitchen","id":"addr-320-first-ave","lastSeen":"2026-10-28","mls":"TB2602030","price":299900,"priceHistory":[{"date":"2026-10-28","price":299900}],"rents":null,"source":"REW","status":"active","taxes":3000,"units":1,"url":"https://www.rew.ca/properties/320-first-avenue-thunder-bay-on","yearBuilt":null},{"address":"2219 Arthur Street E","beds":null,"firstSeen":"2026-10-28","grossRent":null,"highlights":"Finished basement with space for 1-2 bedrooms","id":"addr-2219-arthur-st-e","lastSeen":"2026-10-28","mls":"X13718132","price":399900,"priceHistory":[{"date":"2026-10-28","price":399900}],"rents":null,"source":"REALTOR.ca","status":"active","taxes":3981,"units":1,"url":"https://www.realtor.ca/real-estate/30203752/2219-arthur-st-e-thunder-bay","yearBuilt":1952}]}
+{
+  "city": "Thunder Bay, ON",
+  "lastRun": {
+    "added": 4,
+    "at": 1793268365451,
+    "date": "2026-10-29",
+    "found": 24,
+    "note": "10 standard searches; saved listings all seen yesterday so no re-checks",
+    "priceDrops": 0,
+    "priceRises": 0,
+    "rejected": 0,
+    "removed": 0,
+    "seenAgain": 20
+  },
+  "listings": [
+    {
+      "address": "228 Archibald Street S",
+      "beds": [
+        2,
+        2,
+        2
+      ],
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "McKellar Park triplex, basement and upper rented, main floor vacant",
+      "id": "X13684758",
+      "lastSeen": "2026-10-29",
+      "mls": "X13684758",
+      "price": 529900,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 529900
+        }
+      ],
+      "rents": [
+        1900,
+        1950,
+        null
+      ],
+      "source": "HonestDoor",
+      "status": "active",
+      "taxes": 3675,
+      "units": 3,
+      "url": "https://www.honestdoor.com/listing/228-archibald-st-s-thunder-bay-on-x13684758",
+      "yearBuilt": null
+    },
+    {
+      "address": "334 Pearl Street",
+      "beds": [
+        1,
+        2,
+        2
+      ],
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "Downtown legal triplex, community housing rental income, new roof/soffit/fascia",
+      "id": "TB2602251",
+      "lastSeen": "2026-10-29",
+      "mls": "TB2602251",
+      "price": 489900,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 489900
+        }
+      ],
+      "rents": null,
+      "source": "REW",
+      "status": "active",
+      "taxes": 3416,
+      "units": 3,
+      "url": "https://www.rew.ca/properties/334-pearl-street-thunder-bay-on",
+      "yearBuilt": 1942
+    },
+    {
+      "address": "129 McKellar Street N",
+      "beds": [
+        2,
+        1,
+        1
+      ],
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "Fully rented triplex, own laundry per unit, furnaces ~2 years old",
+      "id": "TB2601723",
+      "lastSeen": "2026-10-29",
+      "mls": "TB2601723",
+      "price": 480000,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 480000
+        }
+      ],
+      "rents": null,
+      "source": "REALTOR.ca",
+      "status": "active",
+      "taxes": 5053,
+      "units": 3,
+      "url": "https://www.realtor.ca/real-estate/29965121/129-mckellar-st-n-thunder-bay",
+      "yearBuilt": 1996
+    },
+    {
+      "address": "397 Empire Avenue",
+      "beds": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "Westfort 2025-built fully rented 4-plex, heat and hydro included",
+      "id": "TB2601223",
+      "lastSeen": "2026-10-29",
+      "mls": "TB2601223",
+      "price": 1490000,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 1490000
+        }
+      ],
+      "rents": [
+        2250,
+        2250,
+        2150,
+        2250
+      ],
+      "source": "REW",
+      "status": "active",
+      "taxes": 9857,
+      "units": 4,
+      "url": "https://www.rew.ca/properties/397-empire-avenue-thunder-bay-on",
+      "yearBuilt": 2025
+    },
+    {
+      "address": "241 Syndicate Avenue N",
+      "beds": null,
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "Legal duplex per 2021 city report, 4 bed 2.5 bath, ~2,080 sq ft, vacant",
+      "id": "TB2602028",
+      "lastSeen": "2026-10-29",
+      "mls": "TB2602028",
+      "price": 325000,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 325000
+        }
+      ],
+      "rents": null,
+      "source": "REW",
+      "status": "active",
+      "taxes": null,
+      "units": 2,
+      "url": "https://www.rew.ca/properties/241-syndicate-avenue-n-thunder-bay-on",
+      "yearBuilt": null
+    },
+    {
+      "address": "65 Kenogami Avenue N",
+      "beds": [
+        1,
+        1
+      ],
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "Port Arthur duplex, 1,198 sq ft, 50x103 lot; live in one unit and rent the other",
+      "id": "TB2601767",
+      "lastSeen": "2026-10-29",
+      "mls": "TB2601767",
+      "price": 329900,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 329900
+        }
+      ],
+      "rents": null,
+      "source": "OnePercent",
+      "status": "active",
+      "taxes": null,
+      "units": 2,
+      "url": "https://ontario.onepercentrealty.com/properties/1551518178/THUNDER_BAY-65_Kenogami_Ave._N.",
+      "yearBuilt": 1949
+    },
+    {
+      "address": "218 Powley Street",
+      "beds": null,
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "Bungalow with three self-contained units incl. owner's, detached garage",
+      "id": "addr-218-powley-st",
+      "lastSeen": "2026-10-29",
+      "mls": null,
+      "price": 535000,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 535000
+        }
+      ],
+      "rents": null,
+      "source": "REW",
+      "status": "active",
+      "taxes": null,
+      "units": 3,
+      "url": "https://www.rew.ca/properties/218-powley-street-thunder-bay-on",
+      "yearBuilt": null
+    },
+    {
+      "address": "142 College Street",
+      "beds": null,
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "Six-unit brick building, 6,700 sq ft",
+      "id": "addr-142-college-st",
+      "lastSeen": "2026-10-29",
+      "mls": "TB2601133",
+      "price": 639900,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 639900
+        }
+      ],
+      "rents": null,
+      "source": "REW",
+      "status": "active",
+      "taxes": 4182,
+      "units": 6,
+      "url": "https://www.rew.ca/properties/142-college-street-thunder-bay-on",
+      "yearBuilt": 1914
+    },
+    {
+      "address": "12 Machar Avenue",
+      "beds": [
+        3
+      ],
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "Tenant-occupied 3-bedroom house",
+      "id": "addr-12-machar-ave",
+      "lastSeen": "2026-10-29",
+      "mls": "TB2602031",
+      "price": 209000,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 209000
+        }
+      ],
+      "rents": null,
+      "source": "REW",
+      "status": "active",
+      "taxes": 1673,
+      "units": 1,
+      "url": "https://www.rew.ca/properties/12-machar-avenue-thunder-bay-on",
+      "yearBuilt": null
+    },
+    {
+      "address": "325 Ray Boulevard",
+      "beds": [
+        2
+      ],
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "1.5-storey, 2 bed 2 bath, ~700 sq ft, 24x23 detached garage",
+      "id": "addr-325-ray-blvd",
+      "lastSeen": "2026-10-29",
+      "mls": "TB2602195",
+      "price": 299000,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 299000
+        }
+      ],
+      "rents": null,
+      "source": "REW",
+      "status": "active",
+      "taxes": 3289,
+      "units": 1,
+      "url": "https://www.rew.ca/properties/325-ray-boulevard-thunder-bay-on",
+      "yearBuilt": 1940
+    },
+    {
+      "address": "237 Finlayson Street",
+      "beds": [
+        3
+      ],
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "Character home, 3 bed 3 bath, 1,574 sq ft, detached garage",
+      "id": "addr-237-finlayson-st",
+      "lastSeen": "2026-10-29",
+      "mls": null,
+      "price": 240000,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 240000
+        }
+      ],
+      "rents": null,
+      "source": "REW",
+      "status": "active",
+      "taxes": 2250,
+      "units": 1,
+      "url": "https://www.rew.ca/properties/237-finlayson-street-thunder-bay-on",
+      "yearBuilt": null
+    },
+    {
+      "address": "127 Court Street S",
+      "beds": [
+        3
+      ],
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "2-storey 3 bed 1 bath, 1,344 sq ft, roof/water heater/paint 2026",
+      "id": "addr-127-crt-st-s",
+      "lastSeen": "2026-10-29",
+      "mls": "TB2602204",
+      "price": 283700,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 283700
+        }
+      ],
+      "rents": null,
+      "source": "OnePercent",
+      "status": "active",
+      "taxes": 2481,
+      "units": 1,
+      "url": "https://ontario.onepercentrealty.com/properties/1555718205/THUNDER_BAY-127_Court_St_S",
+      "yearBuilt": null
+    },
+    {
+      "address": "1830 Murray Avenue",
+      "beds": [
+        3
+      ],
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "Hyde Park brick bungalow, 3 bed 2 bath, ~1,080 sq ft",
+      "id": "addr-1830-murray-ave",
+      "lastSeen": "2026-10-29",
+      "mls": "TB2601419",
+      "price": 449900,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 449900
+        }
+      ],
+      "rents": null,
+      "source": "REW",
+      "status": "active",
+      "taxes": 3787,
+      "units": 1,
+      "url": "https://www.rew.ca/properties/1830-murray-avenue-thunder-bay-on",
+      "yearBuilt": 1953
+    },
+    {
+      "address": "279 Dewe Avenue",
+      "beds": [
+        2
+      ],
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "Current River corner lot 1.5-storey, 2 bed 2 bath, wired garage",
+      "id": "addr-279-dewe-ave",
+      "lastSeen": "2026-10-29",
+      "mls": "X13732116",
+      "price": 389900,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 389900
+        }
+      ],
+      "rents": null,
+      "source": "REW",
+      "status": "active",
+      "taxes": 3635,
+      "units": 1,
+      "url": "https://www.rew.ca/properties/279-dewe-avenue-thunder-bay-on",
+      "yearBuilt": null
+    },
+    {
+      "address": "234 Amelia Street E",
+      "beds": [
+        3
+      ],
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "3 bed 2.5 bath, separate entrance, renovated",
+      "id": "addr-234-amelia-st-e",
+      "lastSeen": "2026-10-28",
+      "mls": "X13870924",
+      "price": 479900,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 479900
+        }
+      ],
+      "rents": null,
+      "source": "Square Yards",
+      "status": "active",
+      "taxes": 3689,
+      "units": 1,
+      "url": "https://www.squareyards.ca/sale/on/thunder-bay/westfort/234-amelia-st-street-e",
+      "yearBuilt": null
+    },
+    {
+      "address": "290 Hodder Avenue",
+      "beds": [
+        4
+      ],
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "Current River 4-bed bungalow",
+      "id": "addr-290-hodder-ave",
+      "lastSeen": "2026-10-29",
+      "mls": "TB2602103",
+      "price": 319900,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 319900
+        }
+      ],
+      "rents": null,
+      "source": "REW",
+      "status": "active",
+      "taxes": 3762,
+      "units": 1,
+      "url": "https://www.rew.ca/properties/290-hodder-avenue-thunder-bay-on",
+      "yearBuilt": 1955
+    },
+    {
+      "address": "2089 Otway Street",
+      "beds": [
+        4
+      ],
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "4 bed 3 bath brick home",
+      "id": "addr-2089-otway-st",
+      "lastSeen": "2026-10-29",
+      "mls": "TB2602155",
+      "price": 699900,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 699900
+        }
+      ],
+      "rents": null,
+      "source": "REW",
+      "status": "active",
+      "taxes": 6813,
+      "units": 1,
+      "url": "https://www.rew.ca/properties/2089-otway-street-thunder-bay-on",
+      "yearBuilt": 1989
+    },
+    {
+      "address": "700 Francis Street",
+      "beds": [
+        2
+      ],
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "2 bed 1 bath bungalow, immediate possession",
+      "id": "addr-700-francis-st",
+      "lastSeen": "2026-10-29",
+      "mls": "TB2602148",
+      "price": 289900,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 289900
+        }
+      ],
+      "rents": null,
+      "source": "REW",
+      "status": "active",
+      "taxes": 3192,
+      "units": 1,
+      "url": "https://www.rew.ca/properties/700-francis-street-thunder-bay-on",
+      "yearBuilt": 1948
+    },
+    {
+      "address": "752 Leslie Avenue",
+      "beds": [
+        3
+      ],
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "3 bed 2 bath bungalow in Current River",
+      "id": "addr-752-leslie-ave",
+      "lastSeen": "2026-10-28",
+      "mls": "TB2601232",
+      "price": 389900,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 389900
+        }
+      ],
+      "rents": null,
+      "source": "OnePercent",
+      "status": "active",
+      "taxes": null,
+      "units": 1,
+      "url": "https://ontario.onepercentrealty.com/properties/1545201892/THUNDER_BAY-752_Leslie_AVE",
+      "yearBuilt": 1953
+    },
+    {
+      "address": "4600 Mapleward Road",
+      "beds": [
+        4
+      ],
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "House on 4+ acres in the McIntyre area.",
+      "id": "addr-4600-mapleward-rd",
+      "lastSeen": "2026-10-28",
+      "mls": null,
+      "price": 729900,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 729900
+        }
+      ],
+      "rents": null,
+      "source": "REW",
+      "status": "active",
+      "taxes": 8966,
+      "units": 1,
+      "url": "https://www.rew.ca/properties/4600-mapleward-road-thunder-bay-on",
+      "yearBuilt": 1985
+    },
+    {
+      "address": "345 Ray Boulevard",
+      "beds": null,
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "Two-unit property with garage, needs TLC",
+      "id": "addr-345-ray-blvd",
+      "lastSeen": "2026-10-29",
+      "mls": "TB2600939",
+      "price": 345000,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 345000
+        }
+      ],
+      "rents": null,
+      "source": "REW",
+      "status": "active",
+      "taxes": 4102,
+      "units": 2,
+      "url": "https://www.rew.ca/properties/345-ray-boulevard-thunder-bay-on",
+      "yearBuilt": null
+    },
+    {
+      "address": "320 First Avenue",
+      "beds": [
+        3
+      ],
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "3 bed 2 bath, second kitchen in basement with separate entrance",
+      "id": "addr-320-first-ave",
+      "lastSeen": "2026-10-29",
+      "mls": "TB2602030",
+      "price": 299900,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 299900
+        }
+      ],
+      "rents": null,
+      "source": "REW",
+      "status": "active",
+      "taxes": 3000,
+      "units": 1,
+      "url": "https://www.rew.ca/properties/320-first-avenue-thunder-bay-on",
+      "yearBuilt": null
+    },
+    {
+      "address": "2219 Arthur Street E",
+      "beds": null,
+      "firstSeen": "2026-10-28",
+      "grossRent": null,
+      "highlights": "Fully finished basement could add 1-2 bedrooms",
+      "id": "addr-2219-arthur-st-e",
+      "lastSeen": "2026-10-29",
+      "mls": "X13718132",
+      "price": 399900,
+      "priceHistory": [
+        {
+          "date": "2026-10-28",
+          "price": 399900
+        }
+      ],
+      "rents": null,
+      "source": "Coldwell Banker",
+      "status": "active",
+      "taxes": 3981,
+      "units": 1,
+      "url": "https://coldwellbanker.ca/listing/ON/Thunder-Bay/2219-Arthur-St-E-P7E-5P3/232504325",
+      "yearBuilt": 1952
+    },
+    {
+      "address": "500 Court Street",
+      "beds": [
+        3
+      ],
+      "firstSeen": "2026-10-29",
+      "grossRent": null,
+      "highlights": "Boulevard Lake 2-storey, 3 bed 2 bath, 1,246 sq ft, no rear neighbours",
+      "id": "addr-500-crt-st",
+      "lastSeen": "2026-10-29",
+      "mls": null,
+      "price": 429900,
+      "priceHistory": [
+        {
+          "date": "2026-10-29",
+          "price": 429900
+        }
+      ],
+      "rents": null,
+      "source": "OnePercent",
+      "status": "active",
+      "taxes": null,
+      "units": 1,
+      "url": "https://ontario.onepercentrealty.com/properties/1554319320/THUNDER_BAY-500_Court_ST",
+      "yearBuilt": 1953
+    },
+    {
+      "address": "510 Van Norman Street",
+      "beds": [
+        2
+      ],
+      "firstSeen": "2026-10-29",
+      "grossRent": null,
+      "highlights": "2 bed 2 bath, 965 sq ft, updated windows, furnace, roof, electrical",
+      "id": "addr-510-van-norman-st",
+      "lastSeen": "2026-10-29",
+      "mls": null,
+      "price": 389900,
+      "priceHistory": [
+        {
+          "date": "2026-10-29",
+          "price": 389900
+        }
+      ],
+      "rents": null,
+      "source": "REW",
+      "status": "active",
+      "taxes": null,
+      "units": 1,
+      "url": "https://www.rew.ca/properties/510-van-norman-street-thunder-bay-on",
+      "yearBuilt": 1928
+    },
+    {
+      "address": "2100 Whitegates Drive",
+      "beds": [
+        3
+      ],
+      "firstSeen": "2026-10-29",
+      "grossRent": null,
+      "highlights": "3-bedroom bungalow",
+      "id": "addr-2100-whitegates-dr",
+      "lastSeen": "2026-10-29",
+      "mls": null,
+      "price": 725000,
+      "priceHistory": [
+        {
+          "date": "2026-10-29",
+          "price": 725000
+        }
+      ],
+      "rents": null,
+      "source": "REW",
+      "status": "active",
+      "taxes": null,
+      "units": 1,
+      "url": "https://www.rew.ca/properties/2100-whitegates-drive-thunder-bay-on",
+      "yearBuilt": null
+    },
+    {
+      "address": "491 Lakeshore Drive",
+      "beds": null,
+      "firstSeen": "2026-10-29",
+      "grossRent": null,
+      "highlights": "1945 home with self-contained one-bedroom suite",
+      "id": "TB2601279",
+      "lastSeen": "2026-10-29",
+      "mls": "TB2601279",
+      "price": 569900,
+      "priceHistory": [
+        {
+          "date": "2026-10-29",
+          "price": 569900
+        }
+      ],
+      "rents": null,
+      "source": "OnePercent",
+      "status": "active",
+      "taxes": null,
+      "units": 2,
+      "url": "https://ontario.onepercentrealty.com/properties/1545779404/THUNDER_BAY-491_Lakeshore_DR",
+      "yearBuilt": 1945
+    }
+  ],
+  "runs": [
+    {
+      "added": 23,
+      "at": 1793204270597,
+      "date": "2026-10-28",
+      "found": 23,
+      "note": "First run: 10 searches plus 1 extended retry (basement suites came back thin).",
+      "priceDrops": 0,
+      "priceRises": 0,
+      "removed": 0,
+      "seenAgain": 0
+    },
+    {
+      "added": 4,
+      "at": 1793204963866,
+      "date": "2026-10-28",
+      "found": 26,
+      "note": "10 standard searches; no stale listings to recheck",
+      "priceDrops": 0,
+      "priceRises": 0,
+      "removed": 0,
+      "seenAgain": 22
+    },
+    {
+      "added": 0,
+      "at": 1793223674865,
+      "date": "2026-10-28",
+      "found": 23,
+      "note": "Checked every listing by hand: 23 confirmed for sale on their own listing page, 4 that couldn't be confirmed removed",
+      "priceDrops": 0,
+      "priceRises": 0,
+      "rejected": 0,
+      "removed": 4,
+      "seenAgain": 23
+    },
+    {
+      "added": 4,
+      "at": 1793268365451,
+      "date": "2026-10-29",
+      "found": 24,
+      "note": "10 standard searches; saved listings all seen yesterday so no re-checks",
+      "priceDrops": 0,
+      "priceRises": 0,
+      "rejected": 0,
+      "removed": 0,
+      "seenAgain": 20
+    }
+  ],
+  "schema": 1,
+  "updatedAt": 1793268365451
+}
