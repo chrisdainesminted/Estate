@@ -54,8 +54,12 @@ html.dark {
   --color-zinc-500: oklch(55.2% 0.016 285.938);
 }
 
+html,
 body {
   background: var(--page);
+}
+
+body {
   @apply text-zinc-900 antialiased dark:text-zinc-100;
 }
 

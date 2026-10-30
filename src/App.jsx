@@ -570,7 +570,7 @@ export default function App() {
 
   return (
     <SectionsContext.Provider value={sections}>
-      <div className="relative min-h-screen print:hidden">
+      <div className="relative min-h-screen bg-(--page) print:hidden">
         <a
           href="#main"
           className="sr-only z-[100] rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
