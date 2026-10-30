@@ -2,15 +2,15 @@
   "city": "Thunder Bay, ON",
   "lastRun": {
     "added": 4,
-    "at": 1793268365451,
-    "date": "2026-10-29",
-    "found": 24,
-    "note": "10 standard searches; saved listings all seen yesterday so no re-checks",
+    "at": 1793354776289,
+    "date": "2026-10-30",
+    "found": 28,
+    "note": "10 standard searches; saved listings reconfirmed, 4 added",
     "priceDrops": 0,
     "priceRises": 0,
     "rejected": 0,
     "removed": 0,
-    "seenAgain": 20
+    "seenAgain": 24
   },
   "listings": [
     {
@@ -24,7 +24,7 @@
       "grossRent": null,
       "highlights": "McKellar Park triplex, basement and upper rented, main floor vacant",
       "id": "X13684758",
-      "lastSeen": "2026-10-29",
+      "lastSeen": "2026-10-30",
       "mls": "X13684758",
       "price": 529900,
       "priceHistory": [
@@ -56,7 +56,7 @@
       "grossRent": null,
       "highlights": "Downtown legal triplex, community housing rental income, new roof/soffit/fascia",
       "id": "TB2602251",
-      "lastSeen": "2026-10-29",
+      "lastSeen": "2026-10-30",
       "mls": "TB2602251",
       "price": 489900,
       "priceHistory": [
@@ -84,7 +84,7 @@
       "grossRent": null,
       "highlights": "Fully rented triplex, own laundry per unit, furnaces ~2 years old",
       "id": "TB2601723",
-      "lastSeen": "2026-10-29",
+      "lastSeen": "2026-10-30",
       "mls": "TB2601723",
       "price": 480000,
       "priceHistory": [
@@ -113,7 +113,7 @@
       "grossRent": null,
       "highlights": "Westfort 2025-built fully rented 4-plex, heat and hydro included",
       "id": "TB2601223",
-      "lastSeen": "2026-10-29",
+      "lastSeen": "2026-10-30",
       "mls": "TB2601223",
       "price": 1490000,
       "priceHistory": [
@@ -142,7 +142,7 @@
       "grossRent": null,
       "highlights": "Legal duplex per 2021 city report, 4 bed 2.5 bath, ~2,080 sq ft, vacant",
       "id": "TB2602028",
-      "lastSeen": "2026-10-29",
+      "lastSeen": "2026-10-30",
       "mls": "TB2602028",
       "price": 325000,
       "priceHistory": [
@@ -169,7 +169,7 @@
       "grossRent": null,
       "highlights": "Port Arthur duplex, 1,198 sq ft, 50x103 lot; live in one unit and rent the other",
       "id": "TB2601767",
-      "lastSeen": "2026-10-29",
+      "lastSeen": "2026-10-30",
       "mls": "TB2601767",
       "price": 329900,
       "priceHistory": [
@@ -193,7 +193,7 @@
       "grossRent": null,
       "highlights": "Bungalow with three self-contained units incl. owner's, detached garage",
       "id": "addr-218-powley-st",
-      "lastSeen": "2026-10-29",
+      "lastSeen": "2026-10-30",
       "mls": null,
       "price": 535000,
       "priceHistory": [
@@ -217,7 +217,7 @@
       "grossRent": null,
       "highlights": "Six-unit brick building, 6,700 sq ft",
       "id": "addr-142-college-st",
-      "lastSeen": "2026-10-29",
+      "lastSeen": "2026-10-30",
       "mls": "TB2601133",
       "price": 639900,
       "priceHistory": [
@@ -243,7 +243,7 @@
       "grossRent": null,
       "highlights": "Tenant-occupied 3-bedroom house",
       "id": "addr-12-machar-ave",
-      "lastSeen": "2026-10-29",
+      "lastSeen": "2026-10-30",
       "mls": "TB2602031",
       "price": 209000,
       "priceHistory": [
@@ -269,7 +269,7 @@
       "grossRent": null,
       "highlights": "1.5-storey, 2 bed 2 bath, ~700 sq ft, 24x23 detached garage",
       "id": "addr-325-ray-blvd",
-      "lastSeen": "2026-10-29",
+      "lastSeen": "2026-10-30",
       "mls": "TB2602195",
       "price": 299000,
       "priceHistory": [
@@ -295,7 +295,7 @@
       "grossRent": null,
       "highlights": "Character home, 3 bed 3 bath, 1,574 sq ft, detached garage",
       "id": "addr-237-finlayson-st",
-      "lastSeen": "2026-10-29",
+      "lastSeen": "2026-10-30",
       "mls": null,
       "price": 240000,
       "priceHistory": [
@@ -321,7 +321,7 @@
       "grossRent": null,
       "highlights": "2-storey 3 bed 1 bath, 1,344 sq ft, roof/water heater/paint 2026",
       "id": "addr-127-crt-st-s",
-      "lastSeen": "2026-10-29",
+      "lastSeen": "2026-10-30",
       "mls": "TB2602204",
       "price": 283700,
       "priceHistory": [
@@ -347,7 +347,7 @@
       "grossRent": null,
       "highlights": "Hyde Park brick bungalow, 3 bed 2 bath, ~1,080 sq ft",
       "id": "addr-1830-murray-ave",
-      "lastSeen": "2026-10-29",
+      "lastSeen": "2026-10-30",
       "mls": "TB2601419",
       "price": 449900,
       "priceHistory": [
@@ -373,7 +373,7 @@
       "grossRent": null,
       "highlights": "Current River corner lot 1.5-storey, 2 bed 2 bath, wired garage",
       "id": "addr-279-dewe-ave",
-      "lastSeen": "2026-10-29",
+      "lastSeen": "2026-10-30",
       "mls": "X13732116",
       "price": 389900,
       "priceHistory": [
@@ -425,7 +425,7 @@
       "grossRent": null,
       "highlights": "Current River 4-bed bungalow",
       "id": "addr-290-hodder-ave",
-      "lastSeen": "2026-10-29",
+      "lastSeen": "2026-10-30",
       "mls": "TB2602103",
       "price": 319900,
       "priceHistory": [
@@ -477,7 +477,7 @@
       "grossRent": null,
       "highlights": "2 bed 1 bath bungalow, immediate possession",
       "id": "addr-700-francis-st",
-      "lastSeen": "2026-10-29",
+      "lastSeen": "2026-10-30",
       "mls": "TB2602148",
       "price": 289900,
       "priceHistory": [
@@ -503,7 +503,7 @@
       "grossRent": null,
       "highlights": "3 bed 2 bath bungalow in Current River",
       "id": "addr-752-leslie-ave",
-      "lastSeen": "2026-10-28",
+      "lastSeen": "2026-10-30",
       "mls": "TB2601232",
       "price": 389900,
       "priceHistory": [
@@ -529,7 +529,7 @@
       "grossRent": null,
       "highlights": "House on 4+ acres in the McIntyre area.",
       "id": "addr-4600-mapleward-rd",
-      "lastSeen": "2026-10-28",
+      "lastSeen": "2026-10-30",
       "mls": null,
       "price": 729900,
       "priceHistory": [
@@ -543,7 +543,7 @@
       "status": "active",
       "taxes": 8966,
       "units": 1,
-      "url": "https://www.rew.ca/properties/4600-mapleward-road-thunder-bay-on",
+      "url": "https://ontario.onepercentrealty.com/properties/1555522772/THUNDER_BAY-4600_Mapleward_Rd.",
       "yearBuilt": 1985
     },
     {
@@ -553,7 +553,7 @@
       "grossRent": null,
       "highlights": "Two-unit property with garage, needs TLC",
       "id": "addr-345-ray-blvd",
-      "lastSeen": "2026-10-29",
+      "lastSeen": "2026-10-30",
       "mls": "TB2600939",
       "price": 345000,
       "priceHistory": [
@@ -579,7 +579,7 @@
       "grossRent": null,
       "highlights": "3 bed 2 bath, second kitchen in basement with separate entrance",
       "id": "addr-320-first-ave",
-      "lastSeen": "2026-10-29",
+      "lastSeen": "2026-10-30",
       "mls": "TB2602030",
       "price": 299900,
       "priceHistory": [
@@ -603,7 +603,7 @@
       "grossRent": null,
       "highlights": "Fully finished basement could add 1-2 bedrooms",
       "id": "addr-2219-arthur-st-e",
-      "lastSeen": "2026-10-29",
+      "lastSeen": "2026-10-30",
       "mls": "X13718132",
       "price": 399900,
       "priceHistory": [
@@ -629,7 +629,7 @@
       "grossRent": null,
       "highlights": "Boulevard Lake 2-storey, 3 bed 2 bath, 1,246 sq ft, no rear neighbours",
       "id": "addr-500-crt-st",
-      "lastSeen": "2026-10-29",
+      "lastSeen": "2026-10-30",
       "mls": null,
       "price": 429900,
       "priceHistory": [
@@ -681,7 +681,7 @@
       "grossRent": null,
       "highlights": "3-bedroom bungalow",
       "id": "addr-2100-whitegates-dr",
-      "lastSeen": "2026-10-29",
+      "lastSeen": "2026-10-30",
       "mls": null,
       "price": 725000,
       "priceHistory": [
@@ -705,7 +705,7 @@
       "grossRent": null,
       "highlights": "1945 home with self-contained one-bedroom suite",
       "id": "TB2601279",
-      "lastSeen": "2026-10-29",
+      "lastSeen": "2026-10-30",
       "mls": "TB2601279",
       "price": 569900,
       "priceHistory": [
@@ -721,6 +721,108 @@
       "units": 2,
       "url": "https://ontario.onepercentrealty.com/properties/1545779404/THUNDER_BAY-491_Lakeshore_DR",
       "yearBuilt": 1945
+    },
+    {
+      "address": "283 Carl Avenue E",
+      "beds": [
+        3
+      ],
+      "firstSeen": "2026-10-30",
+      "grossRent": null,
+      "highlights": "2+1 bed, 2 bath bungalow on the north side with finished basement",
+      "id": "addr-283-carl-ave-e",
+      "lastSeen": "2026-10-30",
+      "mls": null,
+      "price": 289900,
+      "priceHistory": [
+        {
+          "date": "2026-10-30",
+          "price": 289900
+        }
+      ],
+      "rents": null,
+      "source": "REW",
+      "status": "active",
+      "taxes": null,
+      "units": 1,
+      "url": "https://www.rew.ca/properties/283-carl-avenue-e-thunder-bay-on",
+      "yearBuilt": null
+    },
+    {
+      "address": "185 Empress Avenue S",
+      "beds": [
+        2
+      ],
+      "firstSeen": "2026-10-30",
+      "grossRent": null,
+      "highlights": "",
+      "id": "addr-185-empress-ave-s",
+      "lastSeen": "2026-10-30",
+      "mls": null,
+      "price": 329900,
+      "priceHistory": [
+        {
+          "date": "2026-10-30",
+          "price": 329900
+        }
+      ],
+      "rents": null,
+      "source": "OnePercent",
+      "status": "active",
+      "taxes": null,
+      "units": 1,
+      "url": "https://ontario.onepercentrealty.com/properties/1550927567/THUNDER_BAY-185_Empress_Ave_S",
+      "yearBuilt": 1948
+    },
+    {
+      "address": "189 Evans Street",
+      "beds": [
+        3
+      ],
+      "firstSeen": "2026-10-30",
+      "grossRent": null,
+      "highlights": "",
+      "id": "addr-189-evans-st",
+      "lastSeen": "2026-10-30",
+      "mls": null,
+      "price": 499900,
+      "priceHistory": [
+        {
+          "date": "2026-10-30",
+          "price": 499900
+        }
+      ],
+      "rents": null,
+      "source": "OnePercent",
+      "status": "active",
+      "taxes": null,
+      "units": 1,
+      "url": "https://ontario.onepercentrealty.com/properties/1549722962/THUNDER_BAY-189_Evans_ST",
+      "yearBuilt": 1973
+    },
+    {
+      "address": "230 Brodie Street N",
+      "beds": null,
+      "firstSeen": "2026-10-30",
+      "grossRent": null,
+      "highlights": "12-unit apartment building, designated historical",
+      "id": "addr-230-brodie-st-n",
+      "lastSeen": "2026-10-30",
+      "mls": null,
+      "price": 999999,
+      "priceHistory": [
+        {
+          "date": "2026-10-30",
+          "price": 999999
+        }
+      ],
+      "rents": null,
+      "source": "OnePercent",
+      "status": "active",
+      "taxes": null,
+      "units": 12,
+      "url": "https://ontario.onepercentrealty.com/properties/1544040055/THUNDER_BAY-230_Brodie_ST_N",
+      "yearBuilt": 1913
     }
   ],
   "runs": [
@@ -769,8 +871,20 @@
       "rejected": 0,
       "removed": 0,
       "seenAgain": 20
+    },
+    {
+      "added": 4,
+      "at": 1793354776289,
+      "date": "2026-10-30",
+      "found": 28,
+      "note": "10 standard searches; saved listings reconfirmed, 4 added",
+      "priceDrops": 0,
+      "priceRises": 0,
+      "rejected": 0,
+      "removed": 0,
+      "seenAgain": 24
     }
   ],
   "schema": 1,
-  "updatedAt": 1793268365451
+  "updatedAt": 1793354776289
 }
