@@ -193,6 +193,26 @@ export function maxPrice({ profile, units = 1, ratePct, taxPct = 1.4, rentPerOth
 }
 
 /**
+ * The household income a lender would want before approving a home at
+ * `price` with the least down (rent from the other units counted the way
+ * lenders count it), to the next $1,000. Cash isn't the question here.
+ */
+export function incomeToQualify({ price, units = 1, ratePct, taxPct = 1, rentPerOtherUnit = 0, debts = 0, firstTime = true, city }) {
+  const rentFromOthers = Math.max(units - 1, 0) * num(rentPerOtherUnit);
+  const passes = (income) =>
+    buyCheck({ profile: { income, savings: Infinity, debts, firstTime, city }, price, units, ratePct, taxesMonthly: (num(price) * num(taxPct)) / 1200, rentFromOthers, city }).qualify.pass;
+  let lo = 0;
+  let hi = 2000000;
+  if (!passes(hi)) return null;
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (passes(mid)) hi = mid;
+    else lo = mid;
+  }
+  return Math.ceil(hi / 1000) * 1000;
+}
+
+/**
  * Living in one unit and renting the rest: what the home costs you each
  * month once the tenants' rent comes in, next to the rent you pay today.
  * Self-managed, so no management fee; repairs and big replacements are set

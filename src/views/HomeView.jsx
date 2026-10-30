@@ -50,7 +50,7 @@ function Profile({ p, onHome }) {
       <CardHeader title="Your numbers" subtitle="Saved with your deals. Only you see them." />
       <div className="grid grid-cols-2 gap-3 p-5 md:grid-cols-4">
         <div className="col-span-2">
-          <CitySelect id="home-city" value={local.city.key} onChange={(city) => onHome({ city, rentOther: null, taxPct: null, entered: true })} />
+          <CitySelect id="home-city" value={local.city.key} onChange={(city) => onHome({ city, rentOther: null, taxPct: null, targetPrice: cityByKey(city).price, entered: true })} />
           <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">Sets {provinceName(local.province)}’s land transfer tax and programs, and the local rent and property tax.</p>
         </div>
         <div>
@@ -63,7 +63,7 @@ function Profile({ p, onHome }) {
             decimals={0}
             value={local.rent}
             onChange={(v) => onHome({ rentOther: v, entered: true })}
-            hint={local.rentIsAverage ? `${placeName(local.city)} average, 2 bedrooms${local.city.estimated ? ' (estimate)' : ''}` : undefined}
+            hint={local.rentIsAverage ? `${placeName(local.city)} average, 2 bedrooms${local.city.rentEstimated ? ' (estimate)' : ''}` : undefined}
           />
           {!local.rentIsAverage && reset('rentOther', `the ${placeName(local.city)} average`)}
         </div>
@@ -335,7 +335,7 @@ function Start({ onHome, onExample }) {
       document.getElementById(`start-${gaps[0]}`)?.focus();
       return;
     }
-    onHome({ city, rentOther: null, taxPct: null, income: v.income, savings: v.savings, debts: Number.isFinite(v.debts) ? v.debts : 0, rentNow: v.rentNow, entered: true });
+    onHome({ city, rentOther: null, taxPct: null, targetPrice: cityByKey(city).price, income: v.income, savings: v.savings, debts: Number.isFinite(v.debts) ? v.debts : 0, rentNow: v.rentNow, entered: true });
   };
   const label = { income: 'your income', savings: 'what you’ve saved', rentNow: 'the rent you pay' };
   return (
@@ -449,7 +449,8 @@ export default function HomeView({ profile: p, suite, market, items, liveDealId,
             </p>
             <p className="mt-1 text-sm leading-relaxed text-zinc-800 dark:text-zinc-200">
               On your own, a bank would lend on about {money(solo.byIncome)}; with a tenant paying {money(rentEach)} a month, about {money(duplex.byIncome)}. Your savings cover
-              the down payment and closing costs up to {money(duplex.bySavings)}. And there’s about {money(b.total)} in government money you can claim.
+              the down payment and closing costs up to {money(duplex.bySavings)}. A typical house in {placeName(local.city)} sells for about {money(local.city.price)}
+              {local.city.priceEstimated ? ' (estimate)' : ''}. And there’s about {money(b.total)} in government money you can claim.
             </p>
           </>
         }

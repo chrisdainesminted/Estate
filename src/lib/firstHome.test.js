@@ -5,6 +5,7 @@ import {
   buyCheck,
   closingCash,
   homeFor,
+  incomeToQualify,
   liveIn,
   maxPrice,
   minDownPayment,
@@ -86,6 +87,22 @@ describe('qualifying', () => {
     const duplex = maxPrice({ profile, units: 2, ratePct: 4.5, rentPerOtherUnit: 1500 });
     expect(duplex.byIncome).toBeGreaterThan(single.byIncome + 60000);
     expect(['income', 'savings']).toContain(duplex.limit);
+  });
+});
+
+describe('income to qualify', () => {
+  it('finds the income where a lender says yes, lower with a suite rented out', () => {
+    const alone = incomeToQualify({ price: 700000, units: 1, ratePct: 4.9, taxPct: 0.9, city: 'ottawa' });
+    const suite = incomeToQualify({ price: 700000, units: 2, ratePct: 4.9, taxPct: 0.9, rentPerOtherUnit: 1500, city: 'ottawa' });
+    expect(suite).toBeLessThan(alone);
+    const p = { income: alone, savings: Infinity, debts: 0, city: 'ottawa' };
+    expect(buyCheck({ profile: p, price: 700000, ratePct: 4.9, taxesMonthly: 525 }).qualify.pass).toBe(true);
+    expect(buyCheck({ profile: { ...p, income: alone - 2000 }, price: 700000, ratePct: 4.9, taxesMonthly: 525 }).qualify.pass).toBe(false);
+  });
+
+  it('asks for 20% down at $1.5 million and up', () => {
+    const toronto = incomeToQualify({ price: 1563000, units: 1, ratePct: 4.9, taxPct: 0.6, city: 'toronto' });
+    expect(toronto).toBeGreaterThan(200000);
   });
 });
 

@@ -30,48 +30,71 @@ const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 export const provinceName = (code) => PROVINCES.find((p) => p.code === code)?.name ?? 'Ontario';
 
 /**
- * Cities, with the average rent a two-bedroom unit brings (CMHC's October
- * 2025 survey where it gives one; `estimated` where it doesn't) and property
- * tax as a share of what a home sells for. Ontario assessments still use
- * 2016 values, so there the share of today's price is well under the
- * city's published rate. Each province also gets an "elsewhere" entry.
+ * Cities, with three local numbers:
+ * - rent: the average a two-bedroom unit brings (CMHC's October 2025
+ *   survey; `rentEstimated` where it gives none),
+ * - taxPct: property tax as a share of what a home sells for (Ontario
+ *   assessments still use 2016 values, so there the share of today's price
+ *   is well under the city's published rate),
+ * - price: what a typical detached house sells for, fall 2026 (the local
+ *   board's detached average, median or benchmark where one was found;
+ *   `priceEstimated` where it's worked out from the all-homes average).
+ * Each province also gets an "elsewhere" entry, all estimates.
  */
+// key, name, province, rent, taxPct, price, [rentEstimated, priceEstimated]
 const CITY_LIST = [
-  ['vancouver', 'Vancouver', 'BC', 2363, 0.3],
-  ['victoria', 'Victoria', 'BC', 2120, 0.5],
-  ['kelowna', 'Kelowna', 'BC', 1950, 0.45, true],
-  ['calgary', 'Calgary', 'AB', 1914, 0.65],
-  ['edmonton', 'Edmonton', 'AB', 1603, 1],
-  ['regina', 'Regina', 'SK', 1473, 1.1],
-  ['saskatoon', 'Saskatoon', 'SK', 1548, 1],
-  ['winnipeg', 'Winnipeg', 'MB', 1571, 1.2],
-  ['toronto', 'Toronto', 'ON', 2046, 0.6],
-  ['ottawa', 'Ottawa', 'ON', 1926, 0.9],
-  ['hamilton', 'Hamilton', 'ON', 1750, 1, true],
-  ['kitchener', 'Kitchener-Waterloo', 'ON', 1800, 0.85, true],
-  ['london', 'London', 'ON', 1650, 1, true],
-  ['windsor', 'Windsor', 'ON', 1450, 1.2, true],
-  ['sudbury', 'Greater Sudbury', 'ON', 1500, 1, true],
-  ['thunder-bay', 'Thunder Bay', 'ON', 1700, 1, true],
-  ['montreal', 'Montréal', 'QC', 1346, 0.75],
-  ['quebec-city', 'Québec City', 'QC', 1277, 0.85],
-  ['gatineau', 'Gatineau', 'QC', 1400, 0.95, true],
-  ['halifax', 'Halifax', 'NS', 1826, 1],
-  ['moncton', 'Moncton', 'NB', 1453, 1.4],
-  ['saint-john', 'Saint John', 'NB', 1300, 1.6, true],
-  ['fredericton', 'Fredericton', 'NB', 1400, 1.4, true],
-  ['charlottetown', 'Charlottetown', 'PE', 1500, 1.2, true],
-  ['st-johns', 'St. John’s', 'NL', 1250, 0.85, true],
-  ['whitehorse', 'Whitehorse', 'YT', 1800, 0.8, true],
-  ['yellowknife', 'Yellowknife', 'NT', 2000, 1.3, true],
+  ['vancouver', 'Vancouver', 'BC', 2363, 0.3, 1785000],
+  ['victoria', 'Victoria', 'BC', 2120, 0.5, 1300000],
+  ['kelowna', 'Kelowna', 'BC', 1950, 0.45, 1050000, true],
+  ['calgary', 'Calgary', 'AB', 1914, 0.65, 705000],
+  ['edmonton', 'Edmonton', 'AB', 1603, 1, 530000, false, true],
+  ['regina', 'Regina', 'SK', 1473, 1.1, 380000, false, true],
+  ['saskatoon', 'Saskatoon', 'SK', 1548, 1, 480000, false, true],
+  ['winnipeg', 'Winnipeg', 'MB', 1571, 1.2, 440000],
+  ['toronto', 'Toronto', 'ON', 2046, 0.6, 1563000],
+  ['ottawa', 'Ottawa', 'ON', 1926, 0.9, 705000],
+  ['hamilton', 'Hamilton', 'ON', 1750, 1, 850000, true, true],
+  ['kitchener', 'Kitchener-Waterloo', 'ON', 1800, 0.85, 815000, true],
+  ['london', 'London', 'ON', 1650, 1, 700000, true, true],
+  ['windsor', 'Windsor', 'ON', 1450, 1.2, 505000, true],
+  ['sudbury', 'Greater Sudbury', 'ON', 1500, 1, 500000, true, true],
+  ['thunder-bay', 'Thunder Bay', 'ON', 1700, 1, 390000, true, true],
+  ['montreal', 'Montréal', 'QC', 1346, 0.75, 635000],
+  ['quebec-city', 'Québec City', 'QC', 1277, 0.85, 465000],
+  ['gatineau', 'Gatineau', 'QC', 1400, 0.95, 480000, true, true],
+  ['halifax', 'Halifax', 'NS', 1826, 1, 624000],
+  ['moncton', 'Moncton', 'NB', 1453, 1.4, 420000, false, true],
+  ['saint-john', 'Saint John', 'NB', 1300, 1.6, 330000, true, true],
+  ['fredericton', 'Fredericton', 'NB', 1400, 1.4, 380000, true, true],
+  ['charlottetown', 'Charlottetown', 'PE', 1500, 1.2, 450000, true, true],
+  ['st-johns', 'St. John’s', 'NL', 1250, 0.85, 400000, true, true],
+  ['whitehorse', 'Whitehorse', 'YT', 1800, 0.8, 650000, true, true],
+  ['yellowknife', 'Yellowknife', 'NT', 2000, 1.3, 550000, true, true],
 ];
 
-// Elsewhere in each province: rough typical values.
-const ELSEWHERE = { BC: [1800, 0.45], AB: [1500, 0.9], SK: [1350, 1.1], MB: [1400, 1.2], ON: [1600, 1], QC: [1200, 0.85], NB: [1350, 1.5], NS: [1600, 1.1], PE: [1450, 1.2], NL: [1200, 0.9], YT: [1800, 0.8], NT: [2000, 1.2], NU: [2400, 0.8] };
+// Elsewhere in each province: rough typical rent, property tax and house price.
+const ELSEWHERE = {
+  BC: [1800, 0.45, 850000],
+  AB: [1500, 0.9, 450000],
+  SK: [1350, 1.1, 330000],
+  MB: [1400, 1.2, 350000],
+  ON: [1600, 1, 650000],
+  QC: [1200, 0.85, 420000],
+  NB: [1350, 1.5, 300000],
+  NS: [1600, 1.1, 420000],
+  PE: [1450, 1.2, 400000],
+  NL: [1200, 0.9, 330000],
+  YT: [1800, 0.8, 600000],
+  NT: [2000, 1.2, 450000],
+  NU: [2400, 0.8, 600000],
+};
 
 export const CITIES = [
-  ...CITY_LIST.map(([key, name, province, rent, taxPct, estimated = false]) => ({ key, name, province, rent, taxPct, estimated })),
-  ...PROVINCES.map(({ code, name }) => ({ key: `${code.toLowerCase()}-other`, name: `Elsewhere in ${name}`, province: code, rent: ELSEWHERE[code][0], taxPct: ELSEWHERE[code][1], estimated: true })),
+  ...CITY_LIST.map(([key, name, province, rent, taxPct, price, rentEstimated = false, priceEstimated = false]) => ({ key, name, province, rent, taxPct, price, rentEstimated, priceEstimated })),
+  ...PROVINCES.map(({ code, name }) => {
+    const [rent, taxPct, price] = ELSEWHERE[code];
+    return { key: `${code.toLowerCase()}-other`, name: `Elsewhere in ${name}`, province: code, rent, taxPct, price, rentEstimated: true, priceEstimated: true };
+  }),
 ];
 
 export const DEFAULT_CITY = 'toronto';

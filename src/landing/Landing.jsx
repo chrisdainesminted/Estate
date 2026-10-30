@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, ArrowUpRight, Building2, ClipboardCheck, Home, Landmark, ListChecks, Lock, Plus } from 'lucide-react';
 import Logo from '../components/Logo.jsx';
-import { DEFAULT_PROFILE, RULES, RULES_CHECKED, benefits, buyCheck, homeFor, maxPrice } from '../lib/firstHome.js';
+import { DEFAULT_PROFILE, RULES, RULES_CHECKED, benefits, buyCheck, homeFor, incomeToQualify } from '../lib/firstHome.js';
 import { stepsFor } from '../lib/suites.js';
-import { cityByKey, guessCity, provinceName } from '../lib/canada.js';
+import { cityByKey, guessCity } from '../lib/canada.js';
 import CitySelect from '../components/CitySelect.jsx';
 import { DEFAULT_MARKET, INSURANCE_MIN, MARKET, listingToDeal } from '../lib/market.js';
 import { money } from '../lib/format.js';
@@ -30,18 +30,24 @@ const primary =
 const secondary =
   'inline-flex items-center justify-center gap-2 rounded-md border border-(--line-strong) px-5 py-3 text-[15px] font-semibold text-zinc-900 transition hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent) dark:text-zinc-100 dark:hover:bg-white/5';
 
-/** What the sample buyer could borrow on in a city, and what it costs to live there each month. */
-function buyOption(units, cityKey) {
+/** A basement suite rents for about 80% of the city's two-bedroom average (a one-bedroom). */
+const suiteRent = (place) => Math.round((place.rent * 0.8) / 25) * 25;
+
+/**
+ * The city's typical house, bought as a first home with the least down:
+ * the cash it takes, what it costs each month, and the income a bank wants,
+ * on your own or with a basement suite rented out.
+ */
+function buyOption(units, place) {
   const { rate, insurancePerUnit } = DEFAULT_MARKET;
-  const { rent, taxPct } = cityByKey(cityKey);
-  const profile = { ...SAMPLE, city: cityKey };
-  const rentIn = rent * (units - 1);
-  const price = maxPrice({ profile, units, ratePct: rate, taxPct, rentPerOtherUnit: rent }).byIncome;
+  const { price, taxPct } = place;
+  const rentIn = units > 1 ? suiteRent(place) : 0;
   const taxes = (price * taxPct) / 1200;
-  const c = buyCheck({ profile, price, units, ratePct: rate, taxesMonthly: taxes, rentFromOthers: rentIn });
+  const c = buyCheck({ profile: { ...SAMPLE, city: place.key, savings: Infinity, income: 1e9 }, price, units, ratePct: rate, taxesMonthly: taxes, rentFromOthers: rentIn, city: place.key });
   const insurance = Math.max(insurancePerUnit * units, INSURANCE_MIN) / 12;
   const outgoing = c.plan.payment + taxes + insurance + RULES.heatMonthly;
-  return { price, down: c.down, cashNeeded: c.cashNeeded, payment: c.plan.payment, rest: taxes + insurance + RULES.heatMonthly, rentIn, outgoing, live: outgoing - rentIn };
+  const income = incomeToQualify({ price, units, ratePct: rate, taxPct, rentPerOtherUnit: rentIn, city: place.key });
+  return { price, down: c.down, downPct: c.down / price, cashNeeded: c.cashNeeded, payment: c.plan.payment, rest: taxes + insurance + RULES.heatMonthly, rentIn, outgoing, live: outgoing - rentIn, income };
 }
 
 function useFeed() {
@@ -130,7 +136,7 @@ function Hero() {
           Own your first home. Let a tenant help pay for it.
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-zinc-600 sm:text-xl dark:text-zinc-400">
-          Bedrock shows what a bank would lend you, the government money you can claim where you live, and how renting out part of a home can make it cost less than your rent.
+          Bedrock shows what a bank would lend you, the government money you can claim where you live, and how renting out part of a home cuts both the income you need and what it costs you each month.
         </p>
         <div className="mt-9 flex flex-col gap-3 sm:flex-row">
           <a href={open('home')} className={primary}>
@@ -246,47 +252,47 @@ function Today({ feed }) {
 
 function Compare({ city, onCity }) {
   const place = cityByKey(city);
-  const solo = buyOption(1, place.key);
-  const duplex = buyOption(2, place.key);
-  const saves = solo.live - duplex.live;
+  const solo = buyOption(1, place);
+  const suite = buyOption(2, place);
+  const where = placeName(place);
   return (
     <section aria-labelledby="compare-title" className="border-b border-hairline">
       <div className={`${shell} py-16 sm:py-24`}>
-        <p className={eyebrow}>The same paycheque</p>
+        <p className={eyebrow}>What a house really takes</p>
         <h2 id="compare-title" className={`${h2} mt-3 max-w-3xl`} aria-live="polite">
-          {saves > 0
-            ? `On ${money(SAMPLE.income)} a year in ${placeName(place)}, a duplex can cost you ${money(saves)} a month less than a house.`
-            : `On ${money(SAMPLE.income)} a year in ${placeName(place)}, here’s a house next to a duplex.`}
+          A typical house in {where} costs about {money(place.price)}. Rent out a suite and it costs you {money(solo.live - suite.live)} a month less.
         </h2>
         <p className={lede}>
-          A bank counts the rent from the other unit as your income, so you can borrow more. Then the tenant pays a big share of the mortgage. Here’s the math for one buyer
-          paying {money(SAMPLE.rentNow)} a month in rent today.
+          A bank counts the suite’s rent as your income, so you need less of your own to qualify. Then the tenant pays part of the mortgage every month. Here’s the same house
+          both ways.
         </p>
         <div className="mt-8 max-w-sm">
           <CitySelect id="compare-city" label="Pick a city" value={place.key} onChange={onCity} />
         </div>
-        <div className="mt-12 grid overflow-hidden rounded-md border border-(--line-strong) bg-(--panel) md:grid-cols-2">
-          <Option title="A house, on your own" o={solo} />
-          <Option title="A duplex, renting one unit" o={duplex} accent className="max-md:border-t md:border-l border-hairline" />
+        <div className="mt-8 grid overflow-hidden rounded-md border border-(--line-strong) bg-(--panel) md:grid-cols-2">
+          <Option title="On your own" o={solo} rentToday={place.rent} where={where} />
+          <Option title="With a basement suite rented out" o={suite} rentToday={place.rent} where={where} accent className="max-md:border-t md:border-l border-hairline" />
         </div>
-        <p className="mt-4 text-[13px] text-zinc-500 dark:text-zinc-400">
-          At a {DEFAULT_MARKET.rate}% five-year fixed rate over 30 years, 5% down with mortgage insurance, {provinceName(place.province)}’s land transfer tax, {money(place.rent)} a
-          month rent for the other unit ({placeName(place)}’s average for two bedrooms{place.estimated ? ', estimated' : ''}) and property tax of about {place.taxPct}% of the price. Estimates, not financial advice.
+        <p className="mt-4 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+          A typical detached house, fall 2026{place.priceEstimated ? ' (our estimate from the local average)' : ', from the local real estate board'}. {Math.round(solo.downPct * 100)}% down
+          {solo.downPct >= 0.2 ? ' (homes over $1.5 million can’t be insured, so 20% is the least)' : ' with mortgage insurance'}, a {DEFAULT_MARKET.rate}% five-year fixed rate
+          over 30 years, the land transfer tax in {where} after first-buyer relief, property tax of about {place.taxPct}% of the price, and a suite renting for{' '}
+          {money(suite.rentIn)} a month. The same price both ways; a house that already has a legal suite often costs more. Estimates, not financial advice.
         </p>
       </div>
     </section>
   );
 }
 
-function Option({ title, o, accent = false, className = '' }) {
+function Option({ title, o, rentToday, where, accent = false, className = '' }) {
   const row = 'flex items-baseline justify-between gap-4 py-2.5 text-[15px]';
   return (
     <div className={`p-6 sm:p-8 ${className}`}>
       <h3 className="text-base font-semibold text-zinc-950 dark:text-white">{title}</h3>
       <dl className="mt-5 border-t border-hairline">
         <div className={row}>
-          <dt className="text-zinc-600 dark:text-zinc-400">A bank would lend on</dt>
-          <dd className="font-semibold tabular-nums text-zinc-950 dark:text-white">{money(o.price)}</dd>
+          <dt className="text-zinc-600 dark:text-zinc-400">Household income a bank wants</dt>
+          <dd className="font-semibold tabular-nums text-zinc-950 dark:text-white">{o.income ? `${money(o.income)}/yr` : 'Over $2 million'}</dd>
         </div>
         <div className={row}>
           <dt className="text-zinc-600 dark:text-zinc-400">Cash to buy it</dt>
@@ -301,7 +307,7 @@ function Option({ title, o, accent = false, className = '' }) {
           <dd className="tabular-nums">{money(o.rest)}/mo</dd>
         </div>
         <div className={row}>
-          <dt className="text-zinc-600 dark:text-zinc-400">Rent from the tenant</dt>
+          <dt className="text-zinc-600 dark:text-zinc-400">Rent from the suite</dt>
           <dd className="tabular-nums">{o.rentIn ? `−${money(o.rentIn)}/mo` : '—'}</dd>
         </div>
       </dl>
@@ -309,7 +315,9 @@ function Option({ title, o, accent = false, className = '' }) {
         <span className="font-semibold text-zinc-950 dark:text-white">Costs you each month</span>
         <span className={`text-3xl font-semibold tabular-nums tracking-tight ${accent ? 'text-emerald-700 dark:text-emerald-400' : 'text-zinc-950 dark:text-white'}`}>{money(o.live)}</span>
       </div>
-      <p className="mt-2 text-right text-[13px] text-zinc-500 dark:text-zinc-400">{o.live < SAMPLE.rentNow ? `${money(SAMPLE.rentNow - o.live)} less than rent today` : `${money(o.live - SAMPLE.rentNow)} more than rent today`}</p>
+      <p className="mt-2 text-right text-[13px] text-zinc-500 dark:text-zinc-400">
+        Renting a two-bedroom in {where}: about {money(rentToday)}/mo
+      </p>
     </div>
   );
 }
@@ -391,7 +399,9 @@ function Features() {
 
 function Money({ city }) {
   const place = cityByKey(city);
-  const b = benefits({ profile: { ...SAMPLE, city: place.key }, price: SAMPLE.targetPrice, units: SAMPLE.targetUnits });
+  // Earning what a bank wants for the city's typical house with a suite, and maxing the FHSA.
+  const income = buyOption(2, place).income ?? SAMPLE.income;
+  const b = benefits({ profile: { ...SAMPLE, city: place.key, income, monthlySave: 700 }, price: place.price, units: 2 });
   const list = b.list.filter((x) => x.key !== 'refi');
   return (
     <section id="money" aria-labelledby="money-title" className="scroll-mt-16 border-b border-hairline">
@@ -401,8 +411,8 @@ function Money({ city }) {
           About {money(b.total)} back in the first year, plus {money(RULES.hbp)} you can borrow from yourself.
         </h2>
         <p className={lede}>
-          For a first-time buyer in {placeName(place)} earning {money(SAMPLE.income)} and saving {money(SAMPLE.monthlySave)} a month toward a {money(SAMPLE.targetPrice)} duplex.
-          Your own amounts are one tap away.
+          For a first-time buyer in {placeName(place)} buying the typical {money(place.price)} house, earning the {money(income)} a bank would want with a suite, and putting
+          $8,000 a year in an FHSA. Your own amounts are one tap away.
         </p>
         <ul className="mt-10 divide-y divide-hairline border-y border-hairline">
           {list.map((x) => (
