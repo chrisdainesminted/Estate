@@ -19,6 +19,8 @@
       { "name": "DIRECTORY", "class_name": "Directory" }
     ]
   },
+  // Daily: charges landlords not yet billed this month (worker/index.js).
+  "triggers": { "crons": ["17 14 * * *"] },
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["Workspace"] },
     { "tag": "v2", "new_sqlite_classes": ["Directory"] }

@@ -23,6 +23,26 @@ export class DirectoryStore {
     );
     sql.exec('CREATE TABLE IF NOT EXISTS reports (key TEXT, ip TEXT, reason TEXT, note TEXT, at INTEGER, PRIMARY KEY (key, ip))');
     sql.exec('CREATE TABLE IF NOT EXISTS hits (bucket TEXT PRIMARY KEY, n INTEGER)');
+    sql.exec('CREATE TABLE IF NOT EXISTS billed (ws TEXT PRIMARY KEY, charged TEXT)');
+  }
+
+  // ---- landlords with a card on file, for the monthly charge ----
+
+  addBilled(ws) {
+    this.sql.exec('INSERT INTO billed (ws, charged) VALUES (?, ?) ON CONFLICT(ws) DO NOTHING', ws, '');
+  }
+
+  removeBilled(ws) {
+    this.sql.exec('DELETE FROM billed WHERE ws = ?', ws);
+  }
+
+  /** Up to `limit` workspaces not yet charged for `month` (YYYY-MM). */
+  dueBilling(month, limit = 20) {
+    return this.sql.exec('SELECT ws FROM billed WHERE charged < ? ORDER BY charged LIMIT ?', month, limit).toArray().map((r) => r.ws);
+  }
+
+  markCharged(ws, month) {
+    this.sql.exec('UPDATE billed SET charged = ? WHERE ws = ?', month, ws);
   }
 
   limit(ip, kind, max) {

@@ -19,7 +19,10 @@ Safety: listing and status pages carry scam warnings; anyone can report a listin
 
 Optional settings in Cloudflare (Workers → bedrock → Settings → Variables and secrets):
 - `ADMIN_KEY`: turns on the review page for reported listings.
+- `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`: turn on landlord billing (see Pricing below). In Stripe, add a webhook endpoint for `https://<site>/api/stripe/webhook` with the events `checkout.session.completed`, `payment_intent.succeeded` and `payment_intent.payment_failed`.
 - `RESEND_API_KEY` and `EMAIL_FROM` (an address on a domain verified in Resend): turns on email confirmation; once set, a listing shows in public search only after its owner confirms their email with a code. Until then listings publish straight away.
+
+Pricing (`worker/pricing.js`): renters, buyers, listings and the calculators are free. Landlords who track rent pay 2% of each tenanted unit's rent a month, capped at $30 a unit, with their first unit (the one with the biggest fee) and all vacant units free. With `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` set, a landlord saves a card through Stripe Checkout, a daily job charges each one once a month (20 a day, to stay within Cloudflare's per-run limits; a failed one is retried after a new card), and the webhook at `/api/stripe/webhook` records saved cards and settled charges. Without a card, tracking a second tenanted unit asks for one. Without the keys, billing is off and everything is free. Bedrock is software the landlord uses; it doesn't collect rent or manage tenancies.
 
 Messages show in the app only: people see new ones when they open their inbox or status page (both check every 30 to 60 seconds while open).
 

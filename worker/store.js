@@ -4,6 +4,7 @@
 // interface, so it runs the same in the Worker and in tests.
 
 import { APPLY_FIELDS, COLLECTIONS, EMAIL, REPAIR_FIELDS, clean } from './schema.js';
+import { PLAN, isTenanted } from './pricing.js';
 
 const MAX_ITEMS = 3000; // per collection
 const MAX_PHOTOS = 10; // per listing
@@ -37,9 +38,11 @@ function sameText(a, b) {
 }
 
 export class Store {
-  constructor(sql, now = () => Date.now()) {
+  constructor(sql, now = () => Date.now(), { billing = false } = {}) {
     this.sql = sql;
     this.now = now;
+    // With billing on, tracking a second tenanted unit needs a card on file.
+    this.billingOn = billing;
     sql.exec('CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)');
     sql.exec('CREATE TABLE IF NOT EXISTS items (collection TEXT, id TEXT, data TEXT, created INTEGER, updated INTEGER, PRIMARY KEY (collection, id))');
     sql.exec('CREATE TABLE IF NOT EXISTS hits (bucket TEXT PRIMARY KEY, n INTEGER)');
@@ -110,7 +113,42 @@ export class Store {
   /** Everything, for the landlord's screen; old closed applications are cleared out first. */
   all() {
     this.purge();
-    return Object.fromEntries(COLLECTIONS.map((c) => [c, c === 'settings' ? (this.get('settings', 'main') ?? {}) : this.list(c)]));
+    return { ...Object.fromEntries(COLLECTIONS.map((c) => [c, c === 'settings' ? (this.get('settings', 'main') ?? {}) : this.list(c)])), billing: this.billing() };
+  }
+
+  // ---- billing ----
+
+  billing() {
+    const card = this.meta('billingCard');
+    return { card: card ? JSON.parse(card) : null, invoices: this.list('invoices').sort((a, b) => (a.month < b.month ? 1 : -1)) };
+  }
+
+  setCustomer(id) {
+    this.setMeta('billingCustomer', id);
+  }
+
+  setCard(card) {
+    this.setMeta('billingCard', JSON.stringify(card));
+  }
+
+  clearCard() {
+    this.setMeta('billingCard', '');
+  }
+
+  /** Record a month's charge (one per month: a retry replaces it). */
+  recordInvoice({ month, cents, status, stripeId = '', error = '' }) {
+    return this.write('invoices', `inv-${month}`, { month, cents, status, stripeId, error });
+  }
+
+  invoiceByStripe(stripeId) {
+    return this.list('invoices').find((i) => i.stripeId === stripeId) ?? null;
+  }
+
+  /** A unit can't become a second (third…) tenanted one without a card, when billing is on. */
+  checkBilling(next, id) {
+    if (!this.billingOn || !isTenanted(next) || this.billing().card) return;
+    const others = this.list('units').filter((u) => u.id !== id && isTenanted(u)).length;
+    if (others >= PLAN.freeUnits) throw new StoreError(402, 'Your first unit is free. Add a card in Billing to track rent for more units.');
   }
 
   purge() {
@@ -124,7 +162,10 @@ export class Store {
     const n = this.sql.exec('SELECT COUNT(*) AS n FROM items WHERE collection = ?', collection).toArray()[0].n;
     if (n >= MAX_ITEMS) throw new StoreError(413, 'Too many records of this kind.');
     const data = clean(collection, input);
-    if (collection === 'units') data.repairToken = randomToken(12);
+    if (collection === 'units') {
+      this.checkBilling(data, null);
+      data.repairToken = randomToken(12);
+    }
     if (collection === 'slots') {
       if (!data.start || !data.listingId) throw new StoreError(400, 'A viewing slot needs a listing and a start time.');
       data.status = 'open';
@@ -146,6 +187,7 @@ export class Store {
     const old = this.get(collection, id);
     if (!old) throw new StoreError(404, 'Not found.');
     const changes = clean(collection, patch);
+    if (collection === 'units') this.checkBilling({ ...old, ...changes }, id);
     if (collection === 'slots') {
       // Booking state moves only through applications.
       delete changes.status;

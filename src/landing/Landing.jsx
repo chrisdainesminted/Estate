@@ -486,7 +486,7 @@ function Trust() {
   const items = [
     [ClipboardCheck, `Rules checked ${longDate(RULES_CHECKED)}`, 'Down payments, insurance premiums, the stress test and every program amount, each linked to its official source.'],
     [Lock, 'Your numbers stay with you', 'No account and no server storing your income. Everything is saved in your own browser.'],
-    [Landmark, 'Free to use', 'No account and nothing to pay. Every figure shows how it was worked out, so you can check it with your broker.'],
+    [Landmark, 'Free for renters and buyers', 'Searching, applying, the calculators and the first-home tools cost nothing. Landlords track their first unit free; after that it’s 2% of rent, at most $30 a unit.'],
   ];
   return (
     <section aria-label="Why trust it" className="border-b border-hairline bg-(--panel)">
@@ -519,6 +519,10 @@ const FAQ = [
   [
     'Where do the listings come from?',
     'Public listing sites, searched each morning, in Thunder Bay for now. Each one links to its original page, and Bedrock fills gaps like rent with local averages you can change.',
+  ],
+  [
+    'What does it cost?',
+    'Nothing for renters, buyers or the calculators, and listing a home is free. Landlords who track rent pay 2% of each tenanted unit’s rent a month, at most $30 a unit, and their first unit is free. A property manager usually takes 8 to 12%.',
   ],
   [
     'Does it work where I live?',

@@ -11,12 +11,17 @@
 // - RESEND_API_KEY and EMAIL_FROM: send email (sign-in codes). With both set,
 //   a listing appears in public search only once its owner confirms their email.
 // - ADMIN_KEY: opens the review page for reported listings (/homes/#admin).
+// - STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET: landlord billing (pricing.js).
+//   A daily job charges each landlord with a card once a month; the webhook
+//   at /api/stripe/webhook hears when a card is saved or a charge settles.
 
 import { DurableObject } from 'cloudflare:workers';
 import { COLLECTIONS } from './schema.js';
 import { PHOTO_TYPES, Store, StoreError, hashKey, randomToken } from './store.js';
 import { DirectoryStore, REPORT_REASONS } from './directory.js';
 import { cityByKey } from '../src/lib/canada.js';
+import { monthlyBill } from './pricing.js';
+import { stripeClient, verifyWebhook } from './stripe.js';
 
 const MAX_BODY = 32 * 1024;
 const MAX_PHOTO = 1_500_000;
@@ -24,6 +29,8 @@ const json = (data, status = 200, headers = {}) =>
   new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...headers } });
 
 const canEmail = (env) => Boolean(env.RESEND_API_KEY && env.EMAIL_FROM);
+const canBill = (env) => Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET);
+const thisMonth = () => new Date().toISOString().slice(0, 7);
 const directory = (env) => env.DIRECTORY.get(env.DIRECTORY.idFromName('main'));
 
 /** Equal strings in time that doesn't depend on where they differ. */
@@ -47,7 +54,41 @@ export class Workspace extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
     this.env = env;
-    this.store = new Store(ctx.storage.sql);
+    this.store = new Store(ctx.storage.sql, undefined, { billing: canBill(env) });
+  }
+
+  /** Calls only the Worker itself makes (from Stripe's webhook and the monthly job), never from a browser. */
+  async internal(req) {
+    const s = this.store;
+    switch (req.op) {
+      case 'cardSaved':
+        s.setCard(req.card);
+        return { ok: true };
+      case 'charge': {
+        if (!s.billing().card) return { skipped: 'no card' };
+        const bill = monthlyBill(s.list('units'));
+        if (bill.cents < 50) return s.recordInvoice({ month: req.month, cents: 0, status: 'free' });
+        const stripe = stripeClient(this.env.STRIPE_SECRET_KEY);
+        const r = await stripe.charge(
+          s.meta('billingCustomer'),
+          s.billing().card.paymentMethod,
+          bill.cents,
+          `Bedrock rent tracker, ${req.month}: ${bill.tenanted} tenanted unit${bill.tenanted === 1 ? '' : 's'}`,
+          { workspace: req.ws, month: req.month },
+          `bedrock-${req.ws}-${req.month}`,
+        );
+        const pi = r.data?.error?.payment_intent ?? r.data;
+        const status = r.ok && pi?.status === 'succeeded' ? 'paid' : pi?.status === 'processing' ? 'processing' : 'failed';
+        return s.recordInvoice({ month: req.month, cents: bill.cents, status, stripeId: pi?.id || '', error: r.ok ? '' : r.data?.error?.message || 'The charge didn’t go through.' });
+      }
+      case 'invoiceUpdate': {
+        const inv = s.invoiceByStripe(req.stripeId);
+        if (inv) s.recordInvoice({ ...inv, status: req.status, error: req.error || '' });
+        return { ok: true };
+      }
+      default:
+        throw new Error('Unknown internal request.');
+    }
   }
 
   /** Bring the public search in line with this listing (or all of them). */
@@ -91,7 +132,26 @@ export class Workspace extends DurableObject {
       if (!s.checkKey(await hashKey(req.key ?? ''))) throw new StoreError(401, 'This private link isn’t valid for the workspace.');
       switch (req.op) {
         case 'all':
-          return { ...s.all(), config: { verification: canEmail(this.env) } };
+          return { ...s.all(), config: { verification: canEmail(this.env), billing: canBill(this.env) } };
+        case 'billingSetup': {
+          if (!canBill(this.env)) throw new StoreError(501, 'Billing isn’t set up on this site yet.');
+          const stripe = stripeClient(this.env.STRIPE_SECRET_KEY);
+          let customer = s.meta('billingCustomer');
+          if (!customer) {
+            customer = (await stripe.createCustomer(req.ws, s.get('settings', 'main')?.email)).id;
+            s.setCustomer(customer);
+          }
+          const back = `${req.origin}/app/?view=landlord`;
+          const session = await stripe.setupSession(customer, req.ws, `${back}#billing=saved`, `${back}#billing=cancelled`);
+          return { url: session.url };
+        }
+        case 'billingRemove': {
+          const card = s.billing().card;
+          if (card && canBill(this.env)) await stripeClient(this.env.STRIPE_SECRET_KEY).detach(card.paymentMethod).catch(() => {});
+          s.clearCard();
+          await directory(this.env).removeBilled(req.ws);
+          return s.billing();
+        }
         case 'create': {
           const item = s.create(req.collection, req.body);
           if (req.collection === 'listings') await this.publish(req.ws, item.id);
@@ -175,6 +235,22 @@ export class Directory extends DurableObject {
     this.store.remove(key);
   }
 
+  addBilled(ws) {
+    this.store.addBilled(ws);
+  }
+
+  removeBilled(ws) {
+    this.store.removeBilled(ws);
+  }
+
+  dueBilling(month, limit) {
+    return this.store.dueBilling(month, limit);
+  }
+
+  markCharged(ws, month) {
+    this.store.markCharged(ws, month);
+  }
+
   async call(req) {
     try {
       switch (req.op) {
@@ -232,7 +308,8 @@ async function api(request, env, url) {
     if (typeof body.key !== 'string' || body.key.length > 140) return json({ error: 'Not found.' }, 404);
     return answer(await directory(env).call({ op: 'report', key: body.key, ip, reason: REPORT_REASONS.includes(body.reason) ? body.reason : 'other', note: body.note }));
   }
-  if (parts[0] === 'config' && method === 'GET') return json({ verification: canEmail(env), review: Boolean(env.ADMIN_KEY) });
+  if (parts[0] === 'config' && method === 'GET') return json({ verification: canEmail(env), review: Boolean(env.ADMIN_KEY), billing: canBill(env) });
+  if (parts[0] === 'stripe' && parts[1] === 'webhook' && method === 'POST') return stripeWebhook(request, env);
 
   // The site owner's review of reported listings.
   if (parts[0] === 'admin') {
@@ -285,6 +362,8 @@ async function api(request, env, url) {
   else if (rest[0] === 'listings' && rest[2] === 'photos' && rest.length === 4 && method === 'DELETE') call = { op: 'removePhoto', key, listingId: rest[1], photoId: rest[3] };
   else if (rest[0] === 'listings' && rest[2] === 'cover' && method === 'POST') call = { op: 'coverPhoto', key, listingId: rest[1], photoId: body?.photoId };
   else if (rest[0] === 'listings' && rest[2] === 'renew' && method === 'POST') call = { op: 'renew', key, listingId: rest[1] };
+  else if (rest[0] === 'billing' && rest[1] === 'setup' && method === 'POST') call = { op: 'billingSetup', key, origin: url.origin };
+  else if (rest[0] === 'billing' && rest[1] === 'card' && method === 'DELETE') call = { op: 'billingRemove', key };
   else if (rest[0] === 'verify' && rest[1] === 'send' && method === 'POST') call = { op: 'verifySend', key };
   else if (rest[0] === 'verify' && rest[1] === 'check' && method === 'POST') call = { op: 'verifyCheck', key, body };
   else if (COLLECTIONS.includes(rest[0])) {
@@ -296,7 +375,49 @@ async function api(request, env, url) {
   return answer(await ws.call({ ...call, ws: wsId }));
 }
 
+/** Stripe tells us when a card is saved and when a charge settles. */
+async function stripeWebhook(request, env) {
+  if (!canBill(env)) return json({ error: 'Not set up.' }, 404);
+  const payload = await request.text();
+  if (!(await verifyWebhook(payload, request.headers.get('stripe-signature'), env.STRIPE_WEBHOOK_SECRET))) return json({ error: 'Bad signature.' }, 400);
+  const event = JSON.parse(payload);
+  const obj = event.data?.object ?? {};
+  const wsId = obj.metadata?.workspace;
+  if (!wsId || !ID.test(wsId)) return json({ ok: true });
+  const ws = env.WORKSPACE.get(env.WORKSPACE.idFromName(wsId));
+  if (event.type === 'checkout.session.completed' && obj.mode === 'setup' && obj.setup_intent) {
+    const stripe = stripeClient(env.STRIPE_SECRET_KEY);
+    const intent = await stripe.setupIntent(obj.setup_intent);
+    const pm = await stripe.paymentMethod(intent.payment_method);
+    await ws.internal({ op: 'cardSaved', card: { paymentMethod: pm.id, brand: pm.card?.brand || 'card', last4: pm.card?.last4 || '', expMonth: pm.card?.exp_month, expYear: pm.card?.exp_year } });
+    await directory(env).addBilled(wsId);
+    // A new card after a failed charge: try again in the next daily run.
+    await directory(env).markCharged(wsId, '');
+  }
+  if (event.type === 'payment_intent.succeeded') await ws.internal({ op: 'invoiceUpdate', stripeId: obj.id, status: 'paid' });
+  if (event.type === 'payment_intent.payment_failed') await ws.internal({ op: 'invoiceUpdate', stripeId: obj.id, status: 'failed', error: obj.last_payment_error?.message });
+  return json({ ok: true });
+}
+
+/** Each day, charge up to 20 landlords not yet charged this month (spread out to stay within Cloudflare's per-run limits). */
+async function chargeMonth(env) {
+  if (!canBill(env)) return;
+  const month = thisMonth();
+  for (const wsId of await directory(env).dueBilling(month, 20)) {
+    try {
+      await env.WORKSPACE.get(env.WORKSPACE.idFromName(wsId)).internal({ op: 'charge', ws: wsId, month });
+      await directory(env).markCharged(wsId, month);
+    } catch {
+      // Stripe or the workspace didn't answer: this one is tried again tomorrow.
+    }
+  }
+}
+
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(chargeMonth(env));
+  },
+
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname.startsWith('/api/')) {

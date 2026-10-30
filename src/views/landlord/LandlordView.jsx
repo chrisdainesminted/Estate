@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CalendarDays, Home, Inbox as InboxIcon, KeyRound, Landmark, ReceiptText, Scale, Settings, Wrench } from 'lucide-react';
+import { AlertTriangle, CalendarDays, CreditCard, Home, Inbox as InboxIcon, KeyRound, Landmark, ReceiptText, Scale, Settings, Wrench } from 'lucide-react';
 import { Button, Card, CardHeader, ViewHeader } from '../../components/ui.jsx';
 import { ApiError, call, links, saveWorkspace, savedWorkspace } from '../../lib/landlordApi.js';
 import { cityByKey } from '../../lib/canada.js';
@@ -13,6 +13,7 @@ import Repairs from './Repairs.jsx';
 import Expenses from './Expenses.jsx';
 import Rules from './Rules.jsx';
 import SettingsPanel from './SettingsPanel.jsx';
+import BillingPanel from './BillingPanel.jsx';
 
 /**
  * A photo made ready to upload: at most 1600 pixels on its long side, as a
@@ -48,6 +49,7 @@ const TABS = [
   { key: 'repairs', label: 'Repairs', icon: Wrench },
   { key: 'expenses', label: 'Expenses & taxes', icon: ReceiptText },
   { key: 'rules', label: 'Rules', icon: Scale },
+  { key: 'billing', label: 'Billing', icon: CreditCard },
   { key: 'settings', label: 'Settings', icon: Settings },
 ];
 
@@ -68,7 +70,12 @@ export default function LandlordView({ homeCity }) {
   });
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
-  const [tab, setTab] = useState('inbox');
+  // Back from Stripe after saving a card: open Billing.
+  const [tab, setTab] = useState(() => {
+    if (!/billing=/.test(location.hash)) return 'inbox';
+    history.replaceState(null, '', location.pathname + location.search);
+    return 'billing';
+  });
 
   const load = useCallback(async () => {
     if (!ws) return;
@@ -154,6 +161,11 @@ export default function LandlordView({ homeCity }) {
         await call(`/w/${ws?.id}/listings/${listingId}/renew`, { method: 'POST', key: ws?.key, body: {} });
         await load();
       },
+      billingSetup: () => call(`/w/${ws?.id}/billing/setup`, { method: 'POST', key: ws?.key, body: {} }),
+      billingRemove: async () => {
+        await call(`/w/${ws?.id}/billing/card`, { method: 'DELETE', key: ws?.key });
+        await load();
+      },
       verifySend: () => call(`/w/${ws?.id}/verify/send`, { method: 'POST', key: ws?.key, body: {} }),
       verifyCheck: async (code) => {
         await call(`/w/${ws?.id}/verify/check`, { method: 'POST', key: ws?.key, body: { code } });
@@ -232,6 +244,7 @@ export default function LandlordView({ homeCity }) {
       {tab === 'repairs' && <Repairs {...props} />}
       {tab === 'expenses' && <Expenses {...props} />}
       {tab === 'rules' && <Rules {...props} />}
+      {tab === 'billing' && <BillingPanel {...props} />}
       {tab === 'settings' && <SettingsPanel {...props} onForget={() => (saveWorkspace(null), setWs(null), setData(null))} />}
     </div>
   );
