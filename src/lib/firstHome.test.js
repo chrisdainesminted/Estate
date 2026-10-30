@@ -14,6 +14,7 @@ import {
   premiumRate,
   qualify,
   qualifyingRate,
+  refundRate,
 } from './firstHome.js';
 
 describe('down payment and insurance', () => {
@@ -101,13 +102,28 @@ describe('living in it', () => {
 
 describe('money you can get', () => {
   it('adds up the cash for a first-time buyer, and the GST rebate on a new home', () => {
-    const resale = benefits({ profile: { ...DEFAULT_PROFILE, monthlySave: 800 }, price: 400000 });
+    const resale = benefits({ profile: { ...DEFAULT_PROFILE, city: 'thunder-bay', monthlySave: 800 }, price: 400000 });
     expect(resale.list.map((b) => b.key)).toEqual(['fhsa', 'ltt', 'hbtc', 'hbp']);
-    expect(resale.total).toBe(Math.round(8000 * 0.2965) + 4000 + 1500);
+    expect(resale.total).toBe(Math.round(8000 * refundRate(70000, 8000, 'ON')) + 4000 + 1500);
     const fresh = benefits({ profile: { ...DEFAULT_PROFILE, newBuild: true }, price: 600000 });
     expect(fresh.list.find((b) => b.key === 'gst').amount).toBe(30000);
     expect(benefits({ profile: { ...DEFAULT_PROFILE, newBuild: true }, price: 1250000 }).list.find((b) => b.key === 'gst').amount).toBe(25000);
     expect(benefits({ profile: { firstTime: false }, price: 400000 }).total).toBe(0);
+  });
+
+  it('follows the province: Toronto adds its own rebate, BC its exemption, Alberta has neither', () => {
+    const keys = (city) => benefits({ profile: { ...DEFAULT_PROFILE, city }, price: 450000 }).list.map((b) => b.key);
+    expect(keys('toronto')).toEqual(['fhsa', 'ltt', 'mltt', 'hbtc', 'hbp']);
+    expect(keys('vancouver')).toEqual(['fhsa', 'ptt', 'hbtc', 'hbp']);
+    expect(keys('calgary')).toEqual(['fhsa', 'hbtc', 'hbp']);
+    expect(keys('montreal')).toEqual(['fhsa', 'welcome', 'hbtc', 'qc-hbtc', 'hbp']);
+  });
+
+  it('charges tax on the insurance premium only in Ontario, Quebec and Saskatchewan', () => {
+    const pst = (city) => buyCheck({ profile: { ...DEFAULT_PROFILE, city }, price: 400000, ratePct: 4.5, taxesMonthly: 300 }).plan.premiumPst;
+    expect(pst('ottawa')).toBeGreaterThan(0);
+    expect(pst('calgary')).toBe(0);
+    expect(pst('regina')).toBeCloseTo(pst('ottawa') * 0.75, 6);
   });
 
   it('counts the months to save, faster with more each month', () => {
@@ -126,6 +142,14 @@ describe('normalizeProfile', () => {
     expect(normalizeProfile({ income: 82000 }).entered).toBe(true);
     expect(normalizeProfile({ income: 82000, entered: false }).entered).toBe(false);
     expect(normalizeProfile({ entered: true }).entered).toBe(true);
+  });
+
+  it('keeps a city, treating older profiles as Thunder Bay, and local overrides only when set', () => {
+    expect(normalizeProfile(undefined).city).toBe('toronto');
+    expect(normalizeProfile({ income: 60000 }).city).toBe('thunder-bay');
+    expect(normalizeProfile({ city: 'calgary' }).city).toBe('calgary');
+    expect(normalizeProfile({ city: 'calgary' }).rentOther).toBeNull();
+    expect(normalizeProfile({ city: 'calgary', rentOther: 1800 }).rentOther).toBe(1800);
   });
 });
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { money } from '../lib/format.js';
+import { cityByKey, rentsIn } from '../lib/canada.js';
 import { Segmented } from './ui.jsx';
 
 const SIZES = [
@@ -11,11 +12,14 @@ const SIZES = [
 ];
 
 /**
- * "Don't know the rent?": pick the bedrooms in each unit and get the
- * going Thunder Bay rent from the rent table in the listing assumptions.
+ * "Don't know the rent?": pick the bedrooms in each unit and get the going
+ * rent in the deal's city: the listing assumptions' rent table, moved there
+ * by the two cities' average rents.
  */
-export default function RentHelper({ rents, onPick }) {
+export default function RentHelper({ rents: table, city = 'thunder-bay', onPick }) {
   const [open, setOpen] = useState(false);
+  const rents = rentsIn(table, city);
+  const place = cityByKey(city).name.replace(/^Elsewhere in /, '');
   const [beds, setBeds] = useState(null);
   const size = SIZES.find((s) => s.value === beds);
 
@@ -45,8 +49,8 @@ export default function RentHelper({ rents, onPick }) {
       />
       <p className="mt-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
         {size
-          ? `Typical Thunder Bay rent for ${size.words}: ${money(Number(rents[beds]) || 0)}/mo. Change it if you know better.`
-          : 'Fills in the typical Thunder Bay rent for that size, from your listing assumptions.'}
+          ? `Typical ${place} rent for ${size.words}: ${money(Number(rents[beds]) || 0)}/mo. Change it if you know better.`
+          : `Fills in the typical ${place} rent for that size.`}
       </p>
     </div>
   );

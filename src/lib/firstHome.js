@@ -1,10 +1,13 @@
-// First-time buyers in Ontario: the down payment and mortgage insurance on a
+// First-time buyers anywhere in Canada: the down payment and mortgage insurance on a
 // home you live in, whether a bank would lend on it (with rent from the
 // other units counted, as for a house hack), what living there costs you,
 // and the government money you can get. Rules change often: RULES_CHECKED
 // says when these were last checked, and the app shows it beside them.
+// What changes by province and city (transfer tax, tax on the premium,
+// income tax, local rent and property tax) comes from canada.js.
 
-import { loanRate, monthlyPI, ontarioLandTransferTax } from './finance.js';
+import { loanRate, monthlyPI } from './finance.js';
+import { DEFAULT_CITY, PREMIUM_TAX, cityByKey, deductionRefund, provincialHomeCredit, transferRelief, transferTax } from './canada.js';
 
 export const RULES_CHECKED = '2026-10-29';
 
@@ -18,8 +21,6 @@ export const RULES = {
   amortFirstTime: 30, // insured, first-time buyers (since Dec 15, 2024)
   amortInsured: 25,
   amortConventional: 30,
-  premiumPst: 0.08, // Ontario charges PST on the insurance premium, paid at closing
-  lttRefundMax: 4000, // Ontario first-time buyer land transfer tax refund
   homeBuyersCredit: 1500, // federal: $10,000 × 15%
   fhsaYear: 8000,
   fhsaLifetime: 40000,
@@ -48,6 +49,9 @@ export const DEFAULT_PROFILE = {
   newBuild: false,
   targetPrice: 400000, // the home you're saving for
   targetUnits: 2, // a duplex: live in one unit, rent the other
+  city: DEFAULT_CITY, // where you're buying: a key in canada.js CITIES
+  rentOther: null, // $/mo a second unit would rent for; null = the city's average
+  taxPct: null, // property tax, % of price a year; null = the city's typical rate
   entered: false, // false until the person gives their own numbers; until then these are an example
 };
 
@@ -61,6 +65,9 @@ export function normalizeProfile(p) {
   for (const k of ['income', 'savings', 'monthlySave', 'debts', 'rentNow', 'targetPrice']) if (p && Number.isFinite(Number(p[k]))) out[k] = Math.max(Number(p[k]), 0);
   for (const k of ['firstTime', 'newBuild']) if (typeof p?.[k] === 'boolean') out[k] = p[k];
   if ([1, 2, 3, 4].includes(Number(p?.targetUnits))) out.targetUnits = Number(p.targetUnits);
+  // Profiles saved before cities existed were all for Thunder Bay.
+  if (p) out.city = cityByKey(p.city ?? 'thunder-bay').key;
+  for (const k of ['rentOther', 'taxPct']) out[k] = p?.[k] != null && Number.isFinite(Number(p[k])) ? Math.max(Number(p[k]), 0) : null;
   // Profiles saved before this flag existed count as entered once any answer differs from the example.
   out.entered = typeof p?.entered === 'boolean' ? p.entered : STARTER_KEYS.some((k) => typeof p?.[k] === 'number' && p[k] !== DEFAULT_PROFILE[k]);
   return out;
@@ -78,6 +85,13 @@ export function minDownPayment(price, units = 1) {
   return units >= 3 ? Math.max(tiered, p * 0.1) : tiered;
 }
 
+/** Where the profile is buying: the city, its province, and the rent and property tax to use there. */
+export function localFor(profile) {
+  const prof = normalizeProfile(profile);
+  const c = cityByKey(prof.city);
+  return { city: c, province: c.province, rent: prof.rentOther ?? c.rent, taxPct: prof.taxPct ?? c.taxPct, rentIsAverage: prof.rentOther == null, taxIsTypical: prof.taxPct == null };
+}
+
 /** The insurance premium rate for a loan-to-value, or 0 when 20% or more is down. */
 export function premiumRate(ltv, amortYears) {
   if (ltv <= 0.8 + 1e-9) return 0;
@@ -88,9 +102,10 @@ export function premiumRate(ltv, amortYears) {
 
 /**
  * The mortgage on a home you live in: insured below 20% down, with the
- * premium added to the loan and Ontario's PST on it due at closing.
+ * premium added to the loan. Ontario, Quebec and Saskatchewan charge sales
+ * tax on the premium, due in cash at closing.
  */
-export function mortgagePlan({ price, down, ratePct, firstTime = true }) {
+export function mortgagePlan({ price, down, ratePct, firstTime = true, province = 'ON' }) {
   const p = Math.max(num(price), 0);
   const d = Math.min(Math.max(num(down), 0), p);
   const base = p - d;
@@ -101,7 +116,7 @@ export function mortgagePlan({ price, down, ratePct, firstTime = true }) {
   const premium = Number.isFinite(rate) ? base * rate : NaN;
   const loan = base + (Number.isFinite(premium) ? premium : 0);
   const payment = monthlyPI(loan, loanRate(ratePct, { country: 'ca' }), amortYears);
-  return { price: p, down: d, base, ltv, insured, insurable: Number.isFinite(rate), amortYears, premiumRate: rate, premium, premiumPst: insured && Number.isFinite(premium) ? premium * RULES.premiumPst : 0, loan, payment };
+  return { price: p, down: d, base, ltv, insured, insurable: Number.isFinite(rate), amortYears, premiumRate: rate, premium, premiumPst: insured && Number.isFinite(premium) ? premium * (PREMIUM_TAX[province] ?? 0) : 0, loan, payment };
 }
 
 /** The higher of your rate plus 2 points, or 5.25%. */
@@ -124,10 +139,14 @@ export function qualify({ profile, plan, units = 1, taxesMonthly = 0, condoMonth
   return { incomeCounted: yearly, rentCounted: counted, qualPayment, housing, gds, tds, pass: gds <= RULES.gds && tds <= RULES.tds && plan.insurable };
 }
 
-/** Cash you need on closing day beyond the down payment. */
-export function closingCash({ price, units = 1, firstTime = true, otherPct = 1.5, premiumPst = 0 }) {
-  const ltt = ontarioLandTransferTax(price, units);
-  const refund = firstTime ? Math.min(ltt, RULES.lttRefundMax) : 0;
+/**
+ * Cash you need on closing day beyond the down payment: land transfer tax
+ * (less first-buyer relief where the province gives it), legal and other
+ * costs, and any tax on the insurance premium.
+ */
+export function closingCash({ price, units = 1, firstTime = true, otherPct = 1.5, premiumPst = 0, city = 'on-other' }) {
+  const ltt = transferTax(price, { city, units });
+  const refund = firstTime ? Math.min(transferRelief(price, { city, units }).reduce((s, r) => s + r.amount, 0), ltt) : 0;
   const other = num(price) * (num(otherPct) / 100);
   return { ltt, refund, other, premiumPst, total: ltt - refund + other + premiumPst };
 }
@@ -136,12 +155,13 @@ export function closingCash({ price, units = 1, firstTime = true, otherPct = 1.5
  * Everything about buying one home to live in: the least down, the cash it
  * takes, the payment, and whether you'd qualify, given your profile.
  */
-export function buyCheck({ profile, price, units = 1, ratePct, taxesMonthly, condoMonthly = 0, rentFromOthers = 0, down }) {
+export function buyCheck({ profile, price, units = 1, ratePct, taxesMonthly, condoMonthly = 0, rentFromOthers = 0, down, city }) {
   const prof = normalizeProfile(profile);
+  const where = cityByKey(city ?? prof.city);
   const minDown = minDownPayment(price, units);
   const d = down == null ? minDown : Math.max(num(down), minDown);
-  const plan = { ...mortgagePlan({ price, down: d, ratePct, firstTime: prof.firstTime }), ratePct: num(ratePct) };
-  const closing = closingCash({ price, units, firstTime: prof.firstTime, premiumPst: plan.premiumPst });
+  const plan = { ...mortgagePlan({ price, down: d, ratePct, firstTime: prof.firstTime, province: where.province }), ratePct: num(ratePct) };
+  const closing = closingCash({ price, units, firstTime: prof.firstTime, premiumPst: plan.premiumPst, city: where.key });
   const cashNeeded = d + closing.total;
   const q = qualify({ profile: prof, plan, units, taxesMonthly, condoMonthly, rentFromOthers });
   const shortCash = Math.max(cashNeeded - prof.savings, 0);
@@ -153,10 +173,10 @@ export function buyCheck({ profile, price, units = 1, ratePct, taxesMonthly, con
  * savings cover, for a home with `units` units at the given rent per other
  * unit and property tax rate. The lower of the two is what you can buy.
  */
-export function maxPrice({ profile, units = 1, ratePct, taxPct = 1.4, rentPerOtherUnit = 0 }) {
+export function maxPrice({ profile, units = 1, ratePct, taxPct = 1.4, rentPerOtherUnit = 0, city }) {
   const prof = normalizeProfile(profile);
   const rentFromOthers = Math.max(units - 1, 0) * num(rentPerOtherUnit);
-  const check = (price) => buyCheck({ profile: prof, price, units, ratePct, taxesMonthly: (price * num(taxPct)) / 1200, rentFromOthers });
+  const check = (price) => buyCheck({ profile: prof, price, units, ratePct, taxesMonthly: (price * num(taxPct)) / 1200, rentFromOthers, city });
   const search = (ok) => {
     let lo = 0;
     let hi = 3000000;
@@ -190,13 +210,10 @@ export function liveIn({ deal, payment }) {
   return { units, rentIn, payment, taxes, insurance, utilities, setAside, outgoing, costToLive: outgoing - rentIn };
 }
 
-/** A rough Ontario combined marginal tax rate, for estimating refunds. */
-export function marginalRate(income) {
-  const i = num(income);
-  if (i <= 55000) return 0.2005;
-  if (i <= 111000) return 0.2965;
-  if (i <= 150000) return 0.4341;
-  return 0.4641;
+/** The share of an FHSA deposit that comes back as a tax refund, where you live. */
+export function refundRate(income, deposit, province = 'ON') {
+  const d = num(deposit);
+  return d > 0 ? deductionRefund(income, d, province) / d : 0;
 }
 
 /**
@@ -205,26 +222,19 @@ export function marginalRate(income) {
  */
 export function benefits({ profile, price, units = 1 }) {
   const prof = normalizeProfile(profile);
+  const where = cityByKey(prof.city);
   const list = [];
   if (prof.firstTime) {
     const fhsa = Math.min(RULES.fhsaYear, prof.monthlySave * 12);
     list.push({
       key: 'fhsa',
       name: 'First Home Savings Account (FHSA)',
-      amount: Math.round(fhsa * marginalRate(prof.income)),
+      amount: Math.round(fhsa * refundRate(prof.income, fhsa, where.province)),
       per: 'a year',
       what: `Your yearly deposits (up to $8,000, $40,000 in all) come off your taxable income, and you take it all out tax-free to buy. At $${Math.round(fhsa).toLocaleString('en-US')} a year that's a refund of about this much each spring.`,
       url: 'https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/first-home-savings-account.html',
     });
-    const ltt = ontarioLandTransferTax(price, units);
-    list.push({
-      key: 'ltt',
-      name: 'Ontario land transfer tax refund',
-      amount: Math.round(Math.min(ltt, RULES.lttRefundMax)),
-      per: 'once',
-      what: 'Up to $4,000 off the land transfer tax at closing. Your lawyer claims it when the sale closes.',
-      url: 'https://www.ontario.ca/document/land-transfer-tax/refunds-first-time-homebuyers',
-    });
+    for (const r of transferRelief(price, { city: where.key, units })) list.push({ ...r, amount: Math.round(r.amount), per: 'once' });
     list.push({
       key: 'hbtc',
       name: 'First-time home buyers’ tax credit',
@@ -233,6 +243,8 @@ export function benefits({ profile, price, units = 1 }) {
       what: 'Claim $10,000 on your tax return the year you buy, which takes $1,500 off your federal tax.',
       url: 'https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/line-31270-home-buyers-amount.html',
     });
+    const credit = provincialHomeCredit(where.province);
+    if (credit) list.push({ ...credit, per: 'once' });
     if (prof.newBuild) {
       const p = num(price);
       const full = Math.min(p * 0.05, RULES.gstRebateMax);
@@ -276,7 +288,7 @@ export function monthsToSave({ profile, target }) {
   const prof = normalizeProfile(profile);
   const goal = num(target);
   if (prof.savings >= goal) return 0;
-  const rate = prof.firstTime ? marginalRate(prof.income) : 0;
+  const rate = prof.firstTime ? refundRate(prof.income, Math.min(prof.monthlySave * 12, RULES.fhsaYear), cityByKey(prof.city).province) : 0;
   let saved = prof.savings;
   let inFhsa = 0;
   let refundDue = 0;
@@ -306,7 +318,9 @@ export function monthsToSave({ profile, target }) {
 export function homeFor(deal, profile, ratePct) {
   const units = Math.max(Math.round(num(deal.units)), 1);
   if (units > 4) return null;
-  const check = buyCheck({ profile, price: num(deal.price), units, ratePct, taxesMonthly: num(deal.taxesAnnual) / 12, rentFromOthers: num(deal.rentPerUnit) * (units - 1) });
+  // The home's own place sets the transfer tax, not where the profile planned to buy.
+  const city = deal.city ?? `${String(deal.province ?? 'ON').toLowerCase()}-other`;
+  const check = buyCheck({ profile, price: num(deal.price), units, ratePct, taxesMonthly: num(deal.taxesAnnual) / 12, rentFromOthers: num(deal.rentPerUnit) * (units - 1), city });
   const live = liveIn({ deal, payment: check.plan.payment });
   return { canBuy: check.canBuy, down: check.down, cashNeeded: check.cashNeeded, shortCash: check.shortCash, qualifies: check.qualify.pass, costToLive: live.costToLive };
 }

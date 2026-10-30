@@ -1,6 +1,9 @@
 // CSV export of the deal library. Pure string building; saving the file
 // goes through saveFile() in runtime.js.
 
+import { provinceName } from './canada.js';
+import { dealPlace } from './finance.js';
+
 const r2 = (v) => (Number.isFinite(v) ? Math.round(v * 100) / 100 : '');
 const pct2 = (v) => (Number.isFinite(v) ? Math.round(v * 10000) / 100 : '');
 
@@ -8,7 +11,7 @@ const COLUMNS = [
   ['Deal', (x) => x.deal.name],
   ['Address', (x) => x.deal.address ?? ''],
   ['Status', (x) => (x.deal.status === 'owned' ? 'Owned' : 'Prospect')],
-  ['Rules', (x) => (x.deal.country === 'ca' ? 'Canada (Ontario)' : 'US')],
+  ['Rules', (x) => (x.deal.country === 'ca' ? `Canada (${provinceName(dealPlace(x.deal).province)})` : 'US')],
   ['Years owned', (x) => (x.deal.status === 'owned' ? r2(Number(x.deal.yearsOwned) || 0) : '')],
   ['Purchase price', (x) => r2(x.a.price)],
   ['Units', (x) => x.a.units],

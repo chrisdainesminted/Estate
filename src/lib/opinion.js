@@ -1,6 +1,9 @@
 // Second opinion from Claude: the prompt Bedrock sends, and a parser that
 // turns the reply into plain blocks for rendering as text (never HTML).
 
+import { provinceName } from './canada.js';
+import { dealPlace } from './finance.js';
+
 const r0 = (v) => (Number.isFinite(v) ? Math.round(v) : null);
 const r2 = (v) => (Number.isFinite(v) ? Math.round(v * 100) / 100 : null);
 const pct1 = (v) => (Number.isFinite(v) ? Math.round(v * 1000) / 10 : null);
@@ -9,7 +12,7 @@ const pct1 = (v) => (Number.isFinite(v) ? Math.round(v * 1000) / 10 : null);
 export function opinionFacts({ deal, a, sale, refi, offer }, targets) {
   return {
     name: deal.name,
-    location: deal.country === 'ca' ? 'Canada (Ontario); mortgage compounded semi-annually' : 'United States',
+    location: deal.country === 'ca' ? `Canada (${dealPlace(deal).name}, ${provinceName(dealPlace(deal).province)}); mortgage compounded semi-annually` : 'United States',
     status: deal.status === 'owned' ? 'owned' : 'prospect',
     units: a.units,
     purchasePrice: r0(a.price),
@@ -61,8 +64,9 @@ export function opinionFacts({ deal, a, sale, refi, offer }, targets) {
 
 export function buildOpinionPrompt(item, targets) {
   const ca = item.deal.country === 'ca';
-  const who = ca ? 'Ontario rental-property investor and mortgage underwriter' : 'US rental-property investor and DSCR loan underwriter';
-  const where = ca ? 'an Ontario rental (this one is in or near Thunder Bay if the address says so)' : 'a typical US rental';
+  const place = dealPlace(item.deal);
+  const who = ca ? 'Canadian rental-property investor and mortgage underwriter' : 'US rental-property investor and DSCR loan underwriter';
+  const where = ca ? `a rental in ${place.name.replace(/^Elsewhere in /, '')}, ${provinceName(place.province)}` : 'a typical US rental';
   return [
     `You are an experienced ${who} giving a second opinion to an investor growing past five properties.`,
     `Be direct and specific, and quote the numbers given. Use only the data below. If an input looks unusual for ${where} (for example vacancy, repairs, CapEx, insurance, taxes or appreciation), name it and say what is typical. Do not give legal or tax advice.`,

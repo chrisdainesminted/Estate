@@ -741,3 +741,21 @@ describe('allCash', () => {
     expect(loanConstant(c)).toBeNull();
   });
 });
+
+describe('Canadian deals by place', () => {
+  it('charges the land transfer tax of the deal’s province, Ontario when it doesn’t say', async () => {
+    const { analyzeDeal } = await import('./finance.js');
+    const base = { country: 'ca', price: 500000, downPct: 20, rate: 5, termYears: 25, units: 1, closingPct: 1, rentPerUnit: 2500 };
+    expect(analyzeDeal(base).landTransferTax).toBeCloseTo(6475, 6);
+    expect(analyzeDeal({ ...base, city: 'toronto' }).landTransferTax).toBeCloseTo(12950, 6);
+    expect(analyzeDeal({ ...base, city: 'calgary' }).landTransferTax).toBe(550);
+    expect(analyzeDeal({ ...base, country: 'us', city: 'toronto' }).landTransferTax).toBe(0);
+  });
+
+  it('starts a quick-check deal in its city, with that city’s property tax', async () => {
+    const { quickDeal } = await import('./quick.js');
+    const d = quickDeal({ price: 500000, rentPerUnit: 2200, unitType: 'sfh', country: 'ca', city: 'vancouver' });
+    expect(d.city).toBe('vancouver');
+    expect(d.taxesAnnual).toBe(1500);
+  });
+});

@@ -14,7 +14,7 @@ function seen() {
 }
 
 /** First visit: what Bedrock answers, and the quickest way to try it on a property. Shown until it's dismissed in this browser. */
-export default function Welcome({ country, rents, onQuickCheck }) {
+export default function Welcome({ country, city, rents, onQuickCheck }) {
   const [open, setOpen] = useState(() => !seen());
   if (!open) return null;
   const dismiss = () => {
@@ -47,6 +47,7 @@ export default function Welcome({ country, rents, onQuickCheck }) {
         <QuickCheck
           idPrefix="welcome"
           country={country}
+          city={city}
           rents={rents}
           onCheck={(fields) => {
             dismiss();

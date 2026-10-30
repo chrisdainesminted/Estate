@@ -4,7 +4,7 @@
 
 **Cash flow you can build on.**
 
-Bedrock helps young adults get into their first home, starting in Thunder Bay. It shows what you could buy on your own or by renting out part of a duplex, the government money you can claim, when your savings will be ready, what living in a real listing would cost you each month, and how to get a rental suite through the permits. Underneath, it separates **lender DSCR math (PITIA)** from **real-world cash flow (PITIA + OpEx)**, so a deal a lender approves can't quietly lose money every month. The mark is three layers of rock stepping up like a rising chart.
+Bedrock helps young adults anywhere in Canada get into their first home. Pick a city and it uses that province's land transfer tax and first-buyer programs, with local rent and property tax you can change. It shows what you could buy on your own or by renting out part of a duplex, the government money you can claim, when your savings will be ready, what living in a real listing would cost you each month, and how to get a rental suite through the permits. Underneath, it separates **lender DSCR math (PITIA)** from **real-world cash flow (PITIA + OpEx)**, so a deal a lender approves can't quietly lose money every month. The mark is three layers of rock stepping up like a rising chart.
 
 - Website: https://bedrock.signia83.workers.dev/ (public): the homepage at `/`, the app at `/app/` (deals are saved in each visitor's browser)
 - Claude page: https://claude.ai/artifact/5KH4ZZHoZ8CvCKF5CXutGJ (private to the owner; deals sync to their Claude account, Second opinion, and the morning listings run saves here)
@@ -133,8 +133,9 @@ src/components/*          UI sections, plus the search palette, phone sheet and 
 src/landing/Landing.jsx   the website's homepage at / (app/index.html is the app at /app/)
 public/landing/           the homepage's product screenshots
 src/views/HomeView.jsx    home: first-time buyers, money you can get, the suite permit guide (loaded on demand)
+src/lib/canada.js         provinces and cities: land transfer tax and first-buyer relief, tax on the insurance premium, income tax, local rent and property tax (tested)
 src/lib/firstHome.js      first-time buyer lending rules, qualifying, live-in cost, benefits, savings timeline (tested)
-src/lib/suites.js         Thunder Bay suite rules, permit steps and payback (tested)
+src/lib/suites.js         suite rules by province (and Thunder Bay's city pages), permit steps and payback (tested)
 src/views/CashView.jsx    cash view: your own money as 20% down, with the mortgage payment (loaded on demand)
 src/views/CompareView.jsx compare view (loaded on demand)
 src/views/ListingsView.jsx listings tab (loaded on demand)

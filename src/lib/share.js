@@ -3,6 +3,7 @@
 // from a new deal are included. Opening a link checks every field before
 // anything is saved.
 
+import { CITIES } from './canada.js';
 import { PREPAY_SCHEDULES } from './finance.js';
 import { safeHttpUrl } from './format.js';
 import { DEFAULT_DEAL, UNIT_TYPES } from './presets.js';
@@ -15,6 +16,7 @@ const DETAILS = ['address', 'listingUrl', 'notes'];
 const TEXT_MAX = { name: 120, address: 200, listingUrl: 500, notes: 2000 };
 const ENUMS = {
   country: ['us', 'ca'],
+  city: CITIES.map((c) => c.key),
   status: ['prospect', 'owned'],
   unitType: UNIT_TYPES.map((t) => t.key),
   prepay: ['none', ...Object.keys(PREPAY_SCHEDULES)],

@@ -15,7 +15,7 @@ function Heading({ id, children }) {
 }
 
 /** How Bedrock works: a quick check, what each tab is for, and the words it uses. */
-export default function HelpSheet({ onClose, views, country, rents, onQuickCheck, moreHidden, onShowAll }) {
+export default function HelpSheet({ onClose, views, country, city, rents, onQuickCheck, moreHidden, onShowAll }) {
   const [q, setQ] = useState('');
   const shown = useMemo(() => {
     const words = q.trim().toLowerCase();
@@ -32,7 +32,7 @@ export default function HelpSheet({ onClose, views, country, rents, onQuickCheck
         <section aria-labelledby="help-check" className="space-y-3">
           <Heading id="help-check">Check a property</Heading>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">Type its price and rent. Taxes, insurance and running costs start at typical values you can change.</p>
-          <QuickCheck idPrefix="help" country={country} rents={rents} onCheck={onQuickCheck} />
+          <QuickCheck idPrefix="help" country={country} city={city} rents={rents} onCheck={onQuickCheck} />
         </section>
 
         <section aria-labelledby="help-tabs" className="space-y-3">

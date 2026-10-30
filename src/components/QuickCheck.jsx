@@ -3,14 +3,16 @@ import { ArrowRight } from 'lucide-react';
 import { UNIT_TYPES } from '../lib/presets.js';
 import { Button, NumberField, Segmented, SelectField } from './ui.jsx';
 import RentHelper from './RentHelper.jsx';
+import CitySelect from './CitySelect.jsx';
 
 /** Price, type and rent: the least it takes to see whether a rental would make money. */
-export default function QuickCheck({ idPrefix, country = 'ca', rents, onCheck }) {
+export default function QuickCheck({ idPrefix, country = 'ca', city: startCity = 'toronto', rents, onCheck }) {
   const [price, setPrice] = useState(300000);
   const [unitType, setUnitType] = useState('sfh');
   const [units, setUnits] = useState(6);
   const [rent, setRent] = useState(2000);
   const [where, setWhere] = useState(country === 'ca' ? 'ca' : 'us');
+  const [city, setCity] = useState(startCity);
   const id = (k) => `${idPrefix}-${k}`;
   const single = unitType === 'sfh';
 
@@ -19,7 +21,7 @@ export default function QuickCheck({ idPrefix, country = 'ca', rents, onCheck })
       className="grid gap-3 sm:grid-cols-2"
       onSubmit={(e) => {
         e.preventDefault();
-        onCheck({ price, rentPerUnit: rent, unitType, units, country: where });
+        onCheck({ price, rentPerUnit: rent, unitType, units, country: where, city });
       }}
     >
       <NumberField id={id('price')} label="Price" prefix="$" value={price} onChange={setPrice} step={5000} decimals={0} />
@@ -33,7 +35,7 @@ export default function QuickCheck({ idPrefix, country = 'ca', rents, onCheck })
       {unitType === 'multiplex' && <NumberField id={id('units')} label="How many units" value={units} onChange={(v) => setUnits(Math.round(v))} min={5} max={500} decimals={0} />}
       <div>
         <NumberField id={id('rent')} label={single ? 'Monthly rent' : 'Monthly rent for each unit'} prefix="$" suffix="/mo" value={rent} onChange={setRent} step={25} decimals={0} />
-        {where === 'ca' && rents && <RentHelper rents={rents} onPick={setRent} />}
+        {where === 'ca' && rents && <RentHelper rents={rents} city={city} onPick={setRent} />}
       </div>
       <div>
         <span className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">Where is it?</span>
@@ -44,10 +46,11 @@ export default function QuickCheck({ idPrefix, country = 'ca', rents, onCheck })
           onChange={setWhere}
           options={[
             { value: 'us', label: 'US' },
-            { value: 'ca', label: 'Canada (Ontario)' },
+            { value: 'ca', label: 'Canada' },
           ]}
         />
       </div>
+      {where === 'ca' && <CitySelect id={id('city')} label="City" value={city} onChange={setCity} />}
       <div className="sm:col-span-2">
         <Button type="submit" variant="primary">
           See if it makes money <ArrowRight className="size-4" aria-hidden />

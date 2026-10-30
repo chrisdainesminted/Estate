@@ -64,6 +64,8 @@ import Dock from './components/Dock.jsx';
 import Logo, { LogoMark } from './components/Logo.jsx';
 import { useToast } from './components/toast.jsx';
 import { Button, ConfirmButton, SkeletonCard, signedClass } from './components/ui.jsx';
+import { normalizeProfile } from './lib/firstHome.js';
+import { guessCity } from './lib/canada.js';
 
 // Views and charts load on demand so the first screen arrives quickly.
 const PortfolioView = lazy(() => import('./components/PortfolioView.jsx'));
@@ -301,16 +303,19 @@ export default function App() {
   );
 
   // New deals follow the open deal's rules; Canadian ones start from your listing financing.
-  // New deals and quick checks start on Canada (Ontario) rules, unless you're working in a US deal of your own.
+  // New deals and quick checks start on Canadian rules, unless you're working in a US deal of your own,
+  // in the city on your Home numbers (or the one your time zone suggests).
   const homeRules = !active.example && active.country === 'us' ? 'us' : 'ca';
+  const homeProfile = normalizeProfile(lib.settings.home);
+  const homeCity = homeProfile.entered ? homeProfile.city : guessCity();
 
   const newDeal = useCallback(() => {
     const m = lib.settings.market;
-    lib.insertDeal(homeRules === 'ca' ? { ...switchRules(DEFAULT_DEAL, 'ca'), downPct: OWN_DOWN_PCT, rate: m.rate, refiRate: m.rate, termYears: m.amortYears } : {});
+    lib.insertDeal(homeRules === 'ca' ? { ...switchRules(DEFAULT_DEAL, 'ca'), city: homeCity, downPct: OWN_DOWN_PCT, rate: m.rate, refiRate: m.rate, termYears: m.amortYears } : {});
     setView('analyze');
     if (!isDesktop) setSheetOpen(true);
     toast({ tone: 'info', text: 'New deal started. Fill in the inputs and everything updates as you type.' });
-  }, [lib, homeRules, setView, isDesktop, toast]);
+  }, [lib, homeRules, homeCity, setView, isDesktop, toast]);
 
   // The quick check: a new deal from a price, a type and a rent, with everything else typical.
   const quickCheck = useCallback(
@@ -689,7 +694,7 @@ export default function App() {
 
           {view === 'analyze' && (
             <>
-              {!fromLink && <Welcome country={homeRules} rents={rents} onQuickCheck={quickCheck} />}
+              {!fromLink && <Welcome country={homeRules} city={homeCity} rents={rents} onQuickCheck={quickCheck} />}
               <HeroSummary
                 deal={current.deal}
                 a={a}
@@ -797,6 +802,7 @@ export default function App() {
             onClose={() => setHelpOpen(false)}
             views={VIEWS}
             country={homeRules}
+            city={homeCity}
             rents={rents}
             onQuickCheck={quickCheck}
             moreHidden={isDesktop && !tabsUnlocked}

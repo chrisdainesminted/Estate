@@ -3,12 +3,16 @@
 // monthly HOA and rent). Nothing here touches React or the DOM.
 
 import { dscrStatus } from './dscr.js';
+import { cityByKey, transferTax } from './canada.js';
 
 const pct = (v) => (Number(v) || 0) / 100;
 const num = (v) => Number(v) || 0;
 
-/** Deals follow US conventions unless marked Canadian (Ontario). */
+/** Deals follow US conventions unless marked Canadian; a Canadian deal's `city` sets its province's rules. */
 export const isCanada = (deal) => deal?.country === 'ca';
+
+/** Where a Canadian deal is: its city in canada.js, Ontario when it doesn't say. */
+export const dealPlace = (deal) => cityByKey(deal?.city || 'on-other');
 
 /**
  * The rate to run monthly loan math on. Canadian fixed-rate mortgages
@@ -22,33 +26,21 @@ export function loanRate(ratePct, deal) {
 }
 
 /**
- * Ontario land transfer tax: marginal bands on the purchase price. Thunder
- * Bay adds no municipal tax (Toronto does). Above $2M the top band is 2.5%
- * only for land with one or two single-family homes.
+ * Ontario land transfer tax: marginal bands on the purchase price, with no
+ * city tax on top (Toronto's is added by transferTax). Above $2M the top
+ * band is 2.5% only for land with one or two single-family homes.
  */
-export function ontarioLandTransferTax(price, units = 1) {
-  const p = Math.max(num(price), 0);
-  const bands = [
-    [55000, 0.005],
-    [250000, 0.01],
-    [400000, 0.015],
-    [2000000, 0.02],
-    [Infinity, units <= 2 ? 0.025 : 0.02],
-  ];
-  let tax = 0;
-  let floor = 0;
-  for (const [cap, rate] of bands) {
-    if (p <= floor) break;
-    tax += (Math.min(p, cap) - floor) * rate;
-    floor = cap;
-  }
-  return tax;
+export const ontarioLandTransferTax = (price, units = 1) => transferTax(price, { city: 'on-other', units });
+
+/** A Canadian deal's land transfer tax (or the fees that stand in for it) where it is. */
+export function landTransferTaxOf(deal, price) {
+  if (!isCanada(deal)) return 0;
+  return transferTax(price, { city: dealPlace(deal).key, units: Math.max(Math.round(num(deal.units)), 1) });
 }
 
-/** Closing costs at a given price: the deal's % plus, in Ontario, land transfer tax. */
+/** Closing costs at a given price: the deal's % plus, in Canada, land transfer tax. */
 export function closingCostsAt(deal, price) {
-  const units = Math.max(Math.round(num(deal.units)), 1);
-  return price * pct(deal.closingPct) + (isCanada(deal) ? ontarioLandTransferTax(price, units) : 0);
+  return price * pct(deal.closingPct) + landTransferTaxOf(deal, price);
 }
 
 /** Monthly principal & interest payment. Falls back to straight-line when the rate is 0. */
@@ -196,7 +188,7 @@ export function analyzeDeal(deal) {
   const loanAmount = Math.max(price - downPayment, 0);
   const ltv = price > 0 ? loanAmount / price : 0;
   const units = Math.max(Math.round(num(deal.units)), 1);
-  const landTransferTax = isCanada(deal) ? ontarioLandTransferTax(price, units) : 0;
+  const landTransferTax = landTransferTaxOf(deal, price);
   const closingCosts = closingCostsAt(deal, price);
   const cashToClose = downPayment + closingCosts;
   const rehab = Math.max(num(deal.rehabCost), 0);
@@ -559,7 +551,7 @@ export const DEFAULT_TARGETS = { dscr: 1.25, cashFlowPerDoor: 200, coc: 8, useDs
 /**
  * The highest purchase price that still meets every active target, solved
  * exactly: the loan, its payment and closing costs all scale linearly with
- * price, so each target gives a closed-form ceiling. (Ontario's land
+ * price, so each target gives a closed-form ceiling. (Canadian land
  * transfer tax is banded, so there the cash-on-cash ceiling is found by
  * bisection.) Taxes, insurance, HOA, rent and rehab are held as entered.
  *

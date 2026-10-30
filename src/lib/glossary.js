@@ -119,11 +119,11 @@ export const GLOSSARY = {
   },
   rules: {
     term: 'US or Canadian rules',
-    body: 'Canadian rules compound the mortgage rate semi-annually, add Ontario land transfer tax to closing costs, and use capital cost allowance instead of US depreciation in the tax card.',
+    body: 'Canadian rules compound the mortgage rate semi-annually, add the province’s land transfer tax to closing costs, and use capital cost allowance instead of US depreciation in the tax card. Pick where the property is under About this deal.',
   },
   landTransferTax: {
     term: 'Land transfer tax',
-    body: 'Ontario charges it on every purchase: 0.5% of the first $55,000, 1% up to $250,000, 1.5% up to $400,000 and 2% above that. Thunder Bay adds no city tax on top (Toronto does). It’s part of your cash to close.',
+    body: 'A tax on buying, set by the province, and in a few places the city too (Toronto, Montréal, Nova Scotia towns). Ontario’s runs 0.5% to 2%, BC’s 1% to 3%; Alberta and Saskatchewan charge only small title fees. Some provinces cut it for first-time buyers. It’s part of your cash to close.',
   },
   cca: {
     term: 'Capital cost allowance (CCA)',
@@ -147,6 +147,6 @@ export const GLOSSARY = {
   },
   utilities: {
     term: 'Owner-paid utilities',
-    body: 'In many Thunder Bay multi-unit buildings the owner pays water and sometimes heat. Bedrock adds this amount per unit per month to listings with 2 or more units. Set it to 0 if tenants pay everything.',
+    body: 'In many multi-unit buildings the owner pays water and sometimes heat. Bedrock adds this amount per unit per month to listings with 2 or more units. Set it to 0 if tenants pay everything.',
   },
 };

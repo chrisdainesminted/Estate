@@ -228,6 +228,7 @@ export function listingToDeal(listing, market, lens) {
     ...DEFAULT_DEAL,
     name: listing.address,
     country: 'ca',
+    city: 'thunder-bay',
     price,
     termYears: m.amortYears,
     closingPct: m.closingPct,

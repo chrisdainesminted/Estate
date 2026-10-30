@@ -1,17 +1,23 @@
 import { useMemo, useState } from 'react';
 import { ArrowRight, Check, CheckCircle2, ExternalLink, XCircle } from 'lucide-react';
-import { DEFAULT_PROFILE, RULES, RULES_CHECKED, benefits, buyCheck, liveIn, maxPrice, monthsToSave } from '../lib/firstHome.js';
-import { ALLOWED, MONEY, STEPS, SUITE_KINDS, SUITE_RULES_CHECKED, suitePayback } from '../lib/suites.js';
+import { DEFAULT_PROFILE, RULES, RULES_CHECKED, benefits, buyCheck, liveIn, localFor, maxPrice, monthsToSave } from '../lib/firstHome.js';
+import { SUITE_KINDS, SUITE_RULES_CHECKED, allowedFor, moneyFor, stepsFor, suitePayback } from '../lib/suites.js';
+import { cityByKey, guessCity, provinceName } from '../lib/canada.js';
+import { dealPlace } from '../lib/finance.js';
 import { money, percent } from '../lib/format.js';
 import { INSURANCE_MIN } from '../lib/market.js';
 import { Button, Card, CardHeader, LedgerHeading, LedgerLine, NumberField, Segmented, SelectField, SummaryCard, ViewHeader, signedClass } from '../components/ui.jsx';
 import { Section, SectionGroup } from '../components/Section.jsx';
+import CitySelect from '../components/CitySelect.jsx';
 
 const checkedOn = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' });
 const monthFrom = (months) => new Date(new Date().getFullYear(), new Date().getMonth() + months, 1).toLocaleDateString('en-CA', { month: 'long', year: 'numeric' });
 const KIND = { 1: 'a house', 2: 'a duplex', 3: 'a triplex', 4: 'a fourplex' };
+// "Elsewhere in Ontario" reads as "Ontario" in a sentence.
+const placeName = (c) => c.name.replace(/^Elsewhere in /, '');
 
 function Source({ url, children = 'Source' }) {
+  if (!url) return null;
   return (
     <a
       href={url}
@@ -33,10 +39,47 @@ const yesNo = [
 /** Your numbers: what a lender and the savings plan need to know. */
 function Profile({ p, onHome }) {
   const f = (key, props) => <NumberField id={`home-${key}`} value={p[key]} onChange={(v) => onHome({ [key]: v, entered: true })} {...props} />;
+  const local = localFor(p);
+  const reset = (key, words) => (
+    <button type="button" onClick={() => onHome({ [key]: null })} className="mt-1 text-[11px] font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+      Use {words}
+    </button>
+  );
   return (
     <Card>
       <CardHeader title="Your numbers" subtitle="Saved with your deals. Only you see them." />
       <div className="grid grid-cols-2 gap-3 p-5 md:grid-cols-4">
+        <div className="col-span-2">
+          <CitySelect id="home-city" value={local.city.key} onChange={(city) => onHome({ city, rentOther: null, taxPct: null, entered: true })} />
+          <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">Sets {provinceName(local.province)}’s land transfer tax and programs, and the local rent and property tax.</p>
+        </div>
+        <div>
+          <NumberField
+            id="home-rentOther"
+            label="Rent a second unit gets"
+            prefix="$"
+            suffix="/mo"
+            step={25}
+            decimals={0}
+            value={local.rent}
+            onChange={(v) => onHome({ rentOther: v, entered: true })}
+            hint={local.rentIsAverage ? `${placeName(local.city)} average, 2 bedrooms${local.city.estimated ? ' (estimate)' : ''}` : undefined}
+          />
+          {!local.rentIsAverage && reset('rentOther', `the ${placeName(local.city)} average`)}
+        </div>
+        <div>
+          <NumberField
+            id="home-taxPct"
+            label="Property tax"
+            suffix="% a year"
+            step={0.05}
+            decimals={2}
+            value={local.taxPct}
+            onChange={(v) => onHome({ taxPct: v, entered: true })}
+            hint={local.taxIsTypical ? `Of the price; typical for ${placeName(local.city)}` : undefined}
+          />
+          {!local.taxIsTypical && reset('taxPct', 'the typical rate')}
+        </div>
         {f('income', { label: 'Household income', prefix: '$', suffix: '/yr', step: 1000, decimals: 0, hint: 'Before tax, everyone buying' })}
         {f('savings', { label: 'Saved for buying', prefix: '$', step: 1000, decimals: 0 })}
         {f('monthlySave', { label: 'You can save', prefix: '$', suffix: '/mo', step: 50, decimals: 0 })}
@@ -148,7 +191,9 @@ function LiveInDeal({ p, items, dealId, onPick, ratePct, onOpen }) {
   const deal = item.deal;
   const units = Math.min(Math.max(Math.round(Number(deal.units) || 1), 1), 4);
   const rentFromOthers = (Number(deal.rentPerUnit) || 0) * (units - 1);
-  const c = buyCheck({ profile: p, price: Number(deal.price) || 0, units, ratePct, taxesMonthly: (Number(deal.taxesAnnual) || 0) / 12, rentFromOthers });
+  // A Canadian deal's own place sets its transfer tax; a US one is priced as if it were where you're buying.
+  const city = deal.country === 'ca' ? dealPlace(deal).key : p.city;
+  const c = buyCheck({ profile: p, price: Number(deal.price) || 0, units, ratePct, taxesMonthly: (Number(deal.taxesAnnual) || 0) / 12, rentFromOthers, city });
   const l = liveIn({ deal: { ...deal, units }, payment: c.plan.payment });
   const save = p.rentNow - l.costToLive;
   const reasons = [
@@ -196,8 +241,10 @@ function LiveInDeal({ p, items, dealId, onPick, ratePct, onOpen }) {
   );
 }
 
-function SuiteGuide({ s, onSuite }) {
+function SuiteGuide({ s, onSuite, city }) {
   const kind = SUITE_KINDS.find((k) => k.key === s.kind);
+  const place = cityByKey(city);
+  const STEPS = stepsFor(place.key);
   const pay = suitePayback({ buildCost: s.buildCost, rent: s.rent, borrowPct: s.borrowPct });
   const done = new Set(s.done);
   const toggle = (key) => onSuite({ done: done.has(key) ? s.done.filter((k) => k !== key) : [...s.done, key] });
@@ -208,7 +255,7 @@ function SuiteGuide({ s, onSuite }) {
         <div>
           <LedgerHeading>What’s allowed</LedgerHeading>
           <ul className="grid gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-            {ALLOWED.map((a) => (
+            {allowedFor(place.key).map((a) => (
               <li key={a.text}>
                 {a.text} <Source url={a.url} />
               </li>
@@ -255,25 +302,26 @@ function SuiteGuide({ s, onSuite }) {
         <div>
           <LedgerHeading>Money for building</LedgerHeading>
           <ul className="grid gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-            {MONEY.map((m) => (
+            {moneyFor(place.key).map((m) => (
               <li key={m.text}>
                 {m.text} <Source url={m.url} />
               </li>
             ))}
           </ul>
         </div>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">Checked {checkedOn(SUITE_RULES_CHECKED)}. Rules and grants change: confirm with the City of Thunder Bay’s Building Services before you build.</p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">Checked {checkedOn(SUITE_RULES_CHECKED)}. Rules and grants change: confirm with {place.key.endsWith('-other') ? 'your city’s' : `the City of ${place.name}’s`} building department before you build.</p>
       </div>
     </div>
   );
 }
 
 /**
- * First visit: four questions before any result, so the first number a
- * person sees is about them, not the example buyer.
+ * First visit: where, and four numbers, before any result, so the first
+ * number a person sees is about them, not the example buyer.
  */
 function Start({ onHome, onExample }) {
   const [v, setV] = useState({ income: null, savings: null, debts: null, rentNow: null });
+  const [city, setCity] = useState(guessCity);
   const [missing, setMissing] = useState([]);
   const set = (key) => (n) => {
     setV((x) => ({ ...x, [key]: n }));
@@ -287,7 +335,7 @@ function Start({ onHome, onExample }) {
       document.getElementById(`start-${gaps[0]}`)?.focus();
       return;
     }
-    onHome({ income: v.income, savings: v.savings, debts: Number.isFinite(v.debts) ? v.debts : 0, rentNow: v.rentNow, entered: true });
+    onHome({ city, rentOther: null, taxPct: null, income: v.income, savings: v.savings, debts: Number.isFinite(v.debts) ? v.debts : 0, rentNow: v.rentNow, entered: true });
   };
   const label = { income: 'your income', savings: 'what you’ve saved', rentNow: 'the rent you pay' };
   return (
@@ -295,13 +343,17 @@ function Start({ onHome, onExample }) {
       <form onSubmit={submit} noValidate aria-labelledby="start-title">
         <div className="border-b border-hairline px-5 py-5 sm:px-6">
           <h2 id="start-title" className="text-xl font-semibold tracking-tight text-zinc-950 sm:text-2xl dark:text-white">
-            Four questions, then your answer
+            Five questions, then your answer
           </h2>
           <p className="mt-1.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
             What a bank would lend you, alone and with a tenant, and what it would cost you each month. Your answers stay in this browser.
           </p>
         </div>
         <div className="grid gap-4 px-5 py-5 sm:grid-cols-2 sm:px-6">
+          <div className="sm:col-span-2">
+            <CitySelect id="start-city" label="Where are you buying?" value={city} onChange={setCity} />
+            <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">Land transfer tax, provincial programs, rent and property tax all depend on it.</p>
+          </div>
           <NumberField id="start-income" label="Household income, before tax" prefix="$" suffix="/yr" step={1000} decimals={0} value={v.income} onChange={set('income')} hint="Everyone who’ll be on the mortgage" />
           <NumberField id="start-savings" label="Saved for buying" prefix="$" step={1000} decimals={0} value={v.savings} onChange={set('savings')} hint="Bank, TFSA, FHSA, RRSP: anything for the down payment" />
           <NumberField id="start-rentNow" label="Rent you pay now" prefix="$" suffix="/mo" step={50} decimals={0} value={v.rentNow} onChange={set('rentNow')} hint="Your share, if you split it" />
@@ -330,7 +382,7 @@ function ExampleNote({ onStart }) {
   return (
     <div className="flex flex-col gap-3 border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
       <p>
-        <span className="font-semibold">These are example numbers:</span> {money(DEFAULT_PROFILE.income)} income, {money(DEFAULT_PROFILE.savings)} saved, paying {money(DEFAULT_PROFILE.rentNow)}{' '}
+        <span className="font-semibold">These are example numbers:</span> buying in {placeName(cityByKey(DEFAULT_PROFILE.city))}, {money(DEFAULT_PROFILE.income)} income, {money(DEFAULT_PROFILE.savings)} saved, paying {money(DEFAULT_PROFILE.rentNow)}{' '}
         rent.
       </p>
       <Button variant="primary" className="shrink-0" onClick={onStart}>
@@ -348,8 +400,10 @@ function ExampleNote({ onStart }) {
  */
 export default function HomeView({ profile: p, suite, market, items, liveDealId, onHome, onSuite, onPickDeal, onOpen }) {
   const ratePct = Number(market.rate);
-  const taxPct = Number(market.taxPct);
-  const rentEach = Number(market.rents?.[2]) || 0;
+  // Rent for a second unit and property tax where the profile is buying (the city's, unless they set their own).
+  const local = localFor(p);
+  const taxPct = local.taxPct;
+  const rentEach = local.rent;
   const insurance = (units) => Math.max((Number(market.insurancePerUnit) || 0) * units, INSURANCE_MIN) / 12;
   const b = useMemo(() => benefits({ profile: p, price: p.targetPrice, units: p.targetUnits }), [p]);
   const solo = maxPrice({ profile: p, units: 1, ratePct, taxPct });
@@ -358,7 +412,7 @@ export default function HomeView({ profile: p, suite, market, items, liveDealId,
 
   const header = (
     <ViewHeader title="Your first home">
-      How close you are to owning in Thunder Bay, the money you can get, and how to make a home pay for itself. Estimates, not financial advice: a mortgage broker
+      How close you are to owning {p.entered || example ? `in ${placeName(local.city)}` : 'a home anywhere in Canada'}, the money you can get, and how to make a home pay for itself. Estimates, not financial advice: a mortgage broker
       confirms the real numbers.
     </ViewHeader>
   );
@@ -369,8 +423,8 @@ export default function HomeView({ profile: p, suite, market, items, liveDealId,
         {header}
         <Start onHome={onHome} onExample={() => setExample(true)} />
         <SectionGroup>
-          <Section id="home-suite" title="Add a suite or backyard home" meaning="Turn a house you own (or buy) into one that pays you rent: what’s allowed in Thunder Bay, the permit steps, and whether it pays.">
-            <SuiteGuide s={suite} onSuite={onSuite} />
+          <Section id="home-suite" title="Add a suite or backyard home" meaning="Turn a house you own (or buy) into one that pays you rent: what’s allowed where you are, the permit steps, and whether it pays.">
+            <SuiteGuide s={suite} onSuite={onSuite} city={guessCity()} />
           </Section>
         </SectionGroup>
       </div>
@@ -418,8 +472,8 @@ export default function HomeView({ profile: p, suite, market, items, liveDealId,
         <Section id="home-live" title="Live in one of your deals" meaning="Could you buy it, and what would it cost you each month once the other units’ rent comes in?">
           <LiveInDeal p={p} items={items} dealId={liveDealId} onPick={onPickDeal} ratePct={ratePct} onOpen={onOpen} />
         </Section>
-        <Section id="home-suite" title="Add a suite or backyard home" meaning="Turn a house you own (or buy) into one that pays you rent: what’s allowed in Thunder Bay, the permit steps, and whether it pays.">
-          <SuiteGuide s={suite} onSuite={onSuite} />
+        <Section id="home-suite" title="Add a suite or backyard home" meaning="Turn a house you own (or buy) into one that pays you rent: what’s allowed where you are, the permit steps, and whether it pays.">
+          <SuiteGuide s={suite} onSuite={onSuite} city={local.city.key} />
         </Section>
       </SectionGroup>
 

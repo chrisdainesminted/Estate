@@ -5,6 +5,9 @@ import { money, percent } from '../lib/format.js';
 import { Card, CardHeader, FieldLabel, LedgerLine, NumberField, Segmented, SelectField } from './ui.jsx';
 import { InfoTip } from './motion.jsx';
 import RentHelper from './RentHelper.jsx';
+import CitySelect from './CitySelect.jsx';
+import { dealPlace } from '../lib/finance.js';
+import { provinceName } from '../lib/canada.js';
 
 /**
  * A group of inputs. The basics stay open; the rest fold down to one line
@@ -136,7 +139,7 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
             step={25}
             decimals={0}
           />
-          {ca && rents && <RentHelper rents={rents} onPick={set('rentPerUnit')} />}
+          {ca && rents && <RentHelper rents={rents} city={dealPlace(deal).key} onPick={set('rentPerUnit')} />}
         </div>
         {a.units > 1 && (
           <Derived>
@@ -380,7 +383,7 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
         title="About this deal"
         collapsible
         defaultOpen={false}
-        summary={[deal.status === 'owned' ? 'Owned' : 'Prospect', ca ? 'Canada (Ontario) rules' : 'US rules', deal.address].filter(Boolean).join(' · ')}
+        summary={[deal.status === 'owned' ? 'Owned' : 'Prospect', ca ? `${dealPlace(deal).name.replace(/^Elsewhere in /, '')} rules` : 'US rules', deal.address].filter(Boolean).join(' · ')}
       >
         <div className="col-span-2 flex flex-wrap items-end gap-3">
           <div>
@@ -417,6 +420,12 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
               ]}
             />
           </div>
+          {ca && (
+            <div className="min-w-48 flex-1">
+              <CitySelect id={id('city')} label="Where" tip="landTransferTax" value={dealPlace(deal).key} onChange={(v) => onChange({ city: v })} />
+              <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">Sets the land transfer tax: {provinceName(dealPlace(deal).province)}’s.</p>
+            </div>
+          )}
         </div>
         <div className="col-span-2">
           <FieldLabel htmlFor={id('address')}>Address</FieldLabel>

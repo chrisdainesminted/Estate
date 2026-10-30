@@ -37,7 +37,7 @@ export default function TaxCard({ deal, tax, onTax, id = 'sec-tax' }) {
       <div className="grid gap-8 p-5 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <div className="text-sm">
           <div className="mb-4 grid grid-cols-2 gap-3">
-            <NumberField id={`${deal.id}-tax-rate`} label="Your tax rate" suffix="%" value={tax.rate} onChange={(v) => onTax({ rate: v })} max={60} step={1} decimals={1} hint={ca ? 'Federal + Ontario, marginal' : 'Federal + state, marginal'} />
+            <NumberField id={`${deal.id}-tax-rate`} label="Your tax rate" suffix="%" value={tax.rate} onChange={(v) => onTax({ rate: v })} max={60} step={1} decimals={1} hint={ca ? 'Federal + provincial, marginal' : 'Federal + state, marginal'} />
             <NumberField id={`${deal.id}-tax-land`} label="Land share of price" tip="land" suffix="%" value={tax.landPct} onChange={(v) => onTax({ landPct: v })} max={90} step={5} decimals={0} hint="Land isn’t depreciated" />
             {ca ? (
               <p className="col-span-2 text-xs text-zinc-600 dark:text-zinc-400">

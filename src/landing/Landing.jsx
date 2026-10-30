@@ -2,21 +2,24 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, ArrowUpRight, Building2, ClipboardCheck, Home, Landmark, ListChecks, Lock, Plus } from 'lucide-react';
 import Logo from '../components/Logo.jsx';
 import { DEFAULT_PROFILE, RULES, RULES_CHECKED, benefits, buyCheck, homeFor, maxPrice } from '../lib/firstHome.js';
-import { STEPS } from '../lib/suites.js';
+import { stepsFor } from '../lib/suites.js';
+import { cityByKey, guessCity, provinceName } from '../lib/canada.js';
+import CitySelect from '../components/CitySelect.jsx';
 import { DEFAULT_MARKET, INSURANCE_MIN, MARKET, listingToDeal } from '../lib/market.js';
 import { money } from '../lib/format.js';
 
 /**
  * The website's front page at /. Every number on it comes from the same
  * engine as the app, worked out for a sample buyer (DEFAULT_PROFILE) and
- * the default Thunder Bay assumptions, and the listings are today's feed.
+ * the city the visitor picks (their time zone's guess to start), and the
+ * listings are today's Thunder Bay feed.
  */
 
 const APP = '/app/';
 const open = (view) => `${APP}?view=${view}`;
 const FEED_URL = `/data/${MARKET.doc}.json`;
 const SAMPLE = DEFAULT_PROFILE;
-const RENT_EACH = DEFAULT_MARKET.rents[2];
+const placeName = (c) => c.name.replace(/^Elsewhere in /, '');
 
 const shell = 'mx-auto w-full max-w-6xl px-4 sm:px-6';
 const eyebrow = 'text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400';
@@ -27,13 +30,15 @@ const primary =
 const secondary =
   'inline-flex items-center justify-center gap-2 rounded-md border border-(--line-strong) px-5 py-3 text-[15px] font-semibold text-zinc-900 transition hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent) dark:text-zinc-100 dark:hover:bg-white/5';
 
-/** What the sample buyer could borrow on, and what it costs to live there each month. */
-function buyOption(units) {
-  const { rate, taxPct, insurancePerUnit } = DEFAULT_MARKET;
-  const rentIn = RENT_EACH * (units - 1);
-  const price = maxPrice({ profile: SAMPLE, units, ratePct: rate, taxPct, rentPerOtherUnit: RENT_EACH }).byIncome;
+/** What the sample buyer could borrow on in a city, and what it costs to live there each month. */
+function buyOption(units, cityKey) {
+  const { rate, insurancePerUnit } = DEFAULT_MARKET;
+  const { rent, taxPct } = cityByKey(cityKey);
+  const profile = { ...SAMPLE, city: cityKey };
+  const rentIn = rent * (units - 1);
+  const price = maxPrice({ profile, units, ratePct: rate, taxPct, rentPerOtherUnit: rent }).byIncome;
   const taxes = (price * taxPct) / 1200;
-  const c = buyCheck({ profile: SAMPLE, price, units, ratePct: rate, taxesMonthly: taxes, rentFromOthers: rentIn });
+  const c = buyCheck({ profile, price, units, ratePct: rate, taxesMonthly: taxes, rentFromOthers: rentIn });
   const insurance = Math.max(insurancePerUnit * units, INSURANCE_MIN) / 12;
   const outgoing = c.plan.payment + taxes + insurance + RULES.heatMonthly;
   return { price, down: c.down, cashNeeded: c.cashNeeded, payment: c.plan.payment, rest: taxes + insurance + RULES.heatMonthly, rentIn, outgoing, live: outgoing - rentIn };
@@ -63,6 +68,7 @@ const longDate = (iso) => (iso ? new Date(`${iso}T12:00:00`).toLocaleDateString(
 
 export default function Landing() {
   const feed = useFeed();
+  const [city, setCity] = useState(guessCity);
   return (
     <div className="min-h-dvh bg-(--page) text-zinc-900 antialiased dark:text-zinc-100">
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-(--panel) focus:px-3 focus:py-2">
@@ -71,12 +77,12 @@ export default function Landing() {
       <Nav />
       <main id="main">
         <Hero />
-        <Today feed={feed} />
-        <Compare />
+        <Compare city={city} onCity={setCity} />
         <How />
         <Features />
-        <Money />
-        <RedTape />
+        <Money city={city} />
+        <Today feed={feed} />
+        <RedTape city={city} />
         <Trust />
         <Faq />
         <Closing />
@@ -119,12 +125,12 @@ function Hero() {
   return (
     <section className="border-b border-hairline">
       <div className={`${shell} pb-16 pt-14 sm:pt-20 lg:pb-24`}>
-        <p className={eyebrow}>For first-time buyers in Thunder Bay</p>
+        <p className={eyebrow}>For first-time buyers across Canada</p>
         <h1 className="mt-5 max-w-4xl text-[40px] font-semibold leading-[1.04] tracking-[-0.04em] text-balance text-zinc-950 sm:text-6xl lg:text-[76px] dark:text-white">
           Own your first home. Let a tenant help pay for it.
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-zinc-600 sm:text-xl dark:text-zinc-400">
-          Bedrock shows what a bank would lend you, the government money you can claim, and the homes for sale today that cost less to live in than your rent.
+          Bedrock shows what a bank would lend you, the government money you can claim where you live, and how renting out part of a home can make it cost less than your rent.
         </p>
         <div className="mt-9 flex flex-col gap-3 sm:flex-row">
           <a href={open('home')} className={primary}>
@@ -183,7 +189,7 @@ function Today({ feed }) {
   }, [feed]);
 
   const stats = [
-    ['Homes for sale we track', data ? String(data.count) : '—'],
+    ['Thunder Bay homes for sale we track', data ? String(data.count) : '—'],
     ['New in the latest update', data ? String(data.added) : '—'],
     ['Typical asking price', data ? money(data.median) : '—'],
     [`2–4 units that cost under ${money(SAMPLE.rentNow)}/mo to live in`, data ? String(data.underRent) : '—'],
@@ -194,7 +200,7 @@ function Today({ feed }) {
       <div className={`${shell} py-16 sm:py-24`}>
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <p className={eyebrow}>Today in Thunder Bay</p>
+            <p className={eyebrow}>Daily listings · Thunder Bay, more cities coming</p>
             <h2 id="today-title" className={`${h2} mt-3`}>
               Found every morning. Worked out for you.
             </h2>
@@ -238,27 +244,34 @@ function Today({ feed }) {
   );
 }
 
-function Compare() {
-  const solo = buyOption(1);
-  const duplex = buyOption(2);
+function Compare({ city, onCity }) {
+  const place = cityByKey(city);
+  const solo = buyOption(1, place.key);
+  const duplex = buyOption(2, place.key);
+  const saves = solo.live - duplex.live;
   return (
     <section aria-labelledby="compare-title" className="border-b border-hairline">
       <div className={`${shell} py-16 sm:py-24`}>
         <p className={eyebrow}>The same paycheque</p>
-        <h2 id="compare-title" className={`${h2} mt-3 max-w-3xl`}>
-          On {money(SAMPLE.income)} a year, a duplex can cost you {money(solo.live - duplex.live)} a month less than a house.
+        <h2 id="compare-title" className={`${h2} mt-3 max-w-3xl`} aria-live="polite">
+          {saves > 0
+            ? `On ${money(SAMPLE.income)} a year in ${placeName(place)}, a duplex can cost you ${money(saves)} a month less than a house.`
+            : `On ${money(SAMPLE.income)} a year in ${placeName(place)}, here’s a house next to a duplex.`}
         </h2>
         <p className={lede}>
           A bank counts the rent from the other unit as your income, so you can borrow more. Then the tenant pays a big share of the mortgage. Here’s the math for one buyer
           paying {money(SAMPLE.rentNow)} a month in rent today.
         </p>
+        <div className="mt-8 max-w-sm">
+          <CitySelect id="compare-city" label="Pick a city" value={place.key} onChange={onCity} />
+        </div>
         <div className="mt-12 grid overflow-hidden rounded-md border border-(--line-strong) bg-(--panel) md:grid-cols-2">
           <Option title="A house, on your own" o={solo} />
           <Option title="A duplex, renting one unit" o={duplex} accent className="max-md:border-t md:border-l border-hairline" />
         </div>
         <p className="mt-4 text-[13px] text-zinc-500 dark:text-zinc-400">
-          At a {DEFAULT_MARKET.rate}% five-year fixed rate over 30 years, 5% down with mortgage insurance, and {money(RENT_EACH)} a month rent for the other unit. Estimates,
-          not financial advice.
+          At a {DEFAULT_MARKET.rate}% five-year fixed rate over 30 years, 5% down with mortgage insurance, {provinceName(place.province)}’s land transfer tax, {money(place.rent)} a
+          month rent for the other unit ({placeName(place)}’s average for two bedrooms{place.estimated ? ', estimated' : ''}) and property tax of about {place.taxPct}% of the price. Estimates, not financial advice.
         </p>
       </div>
     </section>
@@ -332,8 +345,8 @@ function Features() {
   const items = [
     [Home, 'Home check', 'The most you could pay, held back by your income or your savings, and what it costs you each month next to your rent.', 'home'],
     [Landmark, 'Money you can get', 'FHSA refunds, the land transfer tax refund, the buyers’ tax credit and the RRSP Home Buyers’ Plan, added up for you.', 'home'],
-    [ListChecks, 'Morning listings', 'Thunder Bay homes found each morning, with the cost to live in each and whether a bank would say yes.', 'listings'],
-    [ClipboardCheck, 'Permit guide', 'Adding a basement suite or a backyard home, step by step: what the city allows, what to submit, and whether it pays.', 'home'],
+    [ListChecks, 'Morning listings', 'Homes for sale found each morning, with the cost to live in each and whether a bank would say yes. Thunder Bay for now; more cities are coming.', 'listings'],
+    [ClipboardCheck, 'Permit guide', 'Adding a basement suite or a backyard home, step by step: what your province and city allow, what to submit, and whether it pays.', 'home'],
     [Building2, 'Rental math', 'Every cost of a rental, the lender’s DSCR test, a stress test and a 10-year outlook, in plain words.', 'analyze'],
   ];
   return (
@@ -376,8 +389,9 @@ function Features() {
   );
 }
 
-function Money() {
-  const b = benefits({ profile: SAMPLE, price: SAMPLE.targetPrice, units: SAMPLE.targetUnits });
+function Money({ city }) {
+  const place = cityByKey(city);
+  const b = benefits({ profile: { ...SAMPLE, city: place.key }, price: SAMPLE.targetPrice, units: SAMPLE.targetUnits });
   const list = b.list.filter((x) => x.key !== 'refi');
   return (
     <section id="money" aria-labelledby="money-title" className="scroll-mt-16 border-b border-hairline">
@@ -387,8 +401,8 @@ function Money() {
           About {money(b.total)} back in the first year, plus {money(RULES.hbp)} you can borrow from yourself.
         </h2>
         <p className={lede}>
-          For a first-time buyer earning {money(SAMPLE.income)} and saving {money(SAMPLE.monthlySave)} a month toward a {money(SAMPLE.targetPrice)} duplex. Your own amounts
-          are one tap away.
+          For a first-time buyer in {placeName(place)} earning {money(SAMPLE.income)} and saving {money(SAMPLE.monthlySave)} a month toward a {money(SAMPLE.targetPrice)} duplex.
+          Your own amounts are one tap away.
         </p>
         <ul className="mt-10 divide-y divide-hairline border-y border-hairline">
           {list.map((x) => (
@@ -416,7 +430,8 @@ function Money() {
   );
 }
 
-function RedTape() {
+function RedTape({ city }) {
+  const steps = stepsFor(city);
   return (
     <section aria-labelledby="tape-title" className="border-b border-hairline">
       <div className={`${shell} py-16 sm:py-24`}>
@@ -427,18 +442,22 @@ function RedTape() {
               Add a suite without getting lost at city hall.
             </h2>
             <p className="mt-4 text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
-              Ontario lets you have up to three homes on most residential lots, and Thunder Bay’s zoning allows a suite in the house, a backyard home, or both. Bedrock walks you through the permit, links each step to the city’s own page, and shows
-              how fast the rent pays back the build.
+              Most Canadian cities now allow a basement suite or a backyard home on a house lot, and many allow three or four homes. Bedrock walks you through the permit, the rules
+              in your province, and how fast the rent pays back the build.
             </p>
           </div>
           <ol className="divide-y divide-hairline border-y border-hairline">
-            {STEPS.map((s, i) => (
+            {steps.map((s, i) => (
               <li key={s.key} className="grid grid-cols-[2rem_1fr] gap-x-3 py-4">
                 <span className="text-sm font-medium tabular-nums text-zinc-500 dark:text-zinc-400">{String(i + 1).padStart(2, '0')}</span>
-                <a href={s.url} target="_blank" rel="noreferrer" className="font-medium text-zinc-950 hover:underline dark:text-white">
-                  {s.title}
-                  <span className="sr-only"> (city page, opens in a new tab)</span>
-                </a>
+                {s.url ? (
+                  <a href={s.url} target="_blank" rel="noreferrer" className="font-medium text-zinc-950 hover:underline dark:text-white">
+                    {s.title}
+                    <span className="sr-only"> (city page, opens in a new tab)</span>
+                  </a>
+                ) : (
+                  <span className="font-medium text-zinc-950 dark:text-white">{s.title}</span>
+                )}
               </li>
             ))}
           </ol>
@@ -484,9 +503,12 @@ const FAQ = [
   ],
   [
     'Where do the listings come from?',
-    'Public listing sites, searched each morning. Each one links to its original page, and Bedrock fills gaps like rent with Thunder Bay averages you can change.',
+    'Public listing sites, searched each morning, in Thunder Bay for now. Each one links to its original page, and Bedrock fills gaps like rent with local averages you can change.',
   ],
-  ['Does it work outside Thunder Bay?', 'The calculator works for any Canadian or US rental. The morning listings and the permit guide are Thunder Bay only, for now.'],
+  [
+    'Does it work where I live?',
+    'Yes, anywhere in Canada. Pick your city and Bedrock uses your province’s land transfer tax and first-buyer programs, with local rent and property tax you can change. The morning listings are Thunder Bay only for now; more cities are coming.',
+  ],
 ];
 
 function Faq() {

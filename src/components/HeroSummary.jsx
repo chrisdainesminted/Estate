@@ -3,6 +3,8 @@ import { TONE_TEXT, verdict } from '../lib/dscr.js';
 import { breakevenSentence, dealSentence } from '../lib/explain.js';
 import { money, safeHttpUrl } from '../lib/format.js';
 import { UNIT_TYPES } from '../lib/presets.js';
+import { dealPlace } from '../lib/finance.js';
+import { provinceName } from '../lib/canada.js';
 import { Button, ExampleTag, SummaryCard } from './ui.jsx';
 import DealLedgers from './DealLedgers.jsx';
 import CalcInputs from './CalcInputs.jsx';
@@ -26,7 +28,7 @@ export default function HeroSummary({ deal, a, base, whatIf, onShare, onChange }
     money(a.price),
     `${Number(deal.downPct)}% down`,
     `${rate}% for ${deal.termYears} years`,
-    deal.country === 'ca' && 'Ontario rules',
+    deal.country === 'ca' && `${provinceName(dealPlace(deal).province)} rules`,
     a.interestOnly && `interest-only for ${a.ioYears} years`,
   ].filter(Boolean);
   const breakeven = breakevenSentence(a);

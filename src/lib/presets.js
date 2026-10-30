@@ -13,7 +13,8 @@ export const MAX_COMPARE = 3;
 
 export const DEFAULT_DEAL = {
   name: 'New Deal',
-  country: 'us', // 'us' | 'ca': whose mortgage, closing-cost and tax rules apply (ca = Ontario)
+  country: 'us', // 'us' | 'ca': whose mortgage, closing-cost and tax rules apply
+  city: 'on-other', // in Canada, where: a key in canada.js CITIES (its province's land transfer tax)
   price: 300000,
   downPct: 25,
   rate: 7,
@@ -115,7 +116,7 @@ export const PRESET_OWNED = [
 ];
 
 // Closing costs differ by country: the US figure covers transfer taxes, while
-// in Ontario the land transfer tax is worked out separately on top of ~1%.
+// in Canada the land transfer tax is worked out separately on top of ~1%.
 const CLOSING_DEFAULT = { us: 3, ca: 1 };
 
 /** Patch that switches a deal's rules, swapping a closing % still at the old country's default. */

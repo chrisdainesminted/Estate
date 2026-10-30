@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { AlertTriangle, ArrowDownToLine, CheckCircle2, XCircle } from 'lucide-react';
-import { OWN_DOWN_PCT, allCash, analyzeDeal, loanConstant, maxOffer, ownMoney, paybackYears, projectDeal, saleAnalysis } from '../lib/finance.js';
+import { provinceName } from '../lib/canada.js';
+import { OWN_DOWN_PCT, dealPlace, allCash, analyzeDeal, loanConstant, maxOffer, ownMoney, paybackYears, projectDeal, saleAnalysis } from '../lib/finance.js';
 import { cashRankingMeaning, cashRentMeaning, cashSaleMeaning, cashSentence, cashYearsMeaning, leverageMeaning, offerMeaning } from '../lib/explain.js';
 import { TONE_TEXT } from '../lib/dscr.js';
 import { money, percent } from '../lib/format.js';
@@ -35,7 +36,7 @@ function CashSummary({ deal, own, c, targets, onChange }) {
     type?.key === 'multiplex' ? `Multiplex, ${c.units} units` : type?.label,
     money(c.price),
     `${OWN_DOWN_PCT}% down, ${Number(deal.rate)}% over ${deal.termYears} years`,
-    deal.country === 'ca' && 'Ontario rules',
+    deal.country === 'ca' && `${provinceName(dealPlace(deal).province)} rules`,
   ].filter(Boolean);
   return (
     <SummaryCard
