@@ -14,6 +14,26 @@ import Expenses from './Expenses.jsx';
 import Rules from './Rules.jsx';
 import SettingsPanel from './SettingsPanel.jsx';
 
+/**
+ * A photo made ready to upload: at most 1600 pixels on its long side, as a
+ * JPEG, so phone photos (often 4 to 10 MB) go up quickly and fit the limit.
+ */
+async function shrinkPhoto(file) {
+  if (!file.type.startsWith('image/')) throw new ApiError(415, 'Choose a photo (JPEG, PNG or WebP).');
+  const bitmap = await createImageBitmap(file).catch(() => null);
+  if (!bitmap) throw new ApiError(415, 'That photo couldn’t be read. Try a JPEG or PNG.');
+  const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  for (const quality of [0.82, 0.7, 0.55]) {
+    const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', quality));
+    if (blob && blob.size <= 1_400_000) return blob;
+  }
+  throw new ApiError(413, 'That photo is too large.');
+}
+
 /** A private link pasted in, or carried in this page's #landlord=id.key. */
 function parseWorkspace(text) {
   const m = /landlord=([A-Za-z0-9_-]{8,64})\.([A-Za-z0-9_-]{16,128})/.exec(String(text || ''));
@@ -105,6 +125,40 @@ export default function LandlordView({ homeCity }) {
         await call(`/w/${ws?.id}/applications/${appId}/slot`, { method: 'POST', key: ws?.key, body: { slotId } });
         await load();
       },
+      message: async (applicationId, body) => {
+        await call(`/w/${ws?.id}/messages`, { method: 'POST', key: ws?.key, body: { applicationId, body } });
+        await load();
+      },
+      readThread: (appId) => call(`/w/${ws?.id}/applications/${appId}/read`, { method: 'POST', key: ws?.key, body: {} }),
+      uploadPhoto: async (listingId, file) => {
+        const blob = await shrinkPhoto(file);
+        let res;
+        try {
+          res = await fetch(`/api/w/${ws?.id}/listings/${listingId}/photos`, { method: 'POST', headers: { authorization: `Bearer ${ws?.key}`, 'content-type': blob.type }, body: blob });
+        } catch {
+          throw new ApiError(0, 'Couldn’t upload. Check your connection.');
+        }
+        const data = await res.json().catch(() => null);
+        if (!res.ok) throw new ApiError(res.status, data?.error || 'Couldn’t upload that photo.');
+        await load();
+      },
+      removePhoto: async (listingId, photoId) => {
+        await call(`/w/${ws?.id}/listings/${listingId}/photos/${photoId}`, { method: 'DELETE', key: ws?.key });
+        await load();
+      },
+      coverPhoto: async (listingId, photoId) => {
+        await call(`/w/${ws?.id}/listings/${listingId}/cover`, { method: 'POST', key: ws?.key, body: { photoId } });
+        await load();
+      },
+      renew: async (listingId) => {
+        await call(`/w/${ws?.id}/listings/${listingId}/renew`, { method: 'POST', key: ws?.key, body: {} });
+        await load();
+      },
+      verifySend: () => call(`/w/${ws?.id}/verify/send`, { method: 'POST', key: ws?.key, body: {} }),
+      verifyCheck: async (code) => {
+        await call(`/w/${ws?.id}/verify/check`, { method: 'POST', key: ws?.key, body: { code } });
+        await load();
+      },
     }),
     [save, remove, load, ws],
   );
@@ -127,10 +181,11 @@ export default function LandlordView({ homeCity }) {
 
   const province = cityByKey(data.settings?.city || homeCity).province;
   const unread = data.applications.filter((a) => !a.read && a.status !== 'withdrawn').length + data.maintenance.filter((m) => !m.read).length;
+  const config = data.config || {};
   const late = data.units.filter((u) => ['late', 'partial'].includes(rentStatus(u, data.payments, today()).state)).length;
   const openRepairs = data.maintenance.filter((m) => m.status !== 'fixed').length;
   const badge = { inbox: unread, rent: late, repairs: openRepairs };
-  const props = { data, api, ws, province, homeCity, settings: data.settings || {}, go: setTab };
+  const props = { data, api, ws, province, homeCity, config, settings: data.settings || {}, go: setTab };
 
   return (
     <div className="space-y-6">
@@ -183,7 +238,14 @@ export default function LandlordView({ homeCity }) {
 }
 
 function Header() {
-  return <ViewHeader title="Landlord">Applicants and viewings, tenants and rent, repairs, and your records for tax time, in one place.</ViewHeader>;
+  return (
+    <ViewHeader title="Landlord">
+      List a home for rent or for sale, talk to the people who answer, book viewings, and keep tenants, rent, repairs and tax records in one place.{' '}
+      <a className="font-medium text-emerald-700 hover:underline dark:text-emerald-400" href="/homes/">
+        See public listings
+      </a>
+    </ViewHeader>
+  );
 }
 
 function Offline() {

@@ -9,7 +9,7 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 800,
     // Two pages: the homepage at / and the app at /app/.
-    rollupOptions: { input: { home: 'index.html', app: 'app/index.html', rent: 'rent/index.html' } },
+    rollupOptions: { input: { home: 'index.html', app: 'app/index.html', rent: 'rent/index.html', listing: 'listing/index.html', homes: 'homes/index.html' } },
   },
   test: {
     environment: 'node',

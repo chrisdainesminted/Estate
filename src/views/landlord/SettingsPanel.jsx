@@ -1,11 +1,12 @@
 import { useState } from 'react';
+import { BadgeCheck } from 'lucide-react';
 import { Button, Card, CardHeader } from '../../components/ui.jsx';
 import CitySelect from '../../components/CitySelect.jsx';
 import { links } from '../../lib/landlordApi.js';
 import { CopyButton, Input, TextArea, editable } from './shared.jsx';
 
 /** Your name and contact (shown to applicants once a viewing is confirmed), and your private link. */
-export default function SettingsPanel({ settings, api, ws, province, homeCity, onForget }) {
+export default function SettingsPanel({ settings, api, ws, province, homeCity, config, onForget }) {
   const [f, setF] = useState({ name: '', email: '', phone: '', signature: '', ...settings, city: settings.city || homeCity });
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
@@ -46,7 +47,9 @@ export default function SettingsPanel({ settings, api, ws, province, homeCity, o
           </div>
         </form>
       </Card>
-      <Card className="self-start">
+      <div className="space-y-6 self-start">
+      {config.verification && <ConfirmEmail settings={settings} api={api} />}
+      <Card>
         <CardHeader title="Your private link" subtitle="Opens this workspace on any device. Anyone with it can see your tenants’ details." />
         <div className="space-y-4 p-5 text-sm">
           <input readOnly aria-label="Your private link" value={links.private(ws)} onFocus={(e) => e.target.select()} className="field w-full px-3 py-2.5 font-mono text-xs" />
@@ -58,6 +61,60 @@ export default function SettingsPanel({ settings, api, ws, province, homeCity, o
           </div>
         </div>
       </Card>
+      </div>
     </div>
+  );
+}
+
+/** Confirming the email with a six-digit code, so listings can show in public search. */
+function ConfirmEmail({ settings, api }) {
+  const [sent, setSent] = useState('');
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  if (settings.emailVerified)
+    return (
+      <Card className="flex items-center gap-2 px-5 py-4 text-sm text-emerald-800 dark:text-emerald-300">
+        <BadgeCheck className="size-4" aria-hidden /> {settings.email} is confirmed. Your public listings show a “confirmed” mark.
+      </Card>
+    );
+  const run = async (fn) => {
+    setBusy(true);
+    setError('');
+    try {
+      await fn();
+    } catch (e) {
+      setError(e.message);
+    }
+    setBusy(false);
+  };
+  return (
+    <Card>
+      <CardHeader title="Confirm your email" subtitle="Listings show in Bedrock’s public search once you do. It helps keep fake listings out." />
+      <div className="space-y-3 p-5 text-sm">
+        {!settings.email ? (
+          <p className="text-zinc-600 dark:text-zinc-400">Add your email above and save first.</p>
+        ) : (
+          <>
+            <Button disabled={busy} onClick={() => run(async () => setSent((await api.verifySend()).email))}>
+              {sent ? 'Send a new code' : `Email a code to ${settings.email}`}
+            </Button>
+            {sent && (
+              <form className="flex flex-wrap items-end gap-2" onSubmit={(e) => (e.preventDefault(), run(() => api.verifyCheck(code)))}>
+                <Input id="st-code" label={`The 6-digit code sent to ${sent}`} value={code} onChange={setCode} inputMode="numeric" autoComplete="one-time-code" maxLength={6} />
+                <Button type="submit" variant="primary" disabled={busy || code.length !== 6}>
+                  Confirm
+                </Button>
+              </form>
+            )}
+          </>
+        )}
+        {error && (
+          <p role="alert" className="text-red-700 dark:text-red-300">
+            {error}
+          </p>
+        )}
+      </div>
+    </Card>
   );
 }

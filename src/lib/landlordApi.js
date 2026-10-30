@@ -53,7 +53,7 @@ export function saveWorkspace(w) {
 /** Links built from a workspace. Tokens ride in the #fragment, which never reaches a server log. */
 export const links = {
   origin: () => (typeof location !== 'undefined' && /^https?:/.test(location.origin) ? location.origin : 'https://bedrock.signia83.workers.dev'),
-  apply: (ws, listingId) => `${links.origin()}/rent/#w=${ws}&l=${listingId}`,
+  apply: (ws, listingId) => `${links.origin()}/listing/#w=${ws}&l=${listingId}`,
   status: (ws, token) => `${links.origin()}/rent/#w=${ws}&s=${token}`,
   repair: (ws, unit) => `${links.origin()}/rent/#w=${ws}&u=${unit.id}&t=${unit.repairToken}`,
   private: (w) => `${links.origin()}/app/?view=landlord#landlord=${w.id}.${w.key}`,

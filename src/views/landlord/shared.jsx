@@ -79,11 +79,15 @@ export function CopyButton({ text, label = 'Copy link', className = '' }) {
  * app or messages with it filled in. Nothing is sent until they press send
  * there. `onSent` runs as the app opens (to record what was sent).
  */
-export function SendButtons({ email, phone, message, onSent }) {
+export function SendButtons({ email, phone, message, onSent, secondary = false }) {
   return (
     <div className="flex flex-wrap gap-2">
       {email && (
-        <a href={mailto(email, message)} onClick={onSent} className="inline-flex items-center gap-1.5 rounded-md bg-(--accent) px-3.5 py-2 text-sm font-semibold text-(--accent-ink) hover:brightness-110">
+        <a
+          href={mailto(email, message)}
+          onClick={onSent}
+          className={`inline-flex items-center gap-1.5 rounded-md px-3.5 py-2 text-sm ${secondary ? 'font-medium text-zinc-800 ring-1 ring-(--line-strong) ring-inset hover:bg-well dark:text-zinc-100' : 'bg-(--accent) font-semibold text-(--accent-ink) hover:brightness-110'}`}
+        >
           <Mail className="size-4" aria-hidden /> Email it
         </a>
       )}

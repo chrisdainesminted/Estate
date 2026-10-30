@@ -106,8 +106,11 @@ function Nav() {
           <Logo />
         </a>
         <nav aria-label="Sections" className="hidden items-center gap-7 text-sm font-medium text-zinc-600 md:flex dark:text-zinc-400">
-          <a className="hover:text-zinc-950 dark:hover:text-white" href="#today">
-            Listings
+          <a className="hover:text-zinc-950 dark:hover:text-white" href="/homes/">
+            Find a home
+          </a>
+          <a className="hover:text-zinc-950 dark:hover:text-white" href="/app/?view=landlord">
+            List a home
           </a>
           <a className="hover:text-zinc-950 dark:hover:text-white" href="#how">
             How it works
@@ -142,8 +145,8 @@ function Hero() {
           <a href={open('home')} className={primary}>
             See what you can buy <ArrowRight className="size-4" aria-hidden />
           </a>
-          <a href={open('listings')} className={secondary}>
-            Browse today’s listings
+          <a href="/homes/" className={secondary}>
+            Find a home to rent or buy
           </a>
         </div>
         <p className="mt-5 text-sm text-zinc-500 dark:text-zinc-400">Free. No sign-up. Your numbers stay in your browser.</p>
@@ -355,6 +358,7 @@ function Features() {
     [Landmark, 'Money you can get', 'FHSA refunds, the land transfer tax refund, the buyers’ tax credit and the RRSP Home Buyers’ Plan, added up for you.', 'home'],
     [ListChecks, 'Morning listings', 'Homes for sale found each morning, with the cost to live in each and whether a bank would say yes. Thunder Bay for now; more cities are coming.', 'listings'],
     [ClipboardCheck, 'Permit guide', 'Adding a basement suite or a backyard home, step by step: what your province and city allow, what to submit, and whether it pays.', 'home'],
+    [Home, 'List a home, free', 'Put a home up for rent or for sale with photos. People find it in Bedrock’s search, book a time to see it and message you here.', 'landlord'],
     [KeyRound, 'Landlord tools', 'A page for each rental where people apply and book a viewing from your calendar, rent tracking, repair requests, and expenses sorted for tax time.', 'landlord'],
     [Building2, 'Rental math', 'Every cost of a rental, the lender’s DSCR test, a stress test and a 10-year outlook, in plain words.', 'analyze'],
   ];

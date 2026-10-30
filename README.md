@@ -11,6 +11,18 @@ Bedrock helps young adults anywhere in Canada get into their first home. Pick a 
 
 The website is a homepage plus the same app, served by Cloudflare as a static-assets Worker. The homepage (`index.html`, `src/landing/`) works out its numbers with the app's own engine and today's listings feed; its buttons open the app on a tab with `/app/?view=home` (or `listings`, `analyze`), and old `/#deal=` share links forward to `/app/`. Cloudflare builds it from the default branch on every push with `npm test && npm run build`, then `npx wrangler deploy` publishes `dist/` as set in `wrangler.jsonc`, so a failing test stops a deploy and the last good version stays up. Outside Claude it reads Thunder Bay listings from `public/data/thunderbay.json`, which is published with the site.
 
+## Listings platform
+
+Anyone can list a home for rent or for sale by owner from the Landlord tab, with up to 10 photos. Listings marked public show on [/homes/](https://bedrock.signia83.workers.dev/homes/), searchable by kind, city or province, price, bedrooms and type; each has its own page at `/listing/` where people apply or ask to see it, pick a time, and then message the owner from their own status page (the owner replies from the Inbox). A Directory Durable Object (`worker/directory.js`) indexes public listings; a listing drops out after 60 days unless renewed.
+
+Safety: listing and status pages carry scam warnings; anyone can report a listing, and three reports from different addresses hide it until reviewed at `/homes/#admin`.
+
+Optional settings in Cloudflare (Workers → bedrock → Settings → Variables and secrets):
+- `ADMIN_KEY`: turns on the review page for reported listings.
+- `RESEND_API_KEY` and `EMAIL_FROM` (an address on a domain verified in Resend): turns on email confirmation; once set, a listing shows in public search only after its owner confirms their email with a code. Until then listings publish straight away.
+
+Messages show in the app only: people see new ones when they open their inbox or status page (both check every 30 to 60 seconds while open).
+
 ## Landlord tools
 
 The Landlord tab (under More) runs rentals from one place: a public page for each listing where people apply and pick a viewing time (held until the landlord confirms), a calendar of viewing times, an inbox with reply templates the landlord sends from their own email or phone, tenants and rent (paid, due or late, with reminders), repair requests through a link for each unit, expenses by the CRA's T776 lines with a year-end summary and CSV, and each province's rules on rent increases, notice, deposits and leases.
@@ -138,9 +150,10 @@ src/components/HelpSheet.jsx  help: what each tab does and the words to know (lo
 src/components/ShareSheet.jsx the share panel: copy the link or use the phone's share sheet (loaded on demand)
 src/components/RentHelper.jsx "Don't know the rent?": the Thunder Bay rent for a number of bedrooms
 src/components/*          UI sections, plus the search palette, phone sheet and toasts
-worker/                   the landlord tools' server: index.js (routes), store.js (the workspace database), schema.js (fields)
+worker/                   the server: index.js (routes), store.js (a workspace's database), directory.js (public search), schema.js (fields)
 src/views/landlord/       the Landlord tab: inbox, calendar, listings, tenants & rent, repairs, expenses, rules, settings
-src/rent/                 the public page for applicants and tenants (rent/index.html at /rent/)
+src/rent/                 the public listing, status and repair page (listing/index.html at /listing/, rent/index.html at /rent/)
+src/homes/                the public search of listings (homes/index.html at /homes/), and the review of reported listings
 src/lib/landlord.js       rent status, the T776 year summary, rent increase timing, reply templates (tested)
 src/lib/tenancyRules.js   each province's rules on rent increases, notice, deposits and leases (tested)
 src/landing/Landing.jsx   the website's homepage at / (app/index.html is the app at /app/)

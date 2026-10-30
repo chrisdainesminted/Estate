@@ -18,6 +18,20 @@ export const T776 = [
   { key: 'other', line: '9270', label: 'Other expenses' },
 ];
 
+export const PROPERTY_TYPES = [
+  { key: 'house', label: 'House' },
+  { key: 'semi', label: 'Semi-detached' },
+  { key: 'townhouse', label: 'Townhouse' },
+  { key: 'condo', label: 'Condo' },
+  { key: 'apartment', label: 'Apartment' },
+  { key: 'suite', label: 'Basement or in-law suite' },
+  { key: 'room', label: 'Room' },
+  { key: 'duplex', label: 'Duplex' },
+  { key: 'triplex', label: 'Triplex' },
+  { key: 'fourplex', label: 'Fourplex' },
+  { key: 'other', label: 'Other' },
+];
+
 const text = (max) => ({ type: 'text', max });
 const num = { type: 'number' };
 const bool = { type: 'boolean' };
@@ -35,7 +49,10 @@ export const SCHEMAS = {
     signature: text(300),
   },
   listings: {
+    kind: oneOf('rent', 'sale'),
     title: text(120),
+    city: text(40), // a key in src/lib/canada.js CITIES, for the public search
+    propertyType: oneOf(...PROPERTY_TYPES.map((t) => t.key)),
     unitId: text(40),
     area: text(120), // shown publicly: a neighbourhood or street, not the full address
     address: text(200), // private: shared once a viewing is confirmed
@@ -47,6 +64,12 @@ export const SCHEMAS = {
     parking: text(120),
     details: text(3000),
     active: bool,
+    public: bool, // shown on Bedrock's public listings, not only by its link
+    price: num, // asking price, for a home for sale
+    sqft: num,
+    lot: text(60),
+    taxes: num, // property tax a year
+    yearBuilt: num,
   },
   slots: {
     listingId: text(40),
@@ -104,6 +127,12 @@ export const SCHEMAS = {
     fixedOn: date,
     notes: text(2000),
     read: bool,
+  },
+  messages: {
+    applicationId: text(40),
+    from: oneOf('landlord', 'applicant'),
+    body: text(4000),
+    read: bool, // by the other side
   },
   expenses: {
     date,

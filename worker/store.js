@@ -6,6 +6,9 @@
 import { APPLY_FIELDS, COLLECTIONS, EMAIL, REPAIR_FIELDS, clean } from './schema.js';
 
 const MAX_ITEMS = 3000; // per collection
+const MAX_PHOTOS = 10; // per listing
+const MAX_PHOTO_BYTES = 1_500_000;
+export const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const KEEP_CLOSED_DAYS = 180; // declined or withdrawn applications are deleted after this
 const DAY = 86400000;
 
@@ -40,6 +43,7 @@ export class Store {
     sql.exec('CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)');
     sql.exec('CREATE TABLE IF NOT EXISTS items (collection TEXT, id TEXT, data TEXT, created INTEGER, updated INTEGER, PRIMARY KEY (collection, id))');
     sql.exec('CREATE TABLE IF NOT EXISTS hits (bucket TEXT PRIMARY KEY, n INTEGER)');
+    sql.exec('CREATE TABLE IF NOT EXISTS photos (id TEXT PRIMARY KEY, listing TEXT, mime TEXT, data BLOB, created INTEGER)');
   }
 
   meta(k) {
@@ -86,7 +90,7 @@ export class Store {
   }
 
   list(collection) {
-    return this.sql.exec('SELECT * FROM items WHERE collection = ? ORDER BY created', collection).toArray().map((r) => this.row(r));
+    return this.sql.exec('SELECT * FROM items WHERE collection = ? ORDER BY created, rowid', collection).toArray().map((r) => this.row(r));
   }
 
   write(collection, id, data, created) {
@@ -115,8 +119,8 @@ export class Store {
     for (const s of this.list('slots')) if (s.status === 'open' && Date.parse(s.start) < this.now() - 30 * DAY) this.remove('slots', s.id);
   }
 
-  create(collection, input) {
-    if (!COLLECTIONS.includes(collection) || collection === 'settings') throw new StoreError(404, 'Unknown kind of record.');
+  create(collection, input, { internal = false } = {}) {
+    if (!COLLECTIONS.includes(collection) || collection === 'settings' || (collection === 'messages' && !internal)) throw new StoreError(404, 'Unknown kind of record.');
     const n = this.sql.exec('SELECT COUNT(*) AS n FROM items WHERE collection = ?', collection).toArray()[0].n;
     if (n >= MAX_ITEMS) throw new StoreError(413, 'Too many records of this kind.');
     const data = clean(collection, input);
@@ -131,7 +135,14 @@ export class Store {
   }
 
   update(collection, id, patch) {
-    if (collection === 'settings') return this.write('settings', 'main', { ...(this.get('settings', 'main') ?? {}), ...clean('settings', patch) });
+    if (collection === 'settings') {
+      const old = this.get('settings', 'main') ?? {};
+      const next = { ...old, ...clean('settings', patch) };
+      // A new email has to be confirmed again.
+      if ((next.email || '').toLowerCase() !== (old.email || '').toLowerCase()) next.emailVerified = false;
+      return this.write('settings', 'main', next);
+    }
+    if (collection === 'messages') throw new StoreError(404, 'Messages can’t be changed.');
     const old = this.get(collection, id);
     if (!old) throw new StoreError(404, 'Not found.');
     const changes = clean(collection, patch);
@@ -165,7 +176,11 @@ export class Store {
       const app = this.get('applications', old.applicationId);
       if (app) this.write('applications', app.id, { ...app, slotId: '' }, app.created);
     }
-    if (collection === 'listings') for (const s of this.list('slots')) if (s.listingId === id && s.status === 'open') this.remove('slots', s.id);
+    if (collection === 'listings') {
+      for (const s of this.list('slots')) if (s.listingId === id && s.status === 'open') this.remove('slots', s.id);
+      this.sql.exec('DELETE FROM photos WHERE listing = ?', id);
+    }
+    if (collection === 'applications') for (const m of this.list('messages')) if (m.applicationId === id) this.sql.exec('DELETE FROM items WHERE collection = ? AND id = ?', 'messages', m.id);
     return true;
   }
 
@@ -179,6 +194,140 @@ export class Store {
     if (old?.applicationId === appId) this.write('slots', old.id, { ...old, status: 'open', applicationId: '' }, old.created);
     if (slot) this.write('slots', slot.id, { ...slot, status: app.status === 'viewing' ? 'booked' : 'held', applicationId: appId }, slot.created);
     return this.write('applications', appId, { ...app, slotId: slot ? slot.id : '' }, app.created);
+  }
+
+  // ---- photos ----
+
+  addPhoto(listingId, mime, bytes) {
+    const l = this.get('listings', listingId);
+    if (!l) throw new StoreError(404, 'Not found.');
+    if (!PHOTO_TYPES.includes(mime)) throw new StoreError(415, 'Photos must be JPEG, PNG or WebP.');
+    const size = bytes?.byteLength ?? 0;
+    if (!size || size > MAX_PHOTO_BYTES) throw new StoreError(413, 'That photo is too large.');
+    const ids = l.photoIds ?? [];
+    if (ids.length >= MAX_PHOTOS) throw new StoreError(413, `Up to ${MAX_PHOTOS} photos a listing.`);
+    const id = randomToken(12);
+    this.sql.exec('INSERT INTO photos (id, listing, mime, data, created) VALUES (?, ?, ?, ?, ?)', id, listingId, mime, bytes, this.now());
+    return this.write('listings', listingId, { ...l, photoIds: [...ids, id] }, l.created);
+  }
+
+  removePhoto(listingId, photoId) {
+    const l = this.get('listings', listingId);
+    if (!l) throw new StoreError(404, 'Not found.');
+    this.sql.exec('DELETE FROM photos WHERE id = ? AND listing = ?', photoId, listingId);
+    return this.write('listings', listingId, { ...l, photoIds: (l.photoIds ?? []).filter((x) => x !== photoId) }, l.created);
+  }
+
+  /** Put a photo first (the cover the search shows). */
+  coverPhoto(listingId, photoId) {
+    const l = this.get('listings', listingId);
+    if (!l || !(l.photoIds ?? []).includes(photoId)) throw new StoreError(404, 'Not found.');
+    return this.write('listings', listingId, { ...l, photoIds: [photoId, ...l.photoIds.filter((x) => x !== photoId)] }, l.created);
+  }
+
+  getPhoto(photoId) {
+    const r = this.sql.exec('SELECT mime, data FROM photos WHERE id = ?', photoId).toArray()[0];
+    if (!r) throw new StoreError(404, 'Not found.');
+    return { mime: r.mime, data: r.data };
+  }
+
+  // ---- messages ----
+
+  thread(appId) {
+    return this.list('messages').filter((m) => m.applicationId === appId);
+  }
+
+  /** The landlord writes to an applicant; their own unread messages count as read. */
+  landlordMessage(appId, body) {
+    const app = this.get('applications', appId);
+    if (!app) throw new StoreError(404, 'Not found.');
+    const text = clean('messages', { body }).body;
+    if (!text) throw new StoreError(400, 'Write a message first.');
+    this.markRead(appId, 'applicant');
+    if (!app.read) this.write('applications', app.id, { ...app, read: true }, app.created);
+    return this.create('messages', { applicationId: appId, from: 'landlord', body: text, read: false }, { internal: true });
+  }
+
+  applicantMessage(token, body, ip) {
+    this.limit(ip, 'message', 40);
+    const app = this.appByToken(token);
+    if (!app) throw new StoreError(404, 'We couldn’t find that application.');
+    if (app.status === 'withdrawn') throw new StoreError(400, 'This application was withdrawn.');
+    const text = clean('messages', { body }).body;
+    if (!text) throw new StoreError(400, 'Write a message first.');
+    this.write('applications', app.id, { ...app, read: false }, app.created);
+    this.create('messages', { applicationId: app.id, from: 'applicant', body: text, read: false }, { internal: true });
+    return this.status(token);
+  }
+
+  /** Messages from `from` in a thread, marked read by the other side. */
+  markRead(appId, from) {
+    for (const m of this.thread(appId)) if (m.from === from && !m.read) this.write('messages', m.id, { ...m, read: true }, m.created);
+  }
+
+  // ---- the public directory ----
+
+  /**
+   * What Bedrock's public search shows of a listing, or null when it
+   * shouldn't be there (not public, off, or its owner's email not yet
+   * confirmed where confirming is required).
+   */
+  summary(listingId, wsId, { needVerified = false } = {}) {
+    const l = this.get('listings', listingId);
+    if (!l || !l.public || l.active === false || !l.title) return null;
+    if (needVerified && !this.get('settings', 'main')?.emailVerified) return null;
+    return {
+      key: `${wsId}:${l.id}`,
+      ws: wsId,
+      id: l.id,
+      kind: l.kind === 'sale' ? 'sale' : 'rent',
+      title: l.title,
+      city: l.city || '',
+      area: l.area || '',
+      price: l.kind === 'sale' ? Number(l.price) || 0 : Number(l.rent) || 0,
+      beds: Number(l.beds) || 0,
+      baths: Number(l.baths) || 0,
+      propertyType: l.propertyType || '',
+      sqft: Number(l.sqft) || 0,
+      photo: l.photoIds?.[0] || '',
+      available: l.available || '',
+      verified: Boolean(this.get('settings', 'main')?.emailVerified),
+      renewed: l.renewedAt || l.updated,
+    };
+  }
+
+  renew(listingId) {
+    const l = this.get('listings', listingId);
+    if (!l) throw new StoreError(404, 'Not found.');
+    return this.write('listings', listingId, { ...l, renewedAt: this.now() }, l.created);
+  }
+
+  // ---- confirming the landlord's email ----
+
+  async startVerify() {
+    const email = this.get('settings', 'main')?.email;
+    if (!email || !EMAIL.test(email)) throw new StoreError(400, 'Add your email in Settings first.');
+    this.limitCount('verify', 5);
+    const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, '0');
+    this.setMeta('verifyHash', await hashKey(`${email.toLowerCase()}:${code}`));
+    this.setMeta('verifyUntil', String(this.now() + 15 * 60000));
+    this.setMeta('verifyTries', '0');
+    return { email, code };
+  }
+
+  async finishVerify(code) {
+    const s = this.get('settings', 'main') ?? {};
+    const tries = Number(this.meta('verifyTries') || 0) + 1;
+    this.setMeta('verifyTries', String(tries));
+    if (tries > 5 || Number(this.meta('verifyUntil') || 0) < this.now()) throw new StoreError(400, 'That code has expired. Send a new one.');
+    if (!sameText(this.meta('verifyHash'), await hashKey(`${(s.email || '').toLowerCase()}:${String(code).trim()}`))) throw new StoreError(400, 'That code isn’t right.');
+    this.setMeta('verifyHash', '');
+    return this.write('settings', 'main', { ...s, emailVerified: true });
+  }
+
+  /** At most `max` of `kind` an hour for the whole workspace. */
+  limitCount(kind, max) {
+    this.limit('workspace', kind, max);
   }
 
   // ---- public ----
@@ -199,8 +348,13 @@ export class Store {
   publicListing(listingId) {
     const l = this.get('listings', listingId);
     if (!l || l.active === false) throw new StoreError(404, 'This listing isn’t taking applications.');
-    const { title, area, rent, beds, baths, available, utilities, parking, details } = l;
-    return { listing: { id: l.id, title, area, rent, beds, baths, available, utilities, parking, details }, slots: this.openSlots(listingId), landlord: this.settingsPublic(false) };
+    const { title, area, rent, beds, baths, available, utilities, parking, details, city, propertyType, price, sqft, lot, taxes, yearBuilt } = l;
+    const kind = l.kind === 'sale' ? 'sale' : 'rent';
+    return {
+      listing: { id: l.id, kind, title, area, rent, beds, baths, available, utilities, parking, details, city, propertyType, price, sqft, lot, taxes, yearBuilt, photos: l.photoIds ?? [], ...(kind === 'sale' && l.address ? { address: l.address } : {}) },
+      slots: this.openSlots(listingId),
+      landlord: { ...this.settingsPublic(false), verified: Boolean(this.get('settings', 'main')?.emailVerified) },
+    };
   }
 
   apply(listingId, input, ip) {
@@ -235,7 +389,10 @@ export class Store {
     const l = this.get('listings', a.listingId);
     const slot = a.slotId ? this.get('slots', a.slotId) : null;
     const confirmed = a.status === 'viewing' || a.status === 'approved';
+    this.markRead(a.id, 'landlord');
     return {
+      kind: l?.kind === 'sale' ? 'sale' : 'rent',
+      messages: this.thread(a.id).map(({ from, body, created }) => ({ from, body, created })),
       status: a.status,
       name: a.name,
       listing: l ? { title: l.title, area: l.area, address: confirmed ? l.address : '' } : null,

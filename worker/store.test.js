@@ -126,3 +126,66 @@ describe('repairs', () => {
     expect(m).toMatchObject({ unitId: u.id, title: 'Leak under sink', urgency: 'urgent', status: 'reported', read: false });
   });
 });
+
+describe('photos, messages and publishing', () => {
+  let listing;
+  beforeEach(() => {
+    if (!sqlite) return;
+    listing = s.create('listings', { kind: 'sale', title: 'Bungalow', price: 450000, city: 'winnipeg', address: '9 Elm St', active: true, public: true });
+  });
+
+  it('keeps up to ten photos per listing, cover first, and serves them', () => {
+    const jpg = new Uint8Array([255, 216, 255, 1, 2, 3]);
+    let l = s.addPhoto(listing.id, 'image/jpeg', jpg);
+    l = s.addPhoto(listing.id, 'image/png', new Uint8Array([137, 80, 78, 71]));
+    expect(l.photoIds).toHaveLength(2);
+    expect(s.getPhoto(l.photoIds[0]).mime).toBe('image/jpeg');
+    l = s.coverPhoto(listing.id, l.photoIds[1]);
+    expect(s.getPhoto(l.photoIds[0]).mime).toBe('image/png');
+    expect(() => s.addPhoto(listing.id, 'image/gif', jpg)).toThrow(/JPEG, PNG or WebP/);
+    expect(() => s.addPhoto(listing.id, 'image/jpeg', new Uint8Array(1_600_000))).toThrow(/too large/);
+    l = s.removePhoto(listing.id, l.photoIds[0]);
+    expect(l.photoIds).toHaveLength(1);
+    // Saving the listing keeps its photos.
+    expect(s.update('listings', listing.id, { title: 'Brick bungalow', photoIds: [] }).photoIds).toHaveLength(1);
+  });
+
+  it('shows a sale listing’s address and price publicly', () => {
+    const p = s.publicListing(listing.id);
+    expect(p.listing).toMatchObject({ kind: 'sale', price: 450000, address: '9 Elm St' });
+  });
+
+  it('carries a thread both ways, each side’s messages read by the other', () => {
+    const { token } = s.apply(listing.id, { name: 'Bo', email: 'bo@example.com', message: 'Is it still for sale?' }, 'ip');
+    const app = s.list('applications')[0];
+    s.landlordMessage(app.id, 'Yes! Want to see it Saturday?');
+    let st = s.applicantMessage(token, 'Saturday works.', 'ip');
+    expect(st.messages.map((m) => m.from)).toEqual(['landlord', 'applicant']);
+    expect(s.thread(app.id)[0].read).toBe(true); // the applicant opened their page
+    expect(s.get('applications', app.id).read).toBe(false); // a new message to read
+    s.markRead(app.id, 'applicant');
+    expect(s.thread(app.id).every((m) => m.read)).toBe(true);
+    expect(() => s.create('messages', { applicationId: app.id, from: 'applicant', body: 'forged' })).toThrow();
+    expect(() => s.landlordMessage(app.id, '   ')).toThrow(/Write a message/);
+    s.remove('applications', app.id);
+    expect(s.list('messages')).toEqual([]);
+  });
+
+  it('summarizes public listings for the search, and leaves others out', () => {
+    expect(s.summary(listing.id, 'ws1')).toMatchObject({ key: `ws1:${listing.id}`, kind: 'sale', price: 450000, city: 'winnipeg' });
+    expect(s.summary(listing.id, 'ws1', { needVerified: true })).toBeNull();
+    s.update('listings', listing.id, { public: false });
+    expect(s.summary(listing.id, 'ws1')).toBeNull();
+  });
+
+  it('confirms the owner’s email with a code, and forgets it when the email changes', async () => {
+    s.update('settings', 'main', { email: 'me@example.com' });
+    const { code } = await s.startVerify();
+    await expect(s.finishVerify('000000' === code ? '111111' : '000000')).rejects.toThrow(/isn’t right/);
+    await s.finishVerify(code);
+    expect(s.get('settings', 'main').emailVerified).toBe(true);
+    expect(s.summary(listing.id, 'ws1', { needVerified: true })).not.toBeNull();
+    s.update('settings', 'main', { email: 'new@example.com' });
+    expect(s.get('settings', 'main').emailVerified).toBe(false);
+  });
+});

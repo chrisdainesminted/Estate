@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Plus, Trash2, Wrench } from 'lucide-react';
+import { ArrowRight, Plus, Send, Trash2, Wrench } from 'lucide-react';
 import { Button, Card, CardHeader } from '../../components/ui.jsx';
 import { applicationReplies } from '../../lib/landlord.js';
 import { links } from '../../lib/landlordApi.js';
@@ -127,19 +127,29 @@ function Application({ app, data, api, ws, settings }) {
     setPick(r.key);
     setBody(r.body);
   };
-  /** As the reply goes out: move the application along and leave the note on the applicant's page. */
-  const record = async () => {
+  /**
+   * As a reply goes out, move the application along. Sent in Bedrock, the
+   * message itself is on the applicant's page; sent by email or text, a
+   * short note goes there instead.
+   */
+  const record = async (inBedrock = false) => {
     if (!reply) return;
     setBusy(true);
     setError('');
     try {
       if (reply.releaseSlot && slot) await api.moveSlot(app.id, '');
-      await api.save('applications', app.id, { status: reply.status, note: reply.note, read: true });
+      if (inBedrock) await api.message(app.id, body);
+      await api.save('applications', app.id, { status: reply.status, ...(inBedrock ? {} : { note: reply.note }), read: true });
+      if (inBedrock) setPick(null);
     } catch (e) {
       setError(e.message);
     }
     setBusy(false);
   };
+  const thread = (data.messages || []).filter((m) => m.applicationId === app.id);
+  useEffect(() => {
+    if (thread.some((m) => m.from === 'applicant' && !m.read)) api.readThread(app.id).catch(() => {});
+  }, [thread, app.id, api]);
 
   return (
     <Card>
@@ -184,6 +194,7 @@ function Application({ app, data, api, ws, settings }) {
           </div>
         </dl>
         {app.message && <p className="border-l-2 border-hairline pl-3 whitespace-pre-line text-zinc-700 dark:text-zinc-300">{app.message}</p>}
+        <Conversation app={app} thread={thread} api={api} />
 
         {app.status !== 'withdrawn' && (
           <section aria-labelledby={`reply-${app.id}`} className="border-t border-hairline pt-4">
@@ -200,15 +211,16 @@ function Application({ app, data, api, ws, settings }) {
             {reply && (
               <div className="mt-4 space-y-3">
                 <TextArea id={`body-${app.id}`} label={`Message: ${reply.subject}`} value={body} onChange={setBody} rows={8} />
-                {app.email || app.phone ? (
-                  <SendButtons email={app.email} phone={app.phone} message={{ subject: reply.subject, body }} onSent={record} />
-                ) : (
-                  <Button variant="primary" onClick={record}>
-                    Mark as sent
-                  </Button>
-                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  {app.token && (
+                    <Button variant="primary" disabled={busy} onClick={() => record(true)}>
+                      <Send className="size-4" aria-hidden /> Send in Bedrock
+                    </Button>
+                  )}
+                  {(app.email || app.phone) && <SendButtons email={app.email} phone={app.phone} message={{ subject: reply.subject, body }} onSent={() => record(false)} secondary />}
+                </div>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  Opens your email or messages with it filled in; you press send there. The application moves to “{(STATUS[reply.status] ?? STATUS.new)[0]}” and the applicant sees a short note on their page.
+                  In Bedrock, it shows on {first(app.name)}’s page, where they can reply. Email or text opens your own app with it filled in. Either way the application moves to “{(STATUS[reply.status] ?? STATUS.new)[0]}”.
                 </p>
                 {busy && <p className="text-xs text-zinc-500">Saving…</p>}
               </div>
@@ -239,6 +251,65 @@ function Application({ app, data, api, ws, settings }) {
         </div>
       </div>
     </Card>
+  );
+}
+
+const first = (name) => String(name || '').trim().split(/\s+/)[0] || 'the applicant';
+
+/** The messages with one applicant, and a box to write your own. */
+function Conversation({ app, thread, api }) {
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  if (!app.token) return null; // added by hand: they have no page to read replies on
+  const send = async (e) => {
+    e.preventDefault();
+    if (!text.trim()) return;
+    setBusy(true);
+    try {
+      await api.message(app.id, text);
+      setText('');
+      setError('');
+    } catch (err) {
+      setError(err.message);
+    }
+    setBusy(false);
+  };
+  return (
+    <section aria-labelledby={`conv-${app.id}`} className="border-t border-hairline pt-4">
+      <h3 id={`conv-${app.id}`} className="font-semibold text-zinc-950 dark:text-white">
+        Messages
+      </h3>
+      <ol className="mt-3 space-y-2" aria-live="polite">
+        {thread.length === 0 && <li className="text-zinc-500 dark:text-zinc-400">No messages yet.</li>}
+        {thread.map((m) => (
+          <li key={m.id} className={`max-w-[85%] rounded-md px-3 py-2 ${m.from === 'landlord' ? 'ml-auto bg-emerald-50 text-emerald-950 dark:bg-emerald-500/10 dark:text-emerald-50' : 'bg-zinc-100 text-zinc-900 dark:bg-white/[0.06] dark:text-zinc-100'}`}>
+            <p className="sr-only">{m.from === 'landlord' ? 'You' : app.name}:</p>
+            <p className="whitespace-pre-line">{m.body}</p>
+            <p className="mt-1 text-[11px] opacity-70">
+              {new Date(m.created).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+              {m.from === 'landlord' && (m.read ? ' · Seen' : ' · Sent')}
+            </p>
+          </li>
+        ))}
+      </ol>
+      <form onSubmit={send} className="mt-3 flex items-end gap-2">
+        <div className="min-w-0 flex-1">
+          <label htmlFor={`write-${app.id}`} className="sr-only">
+            Message {app.name}
+          </label>
+          <textarea id={`write-${app.id}`} rows={2} value={text} onChange={(e) => setText(e.target.value)} maxLength={4000} placeholder={`Message ${first(app.name)}`} className="field w-full px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100" />
+        </div>
+        <Button type="submit" variant="primary" disabled={busy || !text.trim()} aria-label="Send message">
+          <Send className="size-4" aria-hidden />
+        </Button>
+      </form>
+      {error && (
+        <p role="alert" className="mt-2 text-red-700 dark:text-red-300">
+          {error}
+        </p>
+      )}
+    </section>
   );
 }
 

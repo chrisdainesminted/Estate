@@ -1,8 +1,8 @@
-// Cloudflare serves the built site in dist/ and, for /api/*, the landlord
-// tools' server in worker/: each landlord workspace is a Durable Object
-// with its own SQLite database, created on first use (nothing to set up in
-// the dashboard). "name" must match the project's name in the Cloudflare
-// dashboard.
+// Cloudflare serves the built site in dist/ and, for /api/*, the listings
+// platform's server in worker/: each workspace, and the public directory,
+// is a Durable Object with its own SQLite database, created on first use
+// (nothing to set up in the dashboard). "name" must match the project's
+// name in the Cloudflare dashboard.
 {
   "name": "bedrock",
   "compatibility_date": "2026-10-01",
@@ -14,7 +14,13 @@
     "run_worker_first": ["/api/*"]
   },
   "durable_objects": {
-    "bindings": [{ "name": "WORKSPACE", "class_name": "Workspace" }]
+    "bindings": [
+      { "name": "WORKSPACE", "class_name": "Workspace" },
+      { "name": "DIRECTORY", "class_name": "Directory" }
+    ]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Workspace"] }]
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Workspace"] },
+    { "tag": "v2", "new_sqlite_classes": ["Directory"] }
+  ]
 }
