@@ -1,7 +1,12 @@
-import { DatabaseSync } from 'node:sqlite';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe as suite, expect, it } from 'vitest';
 import { Store, hashKey } from './store.js';
 import { clean } from './schema.js';
+
+// Node's built-in SQLite stands in for the Durable Object's. Node versions
+// without it (before 22.13) skip these tests instead of failing the build.
+const sqlite = await import('node:sqlite').catch(() => null);
+const describe = sqlite ? suite : suite.skip;
+const DatabaseSync = sqlite?.DatabaseSync;
 
 // The Durable Object's sql.exec, over Node's SQLite: runs at once, rows on toArray().
 function memorySql() {
@@ -21,6 +26,7 @@ let s;
 const future = (h) => new Date(now + h * HOUR).toISOString();
 
 beforeEach(async () => {
+  if (!sqlite) return;
   now = Date.parse('2026-11-02T15:00:00Z');
   s = new Store(memorySql(), () => now);
   s.init(await hashKey('secret-key'));
