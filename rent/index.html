@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bedrock: apply, book a viewing, report a repair</title>
+    <meta name="description" content="Apply for a rental, book a viewing, check your application, or report a repair to your landlord." />
+    <meta name="theme-color" content="#0b0b0c" />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap" rel="stylesheet" />
+    <script>
+      // Same theme as the app: onyx unless the person picked light there.
+      (function () {
+        var saved = null;
+        try {
+          saved = localStorage.getItem('dscr-theme');
+        } catch (e) {}
+        document.documentElement.classList.toggle('dark', saved !== 'light');
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/rent/main.jsx"></script>
+  </body>
+</html>

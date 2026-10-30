@@ -29,8 +29,8 @@ const fragment = [
 rmSync('dist-artifact', { recursive: true, force: true });
 mkdirSync('dist-artifact', { recursive: true });
 writeFileSync('dist-artifact/index.html', `${fragment}\n`);
-// Everything but the website homepage's entry script, which the page never loads.
-cpSync('dist/assets', 'dist-artifact/assets', { recursive: true, filter: (src) => !/[\\/]home-[\w-]+\.js$/.test(src) });
+// Everything but the website's homepage and rental-page entry scripts, which the page never loads.
+cpSync('dist/assets', 'dist-artifact/assets', { recursive: true, filter: (src) => !/[\\/](home|rent)-[\w-]+\.js$/.test(src) });
 
 // The daily listings run downloads its tool and steps from the page itself,
 // so it needs no copy of this repository.

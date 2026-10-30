@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, ArrowUpRight, Building2, ClipboardCheck, Home, Landmark, ListChecks, Lock, Plus } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Building2, ClipboardCheck, Home, KeyRound, Landmark, ListChecks, Lock, Plus } from 'lucide-react';
 import Logo from '../components/Logo.jsx';
 import { DEFAULT_PROFILE, RULES, RULES_CHECKED, benefits, buyCheck, homeFor, incomeToQualify } from '../lib/firstHome.js';
 import { stepsFor } from '../lib/suites.js';
@@ -355,6 +355,7 @@ function Features() {
     [Landmark, 'Money you can get', 'FHSA refunds, the land transfer tax refund, the buyers’ tax credit and the RRSP Home Buyers’ Plan, added up for you.', 'home'],
     [ListChecks, 'Morning listings', 'Homes for sale found each morning, with the cost to live in each and whether a bank would say yes. Thunder Bay for now; more cities are coming.', 'listings'],
     [ClipboardCheck, 'Permit guide', 'Adding a basement suite or a backyard home, step by step: what your province and city allow, what to submit, and whether it pays.', 'home'],
+    [KeyRound, 'Landlord tools', 'A page for each rental where people apply and book a viewing from your calendar, rent tracking, repair requests, and expenses sorted for tax time.', 'landlord'],
     [Building2, 'Rental math', 'Every cost of a rental, the lender’s DSCR test, a stress test and a 10-year outlook, in plain words.', 'analyze'],
   ];
   return (

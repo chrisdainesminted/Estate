@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import {
   Banknote,
   Briefcase,
+  Building2,
   Building,
   Calculator,
   CircleHelp,
@@ -74,6 +75,7 @@ const CompareView = lazy(() => import('./views/CompareView.jsx'));
 const ListingsView = lazy(() => import('./views/ListingsView.jsx'));
 const CashView = lazy(() => import('./views/CashView.jsx'));
 const HomeView = lazy(() => import('./views/HomeView.jsx'));
+const LandlordView = lazy(() => import('./views/landlord/LandlordView.jsx'));
 const HelpSheet = lazy(() => import('./components/HelpSheet.jsx'));
 const ShareSheet = lazy(() => import('./components/ShareSheet.jsx'));
 
@@ -106,6 +108,13 @@ const VIEWS = [
   { value: 'portfolio', label: 'Portfolio', icon: Briefcase, about: 'The properties you own, added up: what they bring in each month and what they’re worth today.' },
   { value: 'compare', label: 'Compare', icon: Columns3, about: 'Up to three deals side by side, with the best of each row marked.' },
   { value: 'plan', label: 'Plan', icon: Sprout, about: 'When your savings and rent could buy the next property, and where that leads in 10 years.' },
+  {
+    value: 'landlord',
+    label: 'Landlord',
+    icon: Building2,
+    keywords: 'tenant applicant viewing booking calendar rent payment late repair maintenance expense t776 tax lease notice deposit',
+    about: 'Run your rentals: listing pages where people apply and book viewings, rent tracking, repair requests, expenses for tax time, and your province’s rules.',
+  },
 ];
 const BASIC_VIEWS = new Set(VIEWS.filter((v) => v.basic).map((v) => v.value));
 
@@ -643,6 +652,8 @@ export default function App() {
                 }}
               />
             )}
+
+            {view === 'landlord' && <LandlordView homeCity={homeCity} />}
 
             {view === 'plan' && (
               <PlanView owned={owned} deals={baseItems} plan={lib.settings.plan} onPlan={(patch) => lib.updateSettings('plan', patch)} dark={dark} onOpen={openDeal} />

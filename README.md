@@ -11,6 +11,14 @@ Bedrock helps young adults anywhere in Canada get into their first home. Pick a 
 
 The website is a homepage plus the same app, served by Cloudflare as a static-assets Worker. The homepage (`index.html`, `src/landing/`) works out its numbers with the app's own engine and today's listings feed; its buttons open the app on a tab with `/app/?view=home` (or `listings`, `analyze`), and old `/#deal=` share links forward to `/app/`. Cloudflare builds it from the default branch on every push with `npm test && npm run build`, then `npx wrangler deploy` publishes `dist/` as set in `wrangler.jsonc`, so a failing test stops a deploy and the last good version stays up. Outside Claude it reads Thunder Bay listings from `public/data/thunderbay.json`, which is published with the site.
 
+## Landlord tools
+
+The Landlord tab (under More) runs rentals from one place: a public page for each listing where people apply and pick a viewing time (held until the landlord confirms), a calendar of viewing times, an inbox with reply templates the landlord sends from their own email or phone, tenants and rent (paid, due or late, with reminders), repair requests through a link for each unit, expenses by the CRA's T776 lines with a year-end summary and CSV, and each province's rules on rent increases, notice, deposits and leases.
+
+These need a server, so they live on the website, not the Claude page. `worker/index.js` serves `/api/*`; everything else is the static site. Each landlord workspace is a Durable Object with its own SQLite database (`worker/store.js`), created on first use with nothing to set up in Cloudflare. There are no accounts: making a workspace returns a private link carrying its key, and only the key's hash is stored. Applicants' and tenants' links carry their own tokens in the `#fragment`. Public forms are rate-limited per address and drop bots through a hidden field; closed applications are deleted after 180 days.
+
+Run it locally with `npm run build && npx wrangler dev`; `npx vitest run worker` tests the store.
+
 ## Run it
 
 ```bash
@@ -130,6 +138,11 @@ src/components/HelpSheet.jsx  help: what each tab does and the words to know (lo
 src/components/ShareSheet.jsx the share panel: copy the link or use the phone's share sheet (loaded on demand)
 src/components/RentHelper.jsx "Don't know the rent?": the Thunder Bay rent for a number of bedrooms
 src/components/*          UI sections, plus the search palette, phone sheet and toasts
+worker/                   the landlord tools' server: index.js (routes), store.js (the workspace database), schema.js (fields)
+src/views/landlord/       the Landlord tab: inbox, calendar, listings, tenants & rent, repairs, expenses, rules, settings
+src/rent/                 the public page for applicants and tenants (rent/index.html at /rent/)
+src/lib/landlord.js       rent status, the T776 year summary, rent increase timing, reply templates (tested)
+src/lib/tenancyRules.js   each province's rules on rent increases, notice, deposits and leases (tested)
 src/landing/Landing.jsx   the website's homepage at / (app/index.html is the app at /app/)
 public/landing/           the homepage's product screenshots
 src/views/HomeView.jsx    home: first-time buyers, money you can get, the suite permit guide (loaded on demand)
