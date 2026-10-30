@@ -48,7 +48,11 @@ export const DEFAULT_PROFILE = {
   newBuild: false,
   targetPrice: 400000, // the home you're saving for
   targetUnits: 2, // a duplex: live in one unit, rent the other
+  entered: false, // false until the person gives their own numbers; until then these are an example
 };
+
+// The answers the first-visit questions ask for.
+const STARTER_KEYS = ['income', 'savings', 'debts', 'rentNow'];
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
@@ -57,6 +61,8 @@ export function normalizeProfile(p) {
   for (const k of ['income', 'savings', 'monthlySave', 'debts', 'rentNow', 'targetPrice']) if (p && Number.isFinite(Number(p[k]))) out[k] = Math.max(Number(p[k]), 0);
   for (const k of ['firstTime', 'newBuild']) if (typeof p?.[k] === 'boolean') out[k] = p[k];
   if ([1, 2, 3, 4].includes(Number(p?.targetUnits))) out.targetUnits = Number(p.targetUnits);
+  // Profiles saved before this flag existed count as entered once any answer differs from the example.
+  out.entered = typeof p?.entered === 'boolean' ? p.entered : STARTER_KEYS.some((k) => typeof p?.[k] === 'number' && p[k] !== DEFAULT_PROFILE[k]);
   return out;
 }
 

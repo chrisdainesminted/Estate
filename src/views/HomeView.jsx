@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ArrowRight, Check, CheckCircle2, ExternalLink, XCircle } from 'lucide-react';
-import { RULES, RULES_CHECKED, benefits, buyCheck, liveIn, maxPrice, monthsToSave } from '../lib/firstHome.js';
+import { DEFAULT_PROFILE, RULES, RULES_CHECKED, benefits, buyCheck, liveIn, maxPrice, monthsToSave } from '../lib/firstHome.js';
 import { ALLOWED, MONEY, STEPS, SUITE_KINDS, SUITE_RULES_CHECKED, suitePayback } from '../lib/suites.js';
 import { money, percent } from '../lib/format.js';
 import { INSURANCE_MIN } from '../lib/market.js';
@@ -32,7 +32,7 @@ const yesNo = [
 
 /** Your numbers: what a lender and the savings plan need to know. */
 function Profile({ p, onHome }) {
-  const f = (key, props) => <NumberField id={`home-${key}`} value={p[key]} onChange={(v) => onHome({ [key]: v })} {...props} />;
+  const f = (key, props) => <NumberField id={`home-${key}`} value={p[key]} onChange={(v) => onHome({ [key]: v, entered: true })} {...props} />;
   return (
     <Card>
       <CardHeader title="Your numbers" subtitle="Saved with your deals. Only you see them." />
@@ -269,6 +269,78 @@ function SuiteGuide({ s, onSuite }) {
 }
 
 /**
+ * First visit: four questions before any result, so the first number a
+ * person sees is about them, not the example buyer.
+ */
+function Start({ onHome, onExample }) {
+  const [v, setV] = useState({ income: null, savings: null, debts: null, rentNow: null });
+  const [missing, setMissing] = useState([]);
+  const set = (key) => (n) => {
+    setV((x) => ({ ...x, [key]: n }));
+    setMissing((m) => m.filter((k) => k !== key));
+  };
+  const submit = (e) => {
+    e.preventDefault();
+    const gaps = ['income', 'savings', 'rentNow'].filter((k) => !Number.isFinite(v[k]));
+    if (gaps.length) {
+      setMissing(gaps);
+      document.getElementById(`start-${gaps[0]}`)?.focus();
+      return;
+    }
+    onHome({ income: v.income, savings: v.savings, debts: Number.isFinite(v.debts) ? v.debts : 0, rentNow: v.rentNow, entered: true });
+  };
+  const label = { income: 'your income', savings: 'what you’ve saved', rentNow: 'the rent you pay' };
+  return (
+    <Card>
+      <form onSubmit={submit} noValidate aria-labelledby="start-title">
+        <div className="border-b border-hairline px-5 py-5 sm:px-6">
+          <h2 id="start-title" className="text-xl font-semibold tracking-tight text-zinc-950 sm:text-2xl dark:text-white">
+            Four questions, then your answer
+          </h2>
+          <p className="mt-1.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+            What a bank would lend you, alone and with a tenant, and what it would cost you each month. Your answers stay in this browser.
+          </p>
+        </div>
+        <div className="grid gap-4 px-5 py-5 sm:grid-cols-2 sm:px-6">
+          <NumberField id="start-income" label="Household income, before tax" prefix="$" suffix="/yr" step={1000} decimals={0} value={v.income} onChange={set('income')} hint="Everyone who’ll be on the mortgage" />
+          <NumberField id="start-savings" label="Saved for buying" prefix="$" step={1000} decimals={0} value={v.savings} onChange={set('savings')} hint="Bank, TFSA, FHSA, RRSP: anything for the down payment" />
+          <NumberField id="start-rentNow" label="Rent you pay now" prefix="$" suffix="/mo" step={50} decimals={0} value={v.rentNow} onChange={set('rentNow')} hint="Your share, if you split it" />
+          <NumberField id="start-debts" label="Monthly debt payments" prefix="$" suffix="/mo" step={25} decimals={0} value={v.debts} onChange={set('debts')} hint="Car, student loan, card minimums. Leave blank if none" />
+        </div>
+        <div className="flex flex-col gap-3 border-t border-hairline px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+            {missing.length > 0 && `Add ${missing.map((k) => label[k]).join(', ').replace(/, ([^,]*)$/, ' and $1')} to see your answer.`}
+          </p>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
+            <Button type="button" variant="ghost" onClick={onExample}>
+              See an example first
+            </Button>
+            <Button type="submit" variant="primary">
+              See what I can buy <ArrowRight className="size-4" aria-hidden />
+            </Button>
+          </div>
+        </div>
+      </form>
+    </Card>
+  );
+}
+
+/** While someone browses the example, say so, and offer the questions. */
+function ExampleNote({ onStart }) {
+  return (
+    <div className="flex flex-col gap-3 border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
+      <p>
+        <span className="font-semibold">These are example numbers:</span> {money(DEFAULT_PROFILE.income)} income, {money(DEFAULT_PROFILE.savings)} saved, paying {money(DEFAULT_PROFILE.rentNow)}{' '}
+        rent.
+      </p>
+      <Button variant="primary" className="shrink-0" onClick={onStart}>
+        Use my numbers
+      </Button>
+    </div>
+  );
+}
+
+/**
  * The Home tab: for someone buying their first home. What you could buy on
  * your own or with a tenant, the government money you can get, when you'll
  * be ready, what living in one of your deals would cost, and how to add a
@@ -282,13 +354,33 @@ export default function HomeView({ profile: p, suite, market, items, liveDealId,
   const b = useMemo(() => benefits({ profile: p, price: p.targetPrice, units: p.targetUnits }), [p]);
   const solo = maxPrice({ profile: p, units: 1, ratePct, taxPct });
   const duplex = maxPrice({ profile: p, units: 2, ratePct, taxPct, rentPerOtherUnit: rentEach });
+  const [example, setExample] = useState(false);
+
+  const header = (
+    <ViewHeader title="Your first home">
+      How close you are to owning in Thunder Bay, the money you can get, and how to make a home pay for itself. Estimates, not financial advice: a mortgage broker
+      confirms the real numbers.
+    </ViewHeader>
+  );
+
+  if (!p.entered && !example) {
+    return (
+      <div className="space-y-6">
+        {header}
+        <Start onHome={onHome} onExample={() => setExample(true)} />
+        <SectionGroup>
+          <Section id="home-suite" title="Add a suite or backyard home" meaning="Turn a house you own (or buy) into one that pays you rent: what’s allowed in Thunder Bay, the permit steps, and whether it pays.">
+            <SuiteGuide s={suite} onSuite={onSuite} />
+          </Section>
+        </SectionGroup>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <ViewHeader title="Your first home">
-        How close you are to owning in Thunder Bay, the money you can get, and how to make a home pay for itself. Estimates, not financial advice: a mortgage broker
-        confirms the real numbers.
-      </ViewHeader>
+      {header}
+      {!p.entered && <ExampleNote onStart={() => setExample(false)} />}
 
       <SummaryCard
         id="home-summary"

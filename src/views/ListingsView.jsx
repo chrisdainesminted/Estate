@@ -127,7 +127,7 @@ function ListingRow({ s, home, rank, sort, feed, imported, hidden, onAnalyze, on
           {home ? (
             <>
               <span className="block text-zinc-900 dark:text-zinc-100">{money(home.costToLive)}/mo</span>
-              {home.canBuy && <span className="mt-0.5 block text-[11px] font-medium text-emerald-700 dark:text-emerald-400">You qualify</span>}
+              {home.known && home.canBuy && <span className="mt-0.5 block text-[11px] font-medium text-emerald-700 dark:text-emerald-400">You qualify</span>}
             </>
           ) : (
             <span className="text-zinc-500 dark:text-zinc-400">—</span>
@@ -170,7 +170,7 @@ function ListingRow({ s, home, rank, sort, feed, imported, hidden, onAnalyze, on
                   <span className={signedClass(s.cash.coc)}>{percent(s.cash.coc, 1)}</span>
                 </Metric>
                 {home && (
-                  <Metric label="If you live in it" sub={home.canBuy ? `you could buy it, ${money(home.down)} down` : home.qualifies ? `${money(home.shortCash)} short of the cash` : 'not yet on your income'}>
+                  <Metric label="If you live in it" sub={!home.known ? 'add your numbers on Home to see if you qualify' : home.canBuy ? `you could buy it, ${money(home.down)} down` : home.qualifies ? `${money(home.shortCash)} short of the cash` : 'not yet on your income'}>
                     {money(home.costToLive)}/mo
                   </Metric>
                 )}
@@ -291,7 +291,17 @@ export default function ListingsView({ feedState, market, targets, profile, impo
 
   // For sale, with a page of its own to check it against (rankListings applies the same rule).
   const active = useMemo(() => (feed?.listings ?? []).filter((l) => (l.status ?? 'active') === 'active' && listingPageUrl(l.url, l.address)), [feed]);
-  const homes = useMemo(() => new Map(active.map((l) => [l.id, profile ? homeFor(listingToDeal(l, market, 'own'), profile, market.rate) : null])), [active, market, profile]);
+  // Until someone gives their own numbers on Home, the cost to live in still holds (it doesn't depend on them), but whether they'd qualify is unknown.
+  const homes = useMemo(
+    () =>
+      new Map(
+        active.map((l) => {
+          const h = profile ? homeFor(listingToDeal(l, market, 'own'), profile, market.rate) : null;
+          return [l.id, h && { ...h, known: profile.entered !== false }];
+        }),
+      ),
+    [active, market, profile],
+  );
   const ranked = useMemo(() => {
     const list = rankListings(active, market, targets, { sort: sort === LIVE_SORT.key ? 'perDoor' : sort, showHidden });
     if (sort !== LIVE_SORT.key) return list;

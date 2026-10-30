@@ -119,6 +119,16 @@ describe('money you can get', () => {
   });
 });
 
+describe('normalizeProfile', () => {
+  it('treats the example numbers as not yet entered, and older edited profiles as entered', () => {
+    expect(normalizeProfile(undefined).entered).toBe(false);
+    expect(normalizeProfile({ ...DEFAULT_PROFILE, entered: undefined }).entered).toBe(false);
+    expect(normalizeProfile({ income: 82000 }).entered).toBe(true);
+    expect(normalizeProfile({ income: 82000, entered: false }).entered).toBe(false);
+    expect(normalizeProfile({ entered: true }).entered).toBe(true);
+  });
+});
+
 describe('homeFor', () => {
   it('works out living in a listing, and skips 5+ unit buildings', () => {
     const deal = { units: 2, price: 350000, rentPerUnit: 1500, taxesAnnual: 4000, insuranceAnnual: 1800, hoaMonthly: 200, maintPct: 5, capexPct: 5, vacancyPct: 4 };

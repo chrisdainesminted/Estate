@@ -39,7 +39,7 @@ export const DEFAULT_MARKET = {
   closingPct: 1, // legal, title, inspection; land transfer tax is added on top
   insurancePerUnit: 800, // $ a year per unit, at least INSURANCE_MIN
   utilitiesPerUnit: 50, // $ a month per unit the owner pays (water, shared heat) in 2+ unit buildings
-  taxPct: 0.9, // property tax as % of price, only when a listing doesn't say
+  taxPct: 1, // property tax as % of price, only when a listing doesn't say: Thunder Bay listings that state their bill run a median 0.94% (0.97% for houses)
   mgmtPct: 8,
   maintPct: 6,
   vacancyPct: 4,
