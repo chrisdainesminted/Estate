@@ -8,6 +8,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: {
     chunkSizeWarningLimit: 800,
+    // Two pages: the homepage at / and the app at /app/.
+    rollupOptions: { input: { home: 'index.html', app: 'app/index.html' } },
   },
   test: {
     environment: 'node',

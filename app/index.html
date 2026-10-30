@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bedrock</title>
+    <meta name="description" content="Bedrock underwrites rental deals the way your bank account sees them: lender DSCR, real cash flow after every cost, Canadian or US rules, and a daily list of Thunder Bay rentals." />
+    <meta name="theme-color" content="#0b0b0c" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="canonical" href="https://bedrock.signia83.workers.dev/app/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Bedrock" />
+    <meta property="og:title" content="Bedrock: cash flow you can build on" />
+    <meta property="og:description" content="Lender DSCR vs real cash flow, Canadian and US rules, and a daily list of Thunder Bay rentals ranked by cash flow per door." />
+    <meta property="og:url" content="https://bedrock.signia83.workers.dev/app/" />
+    <meta property="og:image" content="https://bedrock.signia83.workers.dev/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap" rel="stylesheet" />
+    <script>
+      // Pick the theme before paint to avoid a flash: onyx (dark) unless
+      // the person switched to light with the in-app toggle.
+      (function () {
+        var saved = null;
+        try {
+          saved = localStorage.getItem('dscr-theme');
+        } catch (e) {}
+        document.documentElement.classList.toggle('dark', saved !== 'light');
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

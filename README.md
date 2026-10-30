@@ -6,10 +6,10 @@
 
 Bedrock helps young adults get into their first home, starting in Thunder Bay. It shows what you could buy on your own or by renting out part of a duplex, the government money you can claim, when your savings will be ready, what living in a real listing would cost you each month, and how to get a rental suite through the permits. Underneath, it separates **lender DSCR math (PITIA)** from **real-world cash flow (PITIA + OpEx)**, so a deal a lender approves can't quietly lose money every month. The mark is three layers of rock stepping up like a rising chart.
 
-- Website: https://bedrock.signia83.workers.dev/ (public; deals are saved in each visitor's browser)
+- Website: https://bedrock.signia83.workers.dev/ (public): the homepage at `/`, the app at `/app/` (deals are saved in each visitor's browser)
 - Claude page: https://claude.ai/artifact/5KH4ZZHoZ8CvCKF5CXutGJ (private to the owner; deals sync to their Claude account, Second opinion, and the morning listings run saves here)
 
-The website is the same app, served by Cloudflare as a static-assets Worker. Cloudflare builds it from the default branch on every push with `npm test && npm run build`, then `npx wrangler deploy` publishes `dist/` as set in `wrangler.jsonc`, so a failing test stops a deploy and the last good version stays up. Outside Claude it reads Thunder Bay listings from `public/data/thunderbay.json`, which is published with the site.
+The website is a homepage plus the same app, served by Cloudflare as a static-assets Worker. The homepage (`index.html`, `src/landing/`) works out its numbers with the app's own engine and today's listings feed; its buttons open the app on a tab with `/app/?view=home` (or `listings`, `analyze`), and old `/#deal=` share links forward to `/app/`. Cloudflare builds it from the default branch on every push with `npm test && npm run build`, then `npx wrangler deploy` publishes `dist/` as set in `wrangler.jsonc`, so a failing test stops a deploy and the last good version stays up. Outside Claude it reads Thunder Bay listings from `public/data/thunderbay.json`, which is published with the site.
 
 ## Run it
 
@@ -130,6 +130,8 @@ src/components/HelpSheet.jsx  help: what each tab does and the words to know (lo
 src/components/ShareSheet.jsx the share panel: copy the link or use the phone's share sheet (loaded on demand)
 src/components/RentHelper.jsx "Don't know the rent?": the Thunder Bay rent for a number of bedrooms
 src/components/*          UI sections, plus the search palette, phone sheet and toasts
+src/landing/Landing.jsx   the website's homepage at / (app/index.html is the app at /app/)
+public/landing/           the homepage's product screenshots
 src/views/HomeView.jsx    home: first-time buyers, money you can get, the suite permit guide (loaded on demand)
 src/lib/firstHome.js      first-time buyer lending rules, qualifying, live-in cost, benefits, savings timeline (tested)
 src/lib/suites.js         Thunder Bay suite rules, permit steps and payback (tested)

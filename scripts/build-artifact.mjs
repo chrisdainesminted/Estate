@@ -6,7 +6,9 @@
 import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { rolldown } from 'rolldown';
 
-const html = readFileSync('dist/index.html', 'utf8');
+// The app page (the homepage stays on the website), with its asset paths
+// made relative to the page's root, where the host serves it.
+const html = readFileSync('dist/app/index.html', 'utf8').replaceAll('../assets/', './assets/');
 const head = html.match(/<head>([\s\S]*?)<\/head>/)[1];
 const body = html.match(/<body>([\s\S]*?)<\/body>/)[1];
 
@@ -27,7 +29,8 @@ const fragment = [
 rmSync('dist-artifact', { recursive: true, force: true });
 mkdirSync('dist-artifact', { recursive: true });
 writeFileSync('dist-artifact/index.html', `${fragment}\n`);
-cpSync('dist/assets', 'dist-artifact/assets', { recursive: true });
+// Everything but the website homepage's entry script, which the page never loads.
+cpSync('dist/assets', 'dist-artifact/assets', { recursive: true, filter: (src) => !/[\\/]home-[\w-]+\.js$/.test(src) });
 
 // The daily listings run downloads its tool and steps from the page itself,
 // so it needs no copy of this repository.

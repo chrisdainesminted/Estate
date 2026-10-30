@@ -3,7 +3,8 @@ import { capability } from '../lib/runtime.js';
 import { MARKET } from '../lib/market.js';
 
 // The copy published beside the public website (public/data/), relative to the page.
-const WEB_FEED = `data/${MARKET.doc}.json`;
+// From the site root, so the app finds it under /app/ too.
+const WEB_FEED = `/data/${MARKET.doc}.json`;
 
 /**
  * The daily listings feed. On the hosted Claude page it's the copy the

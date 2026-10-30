@@ -8,7 +8,7 @@ import { safeHttpUrl } from './format.js';
 import { DEFAULT_DEAL, UNIT_TYPES } from './presets.js';
 
 /** Links always open the public website, whoever shares them and from where. */
-export const SITE_URL = 'https://bedrock.signia83.workers.dev/';
+export const SITE_URL = 'https://bedrock.signia83.workers.dev/app/';
 
 // Left out when someone shares without the property's details.
 const DETAILS = ['address', 'listingUrl', 'notes'];

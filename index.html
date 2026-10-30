@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bedrock</title>
-    <meta name="description" content="Bedrock underwrites rental deals the way your bank account sees them: lender DSCR, real cash flow after every cost, Canadian or US rules, and a daily list of Thunder Bay rentals." />
+    <title>Bedrock: your first home, with a tenant helping pay</title>
+    <meta name="description" content="Bedrock shows first-time buyers in Thunder Bay what they can buy, the government money they can claim, and how renting out a unit makes a home cost less than rent. Free, and your numbers stay in your browser." />
     <meta name="theme-color" content="#0b0b0c" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -12,8 +12,8 @@
     <link rel="canonical" href="https://bedrock.signia83.workers.dev/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Bedrock" />
-    <meta property="og:title" content="Bedrock: cash flow you can build on" />
-    <meta property="og:description" content="Lender DSCR vs real cash flow, Canadian and US rules, and a daily list of Thunder Bay rentals ranked by cash flow per door." />
+    <meta property="og:title" content="Bedrock: your first home, with a tenant helping pay" />
+    <meta property="og:description" content="What you can buy, the money you can claim, and the Thunder Bay homes that cost less to live in than rent. Free." />
     <meta property="og:url" content="https://bedrock.signia83.workers.dev/" />
     <meta property="og:image" content="https://bedrock.signia83.workers.dev/og.png" />
     <meta property="og:image:width" content="1200" />
@@ -23,8 +23,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap" rel="stylesheet" />
     <script>
-      // Pick the theme before paint to avoid a flash: onyx (dark) unless
-      // the person switched to light with the in-app toggle.
+      // Links shared before the app moved to /app/ carry the deal in the
+      // hash: send them on to the app, hash and all.
+      if (location.hash.indexOf('#deal=') === 0) location.replace('/app/' + location.hash);
+      // Same theme as the app: onyx unless the person picked light there.
       (function () {
         var saved = null;
         try {
@@ -36,6 +38,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="/src/landing/main.jsx"></script>
   </body>
 </html>

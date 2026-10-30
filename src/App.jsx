@@ -174,8 +174,20 @@ function useAllTabs() {
   return [all, showAll];
 }
 
+/** A view named in the address (?view=listings), as the homepage's links use; read once, then tidied away. */
+function viewFromAddress() {
+  const v = new URLSearchParams(window.location.search).get('view');
+  if (!VIEWS.some((x) => x.value === v)) return null;
+  const url = new URL(window.location.href);
+  url.searchParams.delete('view');
+  window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+  return v;
+}
+
 function useStoredView() {
   const [view, setView] = useState(() => {
+    const linked = viewFromAddress();
+    if (linked) return linked;
     try {
       const v = localStorage.getItem(VIEW_KEY);
       return VIEWS.some((x) => x.value === v) ? v : 'home';
