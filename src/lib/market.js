@@ -1,13 +1,64 @@
-// Daily listings for one market (Thunder Bay): the facts the morning run
-// saves for each property, how Bedrock turns one into a deal, and how the
-// list is ranked. Pure functions, shared by the page and the run's scripts.
+// Daily listings for cities across Canada: the facts the morning run saves
+// for each property, how Bedrock turns one into a deal, and how the list is
+// ranked. Pure functions, shared by the page and the run's scripts.
 
 import { DEFAULT_TARGETS, allCash, analyzeDeal, maxOffer, ownMoney } from './finance.js';
 import { DEFAULT_DEAL, UNIT_TYPES } from './presets.js';
 import { safeHttpUrl } from './format.js';
+import { CITIES, cityByKey } from './canada.js';
 
 /** Where the run saves the feed: data/users/<id>/<doc> in the page's database. */
 export const MARKET = { city: 'Thunder Bay', region: 'ON', doc: 'thunderbay' };
+
+/** The city the listing assumptions are set for, and the one shown first. */
+export const HOME_MARKET = 'thunder-bay';
+
+/** Cities the morning run covers: every named city (not the "elsewhere" entries). */
+export const LISTING_CITIES = CITIES.filter((c) => !c.key.endsWith('-other')).map((c) => c.key);
+
+/** Each city's feed document, and its file beside the website: thunder-bay → thunderbay. */
+export const feedDoc = (cityKey) => String(cityKey).replace(/-/g, '');
+
+/** The index of every city's feed: when each was last updated and how many listings it holds. */
+export const INDEX_DOC = 'markets';
+
+/**
+ * Which city to show: the one picked, else the one you're buying in once
+ * the run has listings there, else Thunder Bay.
+ */
+export function listingCity(picked, homeCity, index) {
+  if (LISTING_CITIES.includes(picked)) return picked;
+  return LISTING_CITIES.includes(homeCity) && index?.cities?.[homeCity]?.count > 0 ? homeCity : HOME_MARKET;
+}
+
+/**
+ * The listing assumptions moved to another city: market rents and the
+ * fallback property tax scale by that city's average rent and tax share
+ * against Thunder Bay's, where the assumptions are set.
+ */
+export function localMarket(market, cityKey = HOME_MARKET) {
+  const m = normalizeMarket(market);
+  const city = cityByKey(cityKey);
+  const home = cityByKey(HOME_MARKET);
+  const rentRatio = city.rent / home.rent;
+  const taxRatio = city.taxPct / home.taxPct;
+  return {
+    ...m,
+    city: city.key,
+    rentRatio,
+    taxRatio,
+    rents: Object.fromEntries(Object.entries(m.rents).map(([b, r]) => [b, Math.round(r * rentRatio)])),
+    taxPct: Math.round(m.taxPct * taxRatio * 1000) / 1000,
+  };
+}
+
+/** A change made to the local assumptions, put back in Thunder Bay terms for saving. */
+export function homePatch(patch, local) {
+  const { city, rentRatio, taxRatio, ...out } = patch; // eslint-disable-line no-unused-vars
+  if (patch.rents && local?.rentRatio) out.rents = Object.fromEntries(Object.entries(patch.rents).map(([b, r]) => [b, Number(r) / local.rentRatio]));
+  if (patch.taxPct != null && local?.taxRatio) out.taxPct = Number(patch.taxPct) / local.taxRatio;
+  return out;
+}
 
 export const LISTING_TYPES = [
   { key: 'single', label: 'Single-family' },
@@ -228,7 +279,7 @@ export function listingToDeal(listing, market, lens) {
     ...DEFAULT_DEAL,
     name: listing.address,
     country: 'ca',
-    city: 'thunder-bay',
+    city: m.city ?? HOME_MARKET,
     price,
     termYears: m.amortYears,
     closingPct: m.closingPct,
@@ -332,7 +383,7 @@ const addDays = (isoDate, n) => new Date(Date.parse(`${isoDate}T00:00:00Z`) + n 
  * being confirmed, or as soon as a run reports it sold or gone. A listing
  * without a link to its own page is turned away: nobody could check it.
  */
-export function mergeFeed(prev, found, { today, now = Date.now(), keepDays = 7, note = '' } = {}) {
+export function mergeFeed(prev, found, { today, now = Date.now(), keepDays = 7, note = '', city = HOME_MARKET } = {}) {
   const old = Array.isArray(prev?.listings) ? prev.listings : [];
   const merged = new Map(old.map((l) => [l.id, { ...l }]));
   const byAddress = new Map(old.map((l) => [addressKey(l.address), l.id]));
@@ -385,7 +436,8 @@ export function mergeFeed(prev, found, { today, now = Date.now(), keepDays = 7, 
   return {
     feed: {
       schema: 1,
-      city: `${MARKET.city}, ${MARKET.region}`,
+      city: `${cityByKey(city).name}, ${cityByKey(city).province}`,
+      market: cityByKey(city).key,
       updatedAt: now,
       lastRun: run,
       runs: [...(Array.isArray(prev?.runs) ? prev.runs : []), run].slice(-14),
@@ -393,4 +445,29 @@ export function mergeFeed(prev, found, { today, now = Date.now(), keepDays = 7, 
     },
     stats,
   };
+}
+
+/**
+ * The index after one city's run: for each city, the date it was last
+ * searched and how many listings its feed holds.
+ */
+export function updateIndex(prev, cityKey, feed) {
+  const cities = { ...(prev?.cities ?? {}) };
+  const active = (feed?.listings ?? []).filter((l) => (l.status ?? 'active') === 'active').length;
+  cities[cityKey] = { doc: feedDoc(cityKey), date: feed?.lastRun?.date ?? null, at: feed?.lastRun?.at ?? null, count: active };
+  return { schema: 1, updatedAt: feed?.lastRun?.at ?? Date.now(), cities };
+}
+
+/**
+ * Which cities today's run searches: the home market every day, then the
+ * `count` cities searched longest ago (never-searched first, in list order).
+ */
+export function planRun(index, count = 4) {
+  const seen = index?.cities ?? {};
+  const others = LISTING_CITIES.filter((k) => k !== HOME_MARKET)
+    .map((k, i) => ({ k, i, date: seen[k]?.date ?? '' }))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.i - b.i)
+    .slice(0, Math.max(0, count))
+    .map((x) => x.k);
+  return [HOME_MARKET, ...others];
 }

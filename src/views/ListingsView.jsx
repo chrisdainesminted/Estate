@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRight, Check, ChevronDown, ExternalLink, Eye, EyeOff, Radar, RotateCcw, SlidersHorizontal } from 'lucide-react';
-import { DEFAULT_MARKET, LISTING_TYPES, MARKET, SORTS, droppedInLatestRun, isNew, lensTargets, listingPageUrl, listingToDeal, rankListings, siteName, typeOf } from '../lib/market.js';
+import { DEFAULT_MARKET, LISTING_CITIES, LISTING_TYPES, SORTS, localMarket, droppedInLatestRun, isNew, lensTargets, listingPageUrl, listingToDeal, rankListings, siteName, typeOf } from '../lib/market.js';
 import { homeFor } from '../lib/firstHome.js';
+import { PROVINCES, cityByKey, provinceName } from '../lib/canada.js';
 import { listingSentence } from '../lib/explain.js';
 import { money, percent } from '../lib/format.js';
 import { Button, Card, CardHeader, DscrChip, NumberField, Segmented, SelectField, SkeletonCard, ViewHeader, signedClass } from '../components/ui.jsx';
@@ -12,6 +13,7 @@ const KIND = { 1: 'House', 2: 'Duplex', 3: 'Triplex', 4: 'Fourplex' };
 const SHORT_TYPE = { single: 'Singles' };
 const RENT_TEXT = { stated: 'Rents as listed', mixed: 'Some rents estimated', estimated: 'Rents estimated' };
 const STALE_AFTER = 36 * 3600 * 1000;
+const ROTATION_STALE_AFTER = 10 * 86400 * 1000;
 // The best few show first; the rest are a tap away.
 const FIRST_PAGE = 10;
 
@@ -224,7 +226,7 @@ function Assumptions({ market, onMarket }) {
         title="How listings are underwritten"
         subtitle="Applies to every listing here and to your morning alert. Targets come from the Max offer card on Analyze."
         actions={
-          <Button onClick={() => onMarket({ ...DEFAULT_MARKET, types: market.types, hidden: market.hidden })}>
+          <Button onClick={() => onMarket({ ...localMarket(DEFAULT_MARKET, market.city), types: market.types, hidden: market.hidden })}>
             <RotateCcw className="size-3.5" aria-hidden /> Defaults
           </Button>
         }
@@ -257,8 +259,10 @@ function Assumptions({ market, onMarket }) {
           <div className="col-span-2">{f('taxPct', { label: 'Property tax if not listed', suffix: '% of price', max: 5, step: 0.05, hint: 'Most listings state their taxes' })}</div>
         </fieldset>
         <fieldset className="grid grid-cols-2 content-start gap-3">
-          <legend className={`${legend} w-full`}>Market rents</legend>
-          <p className="col-span-2 text-xs text-zinc-600 dark:text-zinc-400">Used only where a listing doesn’t state a unit’s current rent.</p>
+          <legend className={`${legend} w-full`}>Market rents in {cityByKey(market.city).name}</legend>
+          <p className="col-span-2 text-xs text-zinc-600 dark:text-zinc-400">
+            Used only where a listing doesn’t state a unit’s current rent. Other cities move these by their average rent, so change them once.
+          </p>
           {rent(0, 'Bachelor')}
           {rent(1, '1 bedroom')}
           {rent(2, '2 bedrooms')}
@@ -280,8 +284,36 @@ function Notice({ icon: Icon = Radar, title, children }) {
   );
 }
 
-/** The Listings tab: Thunder Bay properties for sale, refreshed each morning and ranked by your numbers. */
-export default function ListingsView({ feedState, market, targets, profile, importedIds, onMarket, onAnalyze, onHide, onUnhide }) {
+/** Which city's listings: every covered city by province, with how many listings each has. */
+function CityPicker({ city, index, onCity }) {
+  const cities = index?.cities ?? {};
+  return (
+    <div className="max-w-sm">
+      <SelectField id="listing-city" label="Listings in" value={city} onChange={(e) => onCity(e.target.value)}>
+        {PROVINCES.map((p) => {
+          const keys = LISTING_CITIES.filter((k) => cityByKey(k).province === p.code);
+          if (!keys.length) return null;
+          return (
+            <optgroup key={p.code} label={p.name}>
+              {keys.map((k) => {
+                const n = cities[k]?.count;
+                return (
+                  <option key={k} value={k}>
+                    {cityByKey(k).name}
+                    {!index ? '' : cities[k] ? ` (${n} listing${n === 1 ? '' : 's'})` : ', coming soon'}
+                  </option>
+                );
+              })}
+            </optgroup>
+          );
+        })}
+      </SelectField>
+    </div>
+  );
+}
+
+/** The Listings tab: properties for sale in one Canadian city, refreshed by the morning run and ranked by your numbers. */
+export default function ListingsView({ feedState, indexState, city, onCity, market, targets, profile, importedIds, onMarket, onAnalyze, onHide, onUnhide }) {
   const { status, feed } = feedState;
   const [sort, setSort] = useState('perDoor');
   const [onlyMeets, setOnlyMeets] = useState(false);
@@ -315,7 +347,9 @@ export default function ListingsView({ feedState, market, targets, profile, impo
   const countOf = (key) => active.filter((l) => typeOf(l.units) === key && !hiddenSet.has(l.id)).length;
   const best = visible.reduce((m, s) => (!m || s.perDoor > m.perDoor ? s : m), null);
   const run = feed?.lastRun;
-  const stale = run && Date.now() - run.at > STALE_AFTER;
+  const place = cityByKey(city);
+  // Thunder Bay is searched every morning; the other cities take turns, about once a week.
+  const stale = run && Date.now() - run.at > (city === 'thunder-bay' ? STALE_AFTER : ROTATION_STALE_AFTER);
   const freshCount = visible.filter((s) => isNew(s.listing, feed)).length;
   const dropCount = visible.filter((s) => droppedInLatestRun(s.listing, feed)).length;
   const counted = lensTargets(targets, market.lens);
@@ -333,19 +367,24 @@ export default function ListingsView({ feedState, market, targets, profile, impo
   return (
     <>
       <ViewHeader title="Listings">
-        {MARKET.city}, {MARKET.region}: properties for sale, found each morning and run through your numbers under Ontario rules.
+        {place.name}, {place.province}: properties for sale, found by the morning run and run through your numbers under {provinceName(place.province)} rules.
         {run && ` Updated ${when(run.at)}.`}
       </ViewHeader>
+
+      <CityPicker city={city} index={indexState?.feed} onCity={onCity} />
 
       {status === 'checking' && <SkeletonCard className="h-[28rem]" />}
       {status === 'local' && (
         <Notice title="Listings arrive on your hosted Bedrock page">
-          The morning run saves Thunder Bay listings to your Claude account, so they show up on your Bedrock page at claude.ai. This copy of the page can’t
+          The morning run saves listings to your Claude account, so they show up on your Bedrock page at claude.ai. This copy of the page can’t
           read them.
         </Notice>
       )}
       {status === 'empty' && (
-        <Notice title="The first update hasn’t arrived yet">Listings land here every morning at about 6 am Eastern. Check back after the next run.</Notice>
+        <Notice title={`${place.name} hasn’t been searched yet`}>
+          The morning run searches Thunder Bay every day and a few more cities each morning in turn, so every city gets fresh listings about once a week. {place.name}{' '}
+          should have its first listings within a week. Pick another city above to see what’s already in.
+        </Notice>
       )}
       {status === 'error' && (
         <Notice icon={AlertTriangle} title="Couldn’t load the listings">

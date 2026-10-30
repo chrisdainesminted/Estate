@@ -35,11 +35,11 @@ import { useDeals } from './hooks/useDeals.js';
 import { useTheme } from './hooks/useTheme.js';
 import { useExports } from './hooks/useExports.js';
 import { useMediaQuery, prefersReducedMotion } from './hooks/useMediaQuery.js';
-import { useMarket } from './hooks/useMarket.js';
+import { useMarket, useMarketIndex } from './hooks/useMarket.js';
 import { OWN_DOWN_PCT, analyzeDeal, applyAdjustments, isNeutralAdjustment, maxOffer, ownMoney, projectDeal, refiAnalysis, saleAnalysis } from './lib/finance.js';
 import { money, percent, ratio } from './lib/format.js';
 import { DEFAULT_DEAL, MAX_COMPARE, switchRules } from './lib/presets.js';
-import { listingToDeal, normalizeMarket, rankListings } from './lib/market.js';
+import { homePatch, listingCity, listingToDeal, localMarket, normalizeMarket, rankListings } from './lib/market.js';
 import { quickDeal } from './lib/quick.js';
 import { readShared, sameDeal } from './lib/share.js';
 import { whatIfSummary } from './lib/explain.js';
@@ -241,7 +241,6 @@ export default function App() {
   const [liveDealId, setLiveDealId] = useState(null);
   const [allTabs, showAllTabs] = useAllTabs();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
-  const marketFeed = useMarket();
   const sections = useSectionsState();
   const { setOpen: openSection } = sections;
 
@@ -375,8 +374,13 @@ export default function App() {
   );
 
   // Listings: open one as a deal (once), or hide it from the list.
-  const market = lib.settings.market;
-  const rents = useMemo(() => normalizeMarket(market).rents, [market]);
+  const baseMarket = lib.settings.market;
+  const rents = useMemo(() => normalizeMarket(baseMarket).rents, [baseMarket]);
+  // Listings for one city at a time: the one picked on the Listings tab, else where you're buying.
+  const marketIndex = useMarketIndex();
+  const listCity = listingCity(baseMarket?.listingCity, homeCity, marketIndex.feed);
+  const market = useMemo(() => localMarket(baseMarket, listCity), [baseMarket, listCity]);
+  const marketFeed = useMarket(listCity);
 
   // Portfolio, Compare and Plan wait behind More until you have two deals of your own or own a property.
   const ownDeals = deals.filter((d) => !d.example);
@@ -663,7 +667,7 @@ export default function App() {
               <HomeView
                 profile={lib.settings.home}
                 suite={lib.settings.suite}
-                market={normalizeMarket(market)}
+                market={normalizeMarket(baseMarket)}
                 items={baseItems}
                 liveDealId={liveDealId ?? activeId}
                 onHome={(patch) => lib.updateSettings('home', patch)}
@@ -676,11 +680,14 @@ export default function App() {
             {view === 'listings' && (
               <ListingsView
                 feedState={marketFeed}
+                indexState={marketIndex}
+                city={listCity}
+                onCity={(listingCity) => lib.updateSettings('market', { listingCity })}
                 market={market}
                 targets={targets}
                 profile={lib.settings.home}
                 importedIds={importedIds}
-                onMarket={(patch) => lib.updateSettings('market', patch)}
+                onMarket={(patch) => lib.updateSettings('market', homePatch(patch, market))}
                 onAnalyze={analyzeListing}
                 onHide={hideListing}
                 onUnhide={unhideListing}

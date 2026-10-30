@@ -3,6 +3,13 @@ import { allCash, analyzeDeal, maxOffer } from './finance.js';
 import { DEFAULT_DEAL } from './presets.js';
 import {
   DEFAULT_MARKET,
+  LISTING_CITIES,
+  feedDoc,
+  homePatch,
+  listingCity,
+  localMarket,
+  planRun,
+  updateIndex,
   INSURANCE_MIN,
   addressKey,
   cleanListing,
@@ -290,5 +297,67 @@ describe('normalizeMarket', () => {
     expect(m.rents[3]).toBe(DEFAULT_MARKET.rents[3]);
     expect(m.types).toEqual(['small']);
     expect(m.hidden).toEqual(['a']);
+  });
+});
+
+describe('listings across Canada', () => {
+  it('gives every covered city its own feed document', () => {
+    const docs = LISTING_CITIES.map(feedDoc);
+    expect(new Set(docs).size).toBe(docs.length);
+    expect(feedDoc('thunder-bay')).toBe('thunderbay');
+    expect(docs).not.toContain('bedrock');
+    expect(docs).not.toContain('markets');
+    expect(LISTING_CITIES.some((k) => k.endsWith('-other'))).toBe(false);
+  });
+
+  it('shows the picked city, else where you are buying, else Thunder Bay', () => {
+    expect(listingCity('calgary', 'toronto')).toBe('calgary');
+    expect(listingCity(undefined, 'toronto')).toBe('thunder-bay');
+    expect(listingCity(undefined, 'toronto', { cities: { toronto: { count: 4 } } })).toBe('toronto');
+    expect(listingCity(undefined, 'on-other')).toBe('thunder-bay');
+    expect(listingCity('nowhere', null)).toBe('thunder-bay');
+  });
+
+  it('moves rents and the fallback tax to another city, and back for saving', () => {
+    const tb = localMarket(DEFAULT_MARKET, 'thunder-bay');
+    expect(tb.rents[2]).toBe(DEFAULT_MARKET.rents[2]);
+    const to = localMarket(DEFAULT_MARKET, 'toronto');
+    expect(to.city).toBe('toronto');
+    expect(to.rents[2]).toBe(Math.round((DEFAULT_MARKET.rents[2] * 2046) / 1700));
+    expect(to.taxPct).toBeCloseTo(0.6);
+    const saved = homePatch({ rents: { ...to.rents, 2: 2500 }, taxPct: 0.6, city: 'toronto', rentRatio: 9 }, to);
+    expect(saved.city).toBeUndefined();
+    expect(saved.rentRatio).toBeUndefined();
+    expect(localMarket({ ...DEFAULT_MARKET, ...saved }, 'toronto').rents[2]).toBe(2500);
+    expect(saved.taxPct).toBeCloseTo(1);
+  });
+
+  it('underwrites a listing under the city it is in', () => {
+    const l = { id: 'x', address: '1 Main St', url: 'https://www.realtor.ca/real-estate/1/1-main-st', price: 600000, units: 1 };
+    expect(listingToDeal(l, localMarket(DEFAULT_MARKET, 'calgary')).city).toBe('calgary');
+    expect(listingToDeal(l, DEFAULT_MARKET).city).toBe('thunder-bay');
+  });
+
+  it('labels a merged feed with its city', () => {
+    const { feed } = mergeFeed(null, [], { today: '2026-10-30', city: 'halifax' });
+    expect(feed.city).toBe('Halifax, NS');
+    expect(feed.market).toBe('halifax');
+  });
+
+  it('plans Thunder Bay every day plus the cities searched longest ago', () => {
+    expect(planRun(null, 2)).toEqual(['thunder-bay', 'vancouver', 'victoria']);
+    const index = { cities: { vancouver: { date: '2026-10-29' }, victoria: { date: '2026-10-29' }, kelowna: { date: '2026-10-25' } } };
+    const plan = planRun(index, 3);
+    expect(plan[0]).toBe('thunder-bay');
+    expect(plan.slice(1)).toEqual(['calgary', 'edmonton', 'regina']);
+    const all = Object.fromEntries(LISTING_CITIES.map((k, i) => [k, { date: `2026-10-${String(10 + (i % 20)).padStart(2, '0')}` }]));
+    expect(planRun({ cities: all }, 1)[1]).toBe(LISTING_CITIES.find((k) => k !== 'thunder-bay' && all[k].date === '2026-10-10'));
+  });
+
+  it('keeps an index of each city: date and active listings', () => {
+    const feed = { lastRun: { date: '2026-10-30', at: 5 }, listings: [{ status: 'active' }, {}, { status: 'conditional' }] };
+    const idx = updateIndex({ cities: { toronto: { date: '2026-10-29', count: 3 } } }, 'halifax', feed);
+    expect(idx.cities.halifax).toEqual({ doc: 'halifax', date: '2026-10-30', at: 5, count: 2 });
+    expect(idx.cities.toronto.count).toBe(3);
   });
 });
