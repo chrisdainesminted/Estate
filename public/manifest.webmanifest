@@ -1,7 +1,7 @@
 {
   "name": "Bedrock",
   "short_name": "Bedrock",
-  "description": "Rental deals the way your bank account sees them: lender DSCR, real cash flow and daily Thunder Bay listings.",
+  "description": "Your first home anywhere in Canada: what a bank would lend you, the money you can claim, listings in 27 cities, and tools for landlords.",
   "start_url": "./app/",
   "scope": "./",
   "display": "standalone",

@@ -185,6 +185,10 @@ function useAllTabs() {
   return [all, showAll];
 }
 
+// The website's home page: the site root when the app runs on the website at /app/; from
+// anywhere else (the hosted Claude page) the public site, opened in a new tab.
+const HOME_PAGE = typeof window !== 'undefined' && window.location.pathname.startsWith('/app') ? '/' : 'https://bedrock.signia83.workers.dev/';
+
 /** A view named in the address (?view=listings), as the homepage's links use; read once, then tidied away. */
 function viewFromAddress() {
   const v = new URLSearchParams(window.location.search).get('view');
@@ -600,7 +604,15 @@ export default function App() {
         <header className="relative z-30 border-b border-hairline bg-(--page) lg:sticky lg:top-[env(safe-area-inset-top,0px)]">
           <div className="gutter mx-auto flex max-w-[1500px] flex-wrap items-center gap-x-5 gap-y-2 py-2 lg:flex-nowrap lg:py-0">
             <h1 className="shrink-0 lg:py-3">
-              <Logo />
+              <a
+                href={HOME_PAGE}
+                {...(HOME_PAGE.startsWith('http') ? { target: '_blank', rel: 'noreferrer' } : {})}
+                aria-label="Bedrock home page"
+                title="Bedrock home page"
+                className="block rounded-sm transition hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-500"
+              >
+                <Logo />
+              </a>
             </h1>
 
             {/* From lg up the views are text tabs here; phones and tablets get them along the bottom (Dock). */}
@@ -811,10 +823,10 @@ export default function App() {
 
           <footer className="dock-space mt-4 flex flex-col gap-4 border-t border-hairline pt-6 text-xs leading-relaxed text-zinc-500 sm:flex-row sm:items-start dark:text-zinc-400">
             <div className="flex shrink-0 flex-col gap-2">
-              <div className="flex items-center gap-2">
+              <a href={HOME_PAGE} {...(HOME_PAGE.startsWith('http') ? { target: '_blank', rel: 'noreferrer' } : {})} className="flex items-center gap-2 hover:opacity-80">
                 <LogoMark className="size-6" />
                 <span className="font-semibold text-zinc-800 dark:text-zinc-200">Bedrock</span>
-              </div>
+              </a>
               <SyncStatus sync={lib.sync} />
             </div>
             <p className="max-w-4xl">
