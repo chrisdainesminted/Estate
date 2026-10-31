@@ -303,8 +303,7 @@ export default function CashView({ deal, items, targets, onTargets, tax, onTax, 
   return (
     <div className="space-y-6">
       <ViewHeader title={`Your money, ${OWN_DOWN_PCT}% down`}>
-        Any deal with your own money as a {OWN_DOWN_PCT}% down payment and a regular mortgage for the rest, at the deal’s rate and term. No lender’s DSCR test: just the
-        cash flow after the mortgage payment, and the return on your cash.
+        A regular mortgage with {OWN_DOWN_PCT}% of your own money down: the cash flow and your return.
       </ViewHeader>
 
       <CashSummary deal={deal} own={own} c={c} targets={targets} onChange={onChange} />

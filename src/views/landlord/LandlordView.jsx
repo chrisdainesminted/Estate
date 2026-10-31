@@ -276,7 +276,7 @@ export default function LandlordView({ homeCity }) {
 function Header() {
   return (
     <ViewHeader title="Landlord">
-      List a home for rent or for sale, talk to the people who answer, book viewings, and keep tenants, rent, repairs and tax records in one place.{' '}
+      Listings, viewings, tenants, rent and repairs in one place.{' '}
       <a className="font-medium text-emerald-700 hover:underline dark:text-emerald-400" href="/homes/">
         See public listings
       </a>

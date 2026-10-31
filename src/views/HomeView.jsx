@@ -394,8 +394,7 @@ export default function HomeView({ profile: p, suite, ready = {}, rvb = {}, mark
 
   const header = (
     <ViewHeader title="Your first home">
-      How close you are to owning {p.entered ? `in ${placeName(local.city)}` : 'a home anywhere in Canada'}, the money you can get, and how to make a home pay for itself. Estimates, not financial advice: a mortgage broker
-      confirms the real numbers.
+      How close you are to owning {p.entered ? `in ${placeName(local.city)}` : 'your first home'}. Estimates, not financial advice.
     </ViewHeader>
   );
 

@@ -104,8 +104,7 @@ export default function PlanView({ owned, deals, plan, onPlan, dark, onOpen }) {
   return (
     <div className="space-y-6">
       <ViewHeader title="Growth plan">
-        Buying “{template?.deal.name ?? 'no deal'}” whenever your cash covers the down payment, closing, rehab and every lender’s reserves. Prices and rents move with
-        the deal’s own growth rates.
+        Buying “{template?.deal.name ?? 'no deal'}” again whenever your cash covers the next one.
       </ViewHeader>
 
       <SummaryCard

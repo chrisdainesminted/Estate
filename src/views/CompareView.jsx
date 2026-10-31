@@ -8,7 +8,7 @@ export default function CompareView({ items, compare, slotOf, compared, sliders,
   return (
     <>
       <ViewHeader title="Compare">
-        Up to {MAX_COMPARE} deals side by side: what the lender approves, what actually lands in your account, and what each one is worth when you sell.
+        Up to {MAX_COMPARE} deals side by side.
       </ViewHeader>
       <CompareSelector items={items} compare={compare} slotOf={slotOf} onToggle={lib.toggleCompare} dark={dark} />
       {compared.length > 0 && <SectionGroup>{sliders}</SectionGroup>}

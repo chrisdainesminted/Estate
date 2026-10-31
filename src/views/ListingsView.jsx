@@ -2,7 +2,7 @@ import { Suspense, lazy, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRight, BellPlus, BellRing, Check, ChevronDown, ExternalLink, Eye, EyeOff, Radar, RotateCcw, SlidersHorizontal, X } from 'lucide-react';
 import { DEFAULT_MARKET, LISTING_CITIES, LISTING_TYPES, SORTS, localMarket, alertMatches, alertName, daysListed, droppedInLatestRun, freshMatches, isNew, priceStory, underMarket, lensTargets, listingPageUrl, listingToDeal, rankListings, siteName, typeOf } from '../lib/market.js';
 import { homeFor } from '../lib/firstHome.js';
-import { PROVINCES, cityByKey, provinceName } from '../lib/canada.js';
+import { PROVINCES, cityByKey } from '../lib/canada.js';
 import { listingSentence } from '../lib/explain.js';
 import { money, percent } from '../lib/format.js';
 import { Button, Card, CardHeader, DscrChip, NumberField, Segmented, SelectField, SkeletonCard, ViewHeader, signedClass } from '../components/ui.jsx';
@@ -27,12 +27,6 @@ function when(at) {
   return `${label} at ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
 }
 
-const median = (values) => {
-  const v = values.filter(Number.isFinite).sort((p, q) => p - q);
-  if (!v.length) return NaN;
-  const mid = Math.floor(v.length / 2);
-  return v.length % 2 ? v[mid] : (v[mid - 1] + v[mid]) / 2;
-};
 
 /** A filter that switches on and off; on, it gets a tick and a darker edge. */
 const toggle = (on) =>
@@ -426,8 +420,11 @@ function Notice({ icon: Icon = Radar, title, children }) {
 function CityPicker({ city, index, onCity }) {
   const cities = index?.cities ?? {};
   return (
-    <div className="max-w-sm">
-      <SelectField id="listing-city" label="Listings in" value={city} onChange={(e) => onCity(e.target.value)}>
+    <div>
+      <label htmlFor="listing-city" className="sr-only">
+        Listings in
+      </label>
+      <select id="listing-city" value={city} onChange={(e) => onCity(e.target.value)} className="field max-w-[16rem] py-2 pr-8 pl-3 text-sm font-medium text-zinc-900 dark:text-zinc-100">
         {PROVINCES.map((p) => {
           const keys = LISTING_CITIES.filter((k) => cityByKey(k).province === p.code);
           if (!keys.length) return null;
@@ -438,19 +435,18 @@ function CityPicker({ city, index, onCity }) {
                 return (
                   <option key={k} value={k}>
                     {cityByKey(k).name}
-                    {!index ? '' : cities[k] ? ` (${n} listing${n === 1 ? '' : 's'})` : ', coming soon'}
+                    {!index ? '' : cities[k] ? ` (${n})` : ', coming soon'}
                   </option>
                 );
               })}
             </optgroup>
           );
         })}
-      </SelectField>
+      </select>
     </div>
   );
 }
 
-/** The Listings tab: properties for sale in one Canadian city, refreshed by the morning run and ranked by your numbers. */
 export default function ListingsView({ feedState, indexState, city, onCity, market, baseMarket, alerts = [], onAlerts, targets, profile, importedIds, onMarket, onAnalyze, onHide, onUnhide }) {
   const { status, feed } = feedState;
   const [sort, setSort] = useState('perDoor');
@@ -486,13 +482,11 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
   const shown = onlyMeets ? ranked.filter((s) => s.meets) : ranked;
   const hiddenCount = active.filter((l) => hiddenSet.has(l.id)).length;
   const countOf = (key) => active.filter((l) => typeOf(l.units) === key && !hiddenSet.has(l.id)).length;
-  const best = visible.reduce((m, s) => (!m || s.perDoor > m.perDoor ? s : m), null);
   const run = feed?.lastRun;
   const place = cityByKey(city);
   // Thunder Bay is searched every morning; the other cities take turns, about once a week.
   const stale = run && Date.now() - run.at > (city === 'thunder-bay' ? STALE_AFTER : ROTATION_STALE_AFTER);
   const freshCount = visible.filter((s) => isNew(s.listing, feed)).length;
-  const dropCount = visible.filter((s) => droppedInLatestRun(s.listing, feed)).length;
   const counted = lensTargets(targets, market.lens);
   const targetText = [counted.useDscr && `DSCR ${Number(counted.dscr).toFixed(2)}`, counted.useCashFlow && `$${counted.cashFlowPerDoor}/door`, counted.useCoc && `${counted.coc}% cash-on-cash`]
     .filter(Boolean)
@@ -507,12 +501,9 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
 
   return (
     <>
-      <ViewHeader title="Listings">
-        {place.name}, {place.province}: properties for sale, found by the morning run and run through your numbers under {provinceName(place.province)} rules.
-        {run && ` Updated ${when(run.at)}.`}
+      <ViewHeader title="Listings" aside={<CityPicker city={city} index={indexState?.feed} onCity={onCity} />}>
+        Homes for sale in {place.name}, run through your numbers{run ? ` · updated ${when(run.at)}` : ''}{status === 'ready' && freshCount ? ` · ${freshCount} new` : ''}
       </ViewHeader>
-
-      <CityPicker city={city} index={indexState?.feed} onCity={onCity} />
 
       {status === 'ready' && onAlerts && (
         <AlertBanners alerts={alerts.filter((a) => a.city === city)} feed={feed} market={baseMarket ?? market} profile={profile} onSeen={(id) => onAlerts(alerts.map((a) => (a.id === id ? { ...a, seen: todayIso() } : a)))} place={place} />
@@ -555,114 +546,98 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
             </p>
           )}
 
-          <Card className="divide-y divide-hairline">
-            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3.5 sm:px-5">
-              <div className="min-w-0 max-w-xl">
-                <p className="text-sm font-semibold text-zinc-900 dark:text-white">Count the income with</p>
-                <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
-                  {market.lens === 'own'
-                    ? `Your own money as a 20% down payment, with a regular mortgage at ${Number(market.rate)}%. No lender’s DSCR test: just the income and the return on your cash.`
-                    : `A DSCR loan, where the lender qualifies the property on its rent: ${Number(market.dscrDownPct)}% down at ${Number(market.dscrRate)}%, and it has to pass the lender’s DSCR test.`}
-                </p>
-              </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div role="group" aria-label="Property types" className="inline-flex overflow-hidden rounded-md border border-(--line-strong)">
+              {LISTING_TYPES.map((t, i) => {
+                const on = market.types.includes(t.key);
+                return (
+                  <button
+                    key={t.key}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => toggleType(t.key)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap transition focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 ${
+                      i ? 'border-l border-(--line-strong)' : ''
+                    } ${on ? 'bg-zinc-950/[0.05] font-semibold text-zinc-950 dark:bg-white/[0.07] dark:text-white' : 'font-medium text-zinc-500 hover:bg-well hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'}`}
+                  >
+                    {SHORT_TYPE[t.key] ? (
+                      <>
+                        <span className="sm:hidden">{SHORT_TYPE[t.key]}</span>
+                        <span className="max-sm:hidden">{t.label}</span>
+                      </>
+                    ) : (
+                      t.label
+                    )}
+                    <span className={`tabular ${on ? 'text-emerald-700 dark:text-emerald-400' : ''}`}>{countOf(t.key)}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <Segmented
+              label="Financing"
+              value={market.lens}
+              onChange={(lens) => onMarket({ lens })}
+              options={[
+                { value: 'dscr', label: 'DSCR loan' },
+                { value: 'own', label: '20% down' },
+              ]}
+            />
+            <button
+              type="button"
+              aria-pressed={onlyMeets}
+              onClick={() => setOnlyMeets((v) => !v)}
+              className={toggle(onlyMeets)}
+              title={targetText ? `Your targets: ${targetText}` : 'Set targets in Assumptions'}
+            >
+              {onlyMeets && <Check className="size-3.5" aria-hidden />}
+              Beats my targets <span className="tabular text-emerald-700 dark:text-emerald-400">{visible.filter((x) => x.meets).length}</span>
+            </button>
+            {hiddenCount > 0 && (
+              <button type="button" aria-pressed={showHidden} onClick={() => setShowHidden((v) => !v)} className={toggle(showHidden)}>
+                {showHidden && <Check className="size-3.5" aria-hidden />}
+                Hidden ({hiddenCount})
+              </button>
+            )}
+            <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
+              <label htmlFor="listing-sort" className="sr-only">
+                Sort
+              </label>
+              <select id="listing-sort" value={sort} onChange={(e) => setSort(e.target.value)} className="field px-3 py-1.5 text-sm text-zinc-900 dark:text-zinc-100">
+                {Object.entries(SORTS).map(([key, s]) => (
+                  <option key={key} value={key}>
+                    {s.label}
+                  </option>
+                ))}
+                {profile && <option value={LIVE_SORT.key}>{LIVE_SORT.label}</option>}
+              </select>
               <Segmented
-                label="Count the income with"
-                value={market.lens}
-                onChange={(lens) => onMarket({ lens })}
+                label="Show as"
+                value={layout}
+                onChange={setLayout}
                 options={[
-                  { value: 'dscr', label: 'DSCR loan' },
-                  { value: 'own', label: 'Own money, 20% down' },
+                  { value: 'list', label: 'List' },
+                  { value: 'map', label: 'Map' },
                 ]}
               />
-            </div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5 px-4 py-3.5 sm:px-5">
-              <div role="group" aria-label="Property types" className="inline-flex overflow-hidden rounded-md border border-(--line-strong)">
-                {LISTING_TYPES.map((t, i) => {
-                  const on = market.types.includes(t.key);
-                  return (
-                    <button
-                      key={t.key}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => toggleType(t.key)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap transition focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500 ${
-                        i ? 'border-l border-(--line-strong)' : ''
-                      } ${on ? 'bg-zinc-950/[0.05] font-semibold text-zinc-950 dark:bg-white/[0.07] dark:text-white' : 'font-medium text-zinc-500 hover:bg-well hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'}`}
-                    >
-                      {SHORT_TYPE[t.key] ? (
-                        <>
-                          <span className="sm:hidden">{SHORT_TYPE[t.key]}</span>
-                          <span className="max-sm:hidden">{t.label}</span>
-                        </>
-                      ) : (
-                        t.label
-                      )}
-                      <span className={`tabular ${on ? 'text-emerald-700 dark:text-emerald-400' : ''}`}>{countOf(t.key)}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              <button type="button" aria-pressed={onlyMeets} onClick={() => setOnlyMeets((v) => !v)} className={toggle(onlyMeets)}>
-                {onlyMeets && <Check className="size-3.5" aria-hidden />}
-                Beats my targets only
-              </button>
-              {hiddenCount > 0 && (
-                <button type="button" aria-pressed={showHidden} onClick={() => setShowHidden((v) => !v)} className={toggle(showHidden)}>
-                  {showHidden && <Check className="size-3.5" aria-hidden />}
-                  Show hidden ({hiddenCount})
-                </button>
-              )}
-              <div className="flex flex-wrap items-center gap-2 md:ml-auto">
-                <Segmented
-                  label="Show as"
-                  value={layout}
-                  onChange={setLayout}
-                  options={[
-                    { value: 'list', label: 'List' },
-                    { value: 'map', label: 'Map' },
-                  ]}
-                />
-                <label htmlFor="listing-sort" className="text-xs font-medium text-zinc-600 max-sm:sr-only dark:text-zinc-400">
-                  Sort
-                </label>
-                <select id="listing-sort" value={sort} onChange={(e) => setSort(e.target.value)} className="field px-3 py-1.5 text-sm text-zinc-900 dark:text-zinc-100">
-                  {Object.entries(SORTS).map(([key, s]) => (
-                    <option key={key} value={key}>
-                      {s.label}
-                    </option>
-                  ))}
-                  {profile && <option value={LIVE_SORT.key}>{LIVE_SORT.label}</option>}
-                </select>
-                {onAlerts && (
-                  <Button className="py-1.5" onClick={() => setAlerting((v) => !v)} aria-expanded={alerting}>
-                    <BellPlus className="size-4" aria-hidden /> Alert me
-                  </Button>
-                )}
-                <Button className="py-1.5" onClick={() => setEditing((v) => !v)} aria-expanded={editing} aria-controls="listing-assumptions">
-                  <SlidersHorizontal className="size-4" aria-hidden /> Assumptions
+              {onAlerts && (
+                <Button className="px-2.5 py-1.5" onClick={() => setAlerting((v) => !v)} aria-expanded={alerting} aria-label="Alert me about new listings" title="Alert me about new listings">
+                  <BellPlus className="size-4" aria-hidden />
                 </Button>
-              </div>
+              )}
+              <Button
+                className="px-2.5 py-1.5"
+                onClick={() => setEditing((v) => !v)}
+                aria-expanded={editing}
+                aria-controls="listing-assumptions"
+                aria-label="Assumptions"
+                title="Assumptions: rent, rates and running costs"
+              >
+                <SlidersHorizontal className="size-4" aria-hidden />
+              </Button>
             </div>
-          </Card>
+          </div>
 
           {editing && <Assumptions market={market} onMarket={onMarket} />}
-
-          <Card className="@container">
-            <dl className="grid grid-cols-2 @3xl:grid-cols-4">
-              {[
-                { label: 'Beat your targets', value: `${visible.filter((s) => s.meets).length} of ${visible.length}`, sub: targetText || 'No targets set' },
-                { label: 'Best cash flow', value: best ? `${money(best.perDoor, { signed: true })}/door` : '—', sub: best?.listing.address, cls: best ? signedClass(best.perDoor) : '' },
-                { label: 'In the latest update', value: `${freshCount} new`, sub: `${dropCount} price ${dropCount === 1 ? 'drop' : 'drops'}` },
-                { label: 'Typical asking price', value: money(median(visible.map((s) => s.a.price))), sub: `${money(median(visible.map((s) => s.a.price / s.a.units)))} per door` },
-              ].map((t, i) => (
-                <div key={t.label} className={`min-w-0 px-4 py-3.5 sm:px-5 ${i % 2 ? 'border-l border-hairline' : ''} ${i >= 2 ? 'border-t border-hairline @3xl:border-t-0 @3xl:border-l' : ''}`}>
-                  <dt className="caption">{t.label}</dt>
-                  <dd className={`tabular mt-1 text-lg font-semibold tracking-tight text-zinc-950 dark:text-white ${t.cls ?? ''}`}>{t.value}</dd>
-                  {t.sub && <dd className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">{t.sub}</dd>}
-                </div>
-              ))}
-            </dl>
-          </Card>
 
           {layout === 'map' && shown.length > 0 ? (
             <Card className="p-3 sm:p-4">
