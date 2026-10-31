@@ -183,7 +183,7 @@ function Hero({ city, onCity }) {
             <p className="inline-flex items-center gap-2 rounded-full border border-(--line-strong) bg-(--panel)/60 px-3 py-1 text-xs font-medium text-zinc-600 backdrop-blur dark:text-zinc-300">
               <span className="live-dot" aria-hidden /> For first-time buyers across Canada
             </p>
-            <h1 className="mt-6 max-w-4xl text-[40px] font-semibold leading-[1.02] tracking-[-0.045em] text-balance text-zinc-950 sm:text-6xl lg:text-[72px] dark:text-white">
+            <h1 className="mt-6 max-w-4xl text-[40px] font-extrabold leading-[1.02] tracking-[-0.042em] text-balance text-zinc-950 sm:text-6xl lg:text-[72px] dark:text-white">
               Own your first home.{' '}
               <span className="bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 bg-clip-text text-transparent dark:from-emerald-300 dark:via-emerald-400 dark:to-teal-300">
                 Let a tenant help pay for it.
