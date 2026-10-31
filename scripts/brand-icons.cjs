@@ -6,10 +6,10 @@ const path = require('path');
 
 const PUBLIC = path.join(__dirname, '..', 'public');
 const MARK = [
-  { x: 0, y: 0, w: 48, h: 8 },
-  { x: 0, y: 40, w: 48, h: 8 },
-  { x: 0, y: 8, w: 8, h: 32 },
-  { x: 40, y: 8, w: 8, h: 32 },
+  { x: 0, y: 0, w: 30, h: 8 },
+  { x: 0, y: 8, w: 8, h: 22 },
+  { x: 18, y: 40, w: 30, h: 8 },
+  { x: 40, y: 18, w: 8, h: 22 },
   { x: 16, y: 16, w: 16, h: 16 },
 ];
 const ONYX = '#0b0b0c';
