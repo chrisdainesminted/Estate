@@ -44,7 +44,18 @@ export async function buildMemoPdf({ deal, a, rows, sale, refi, offer }) {
   // Header: brand mark, deal name, terms, verdict.
   // The mark (src/lib/brand.js), its 48-unit square drawn 16 pt wide.
   doc.setFillColor(...BRAND);
-  MARK.forEach((s) => doc.rect(m + s.x / 3, m + s.y / 3, s.w / 3, s.h / 3, 'F'));
+  doc.setDrawColor(...BRAND);
+  doc.setLineWidth(MARK.stroke / 3);
+  doc.setLineCap('round');
+  doc.setLineJoin('round');
+  MARK.brackets.forEach((pts) => {
+    const [[x0, y0], ...rest] = pts.map(([x, y]) => [m + x / 3, m + y / 3]);
+    doc.lines(rest.map(([x, y], i) => [x - (i ? rest[i - 1][0] : x0), y - (i ? rest[i - 1][1] : y0)]), x0, y0, [1, 1], 'S');
+  });
+  const q = MARK.square;
+  doc.roundedRect(m + q.x / 3, m + q.y / 3, q.size / 3, q.size / 3, q.r / 3, q.r / 3, 'F');
+  doc.setLineCap('butt');
+  doc.setLineJoin('miter');
   text('Squarely  ·  Deal memo', m + 22, m + 11.5, { size: 9, bold: true });
   text(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), m + W, m + 11.5, { size: 8, color: MUTED, align: 'right' });
 

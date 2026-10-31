@@ -1,12 +1,18 @@
-import { MARK } from '../lib/brand.js';
+import { MARK, bracketPath } from '../lib/brand.js';
 
 /** The mark alone, in the accent green. */
 export function LogoMark({ className = 'size-7' }) {
+  const { stroke, brackets, square: q } = MARK;
   return (
-    <svg viewBox="0 0 48 48" className={`${className} fill-emerald-700 dark:fill-emerald-400 print:fill-emerald-700`} aria-hidden>
-      {MARK.map((s) => (
-        <rect key={`${s.x}-${s.y}`} x={s.x} y={s.y} width={s.w} height={s.h} />
+    <svg
+      viewBox="0 0 48 48"
+      className={`${className} fill-emerald-700 stroke-emerald-700 dark:fill-emerald-400 dark:stroke-emerald-400 print:fill-emerald-700 print:stroke-emerald-700`}
+      aria-hidden
+    >
+      {brackets.map((pts) => (
+        <path key={pts[0].join()} d={bracketPath(pts)} fill="none" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" />
       ))}
+      <rect x={q.x} y={q.y} width={q.size} height={q.size} rx={q.r} stroke="none" />
     </svg>
   );
 }

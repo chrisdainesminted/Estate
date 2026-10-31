@@ -1,10 +1,16 @@
-// The Squarely mark: two corner brackets framing a home square, drawn as
-// five bars on a 48-unit square. Logo.jsx, the PDF memo, public/favicon.svg
-// and the app icons (scripts/brand-icons.cjs) all draw this geometry.
-export const MARK = [
-  { x: 0, y: 0, w: 30, h: 6 },
-  { x: 0, y: 6, w: 6, h: 24 },
-  { x: 18, y: 42, w: 30, h: 6 },
-  { x: 42, y: 18, w: 6, h: 24 },
-  { x: 15, y: 15, w: 18, h: 18 },
-];
+// The Squarely mark: two rounded corner brackets framing a home square, on a
+// 48-unit square. Brackets are lines of width STROKE with round ends and
+// joins; the square has soft corners. Logo.jsx, the PDF memo,
+// public/favicon.svg and the app icons (scripts/brand-icons.cjs) all draw
+// this geometry.
+export const MARK = {
+  stroke: 6,
+  brackets: [
+    [[27, 3], [3, 3], [3, 27]],
+    [[21, 45], [45, 45], [45, 21]],
+  ],
+  square: { x: 15, y: 15, size: 18, r: 4 },
+};
+
+/** A bracket as an SVG path: "M27 3 L3 3 L3 27". */
+export const bracketPath = (pts) => pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x} ${y}`).join(' ');

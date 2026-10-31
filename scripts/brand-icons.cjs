@@ -5,18 +5,13 @@ const { chromium } = require('playwright');
 const path = require('path');
 
 const PUBLIC = path.join(__dirname, '..', 'public');
-const MARK = [
-  { x: 0, y: 0, w: 30, h: 6 },
-  { x: 0, y: 6, w: 6, h: 24 },
-  { x: 18, y: 42, w: 30, h: 6 },
-  { x: 42, y: 18, w: 6, h: 24 },
-  { x: 15, y: 15, w: 18, h: 18 },
-];
+const MARK_SVG = (fill) =>
+  `<path d="M27 3 L3 3 L3 27 M21 45 L45 45 L45 21" fill="none" stroke="${fill}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><rect x="15" y="15" width="18" height="18" rx="4" fill="${fill}"/>`;
 const ONYX = '#0b0b0c';
 const GREEN = '#34d399';
 const FONT = '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">';
 const mark = (size, fill = GREEN) =>
-  `<svg width="${size}" height="${size}" viewBox="0 0 48 48">${MARK.map((s) => `<rect x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" fill="${fill}"/>`).join('')}</svg>`;
+  `<svg width="${size}" height="${size}" viewBox="0 0 48 48">${MARK_SVG(fill)}</svg>`;
 
 // A full-bleed square: the phone rounds the corners itself, and the mark sits
 // inside the maskable safe zone (the middle 80%).
