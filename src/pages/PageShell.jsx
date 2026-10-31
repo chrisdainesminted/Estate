@@ -1,5 +1,6 @@
 import Logo from '../components/Logo.jsx';
 import SiteFooter from '../components/SiteFooter.jsx';
+import AccountLink from '../components/AccountLink.jsx';
 
 const NAV = [
   ['Find a home', '/homes/'],
@@ -29,6 +30,7 @@ export default function PageShell({ width = 'max-w-3xl', children }) {
                 {label}
               </a>
             ))}
+            {!here.startsWith('/account') && <AccountLink />}
           </nav>
         </div>
       </header>

@@ -1,15 +1,50 @@
-// A Bedrock account: someone's numbers, deals and listing alerts, kept so
-// they follow them to every device. There's no password: the account opens
-// with a private link, and only a hash of its key is stored. An email is
-// optional and only for alerts, confirmed with a code before anything is
-// sent to it.
+// A Bedrock account: someone's numbers, deals and listing alerts, their
+// renter profile, saved homes, applications and tenant pages, and their
+// landlord workspaces, kept so they follow them to every device. It opens
+// with its key: from a private link, or from signing in with an email and
+// password (see auth.js). Only a hash of the key is stored here. A separate
+// email for alerts is confirmed with a code before anything is sent to it.
 
 import { StoreError, hashKey } from './store.js';
+import { APPLY_FIELDS, clean } from './schema.js';
 
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
 const MAX_DATA = 1_500_000; // characters of saved library
 const MAX_ALERTS = 10;
 const CITY = /^[a-z-]{2,30}$/;
+const ID = /^[A-Za-z0-9_-]{6,80}$/;
+
+const txt = (v, n) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
+const n = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+const id = (v) => (typeof v === 'string' && ID.test(v) ? v : null);
+const list = (v, max, one, key) => {
+  const seen = new Set();
+  return (Array.isArray(v) ? v : [])
+    .map(one)
+    .filter((x) => x && !seen.has(key(x)) && seen.add(key(x)))
+    .slice(0, max);
+};
+
+/**
+ * What each saved section may hold. Links (workspace keys, applicant and
+ * tenant tokens) are the same ones the pages already keep in the browser.
+ */
+export const SECTIONS = {
+  // The renter's application details, to fill in applications for them.
+  profile: (v) => clean('applications', v && typeof v === 'object' ? v : {}, APPLY_FIELDS),
+  saved: (v) =>
+    list(
+      v,
+      200,
+      (h) => id(h?.ws) && id(h?.id) && { ws: h.ws, id: h.id, title: txt(h.title, 120), kind: h.kind === 'sale' ? 'sale' : 'rent', price: n(h.price), city: txt(h.city, 40), area: txt(h.area, 120), photo: id(h.photo) || '', at: n(h.at) },
+      (h) => `${h.ws}:${h.id}`,
+    ),
+  applications: (v) =>
+    list(v, 200, (a) => id(a?.ws) && id(a?.token) && { ws: a.ws, token: a.token, listingId: id(a.listingId) || '', title: txt(a.title, 120), at: n(a.at) }, (a) => a.token),
+  tenancies: (v) =>
+    list(v, 50, (t) => id(t?.ws) && id(t?.unitId) && id(t?.token) && { ws: t.ws, unitId: t.unitId, token: t.token, label: txt(t.label, 80), landlord: txt(t.landlord, 80), at: n(t.at) }, (t) => `${t.ws}:${t.unitId}`),
+  workspaces: (v) => list(v, 20, (w) => id(w?.id) && id(w?.key) && { id: w.id, key: w.key, name: txt(w.name, 80), at: n(w.at) }, (w) => w.id),
+};
 const TYPES = ['single', 'small', 'large'];
 
 function sameText(a, b) {
@@ -74,7 +109,28 @@ export class AccountStore {
       alerts: this.alerts(),
       email: this.meta('email') || '',
       emailVerified: this.meta('emailVerified') === '1',
+      loginEmail: this.meta('loginEmail') || '',
+      ...Object.fromEntries(Object.keys(SECTIONS).map((k) => [k, this.section(k)])),
     };
+  }
+
+  section(name) {
+    const raw = this.meta(`s:${name}`);
+    return raw ? JSON.parse(raw) : name === 'profile' ? {} : [];
+  }
+
+  /** Replace one saved section (profile, saved, applications, tenancies, workspaces), kept to its shape. */
+  setSection(name, value) {
+    if (!SECTIONS[name]) throw new StoreError(404, 'Unknown section.');
+    const clean = SECTIONS[name](value);
+    const body = JSON.stringify(clean);
+    if (body.length > 200_000) throw new StoreError(413, 'That’s more than an account can hold.');
+    this.setMeta(`s:${name}`, body);
+    return clean;
+  }
+
+  setLoginEmail(email) {
+    this.setMeta('loginEmail', email);
   }
 
   /** Save the library if it's newer than what's kept (the newest edit wins). */

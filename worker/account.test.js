@@ -66,3 +66,16 @@ suite('alert cleaning', () => {
     expect(cleanAlert({ city: 'toronto', minPerDoor: 0 }).minPerDoor).toBe(0);
   });
 });
+
+describe('saved sections', () => {
+  it('keeps each section to its shape and drops duplicates', () => {
+    expect(a.read()).toMatchObject({ profile: {}, saved: [], workspaces: [] });
+    a.setSection('profile', { name: 'Alex', income: 5200, sin: '123', email: 'a@b.ca' });
+    expect(a.read().profile).toEqual({ name: 'Alex', income: 5200, email: 'a@b.ca' });
+    const saved = a.setSection('saved', [{ ws: 'ws123456', id: 'li123456', title: 'Suite', price: 1650 }, { ws: 'ws123456', id: 'li123456' }, { ws: 'bad id!', id: 'x' }]);
+    expect(saved).toHaveLength(1);
+    a.setSection('workspaces', [{ id: 'wsabcdef', key: 'keykeykeykey', name: 'Main St' }]);
+    expect(a.read().workspaces[0]).toMatchObject({ id: 'wsabcdef', name: 'Main St' });
+    expect(() => a.setSection('nope', [])).toThrow(/Unknown/);
+  });
+});

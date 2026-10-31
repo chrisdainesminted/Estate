@@ -126,9 +126,11 @@ const PRIVACY = {
     [
       'If you create an account',
       <p>
-        An account is optional. It keeps a copy of your numbers, deals, checklist and listing alerts on our server so they sync to your other devices; it opens with a private
-        link, and we keep only a scrambled form of its key. If you add an email for alerts, we confirm it with a code and use it only to send the alerts you asked for. Delete
-        the account from the app at any time and its copy is erased.
+        An account is optional. It keeps what you choose to save on our server so it follows you to every device: your numbers, deals, checklist and listing alerts; your
+        rental profile, saved homes, applications and rental pages; and the landlord workspaces you open. You sign in with an email and password: we keep your email only in a
+        scrambled form for signing in, and never your password, only a one-way check of it. Your rental profile goes to a landlord only when you apply. If you add an email for
+        alerts, we confirm it with a code and use it only for the alerts you asked for. Delete the account from your account page at any time and its copy is erased (landlord
+        workspaces themselves stay until you clear them).
       </p>,
     ],
     [

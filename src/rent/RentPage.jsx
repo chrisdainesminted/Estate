@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { AlertTriangle, ArrowRight, BadgeCheck, CalendarPlus, CheckCircle2, ChevronLeft, ChevronRight, Clock, Copy, Flag, Printer, Receipt, Send, ShieldAlert, Wallet, Wrench } from 'lucide-react';
 import Logo from '../components/Logo.jsx';
 import SiteFooter from '../components/SiteFooter.jsx';
+import AccountLink from '../components/AccountLink.jsx';
+import { useAccount } from '../hooks/useAccount.js';
 import { Button } from '../components/ui.jsx';
 import { call, hashParams, links } from '../lib/landlordApi.js';
 import { money } from '../lib/format.js';
@@ -28,10 +30,11 @@ export default function RentPage() {
   return (
     <div className="min-h-dvh bg-(--page) text-zinc-900 antialiased dark:text-zinc-100">
       <header className="border-b border-hairline">
-        <div className="mx-auto flex h-14 max-w-2xl items-center px-4 sm:px-6">
+        <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4 sm:px-6">
           <a href="/" aria-label="Bedrock home">
             <Logo />
           </a>
+          <AccountLink />
         </div>
       </header>
       <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
@@ -124,7 +127,15 @@ function Apply({ ws, listingId }) {
   const [form, setForm] = useState({ name: '', email: '', phone: '', moveIn: '', people: '', message: '', income: '', employer: '', workYears: '', refName: '', refPhone: '', pets: '', website: '' });
   const [slotId, setSlotId] = useState('');
   const [sending, setSending] = useState(false);
+  const [keep, setKeep] = useState(true);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const account = useAccount();
+  // Fill the form from the saved rental profile once it loads (without overwriting anything typed).
+  const profile = account.data?.profile;
+  useEffect(() => {
+    if (!profile) return;
+    setForm((f) => Object.fromEntries(Object.entries(f).map(([k, v]) => [k, v === '' && profile[k] != null ? String(profile[k]) : v])));
+  }, [profile]);
 
   useEffect(() => {
     call(`/w/${ws}/listings/${listingId}`)
@@ -149,6 +160,14 @@ function Apply({ ws, listingId }) {
         localStorage.setItem(`bedrock-application-${listingId}`, token);
       } catch {
         // The status link on the next screen is the way back.
+      }
+      if (account.link) {
+        // Keep the application (and, if asked, these details) in the account.
+        await account.update('applications', (list) => [{ ws, token, listingId, title: li.title, at: Date.now() }, ...list]).catch(() => {});
+        if (keep) {
+          const { message, moveIn, website, ...details } = body; // eslint-disable-line no-unused-vars
+          await account.update('profile', (p) => ({ ...p, ...details, ...(message ? { message } : {}) })).catch(() => {});
+        }
       }
       location.hash = `w=${ws}&s=${token}`;
     } catch (err) {
@@ -242,6 +261,19 @@ function Apply({ ws, listingId }) {
         </section>
 
         {error && <Problem>{error}</Problem>}
+        {account.link ? (
+          <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+            <input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} className="accent-emerald-600" />
+            Save these details to my profile for next time
+          </label>
+        ) : (
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            <a href="/account/" className="font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-400">
+              Create a free account
+            </a>{' '}
+            to fill this in for you next time and keep every application in one place.
+          </p>
+        )}
         <Button type="submit" variant="primary" disabled={sending}>
           {sending ? 'Sending…' : sale ? (slotId ? 'Send and hold this time' : 'Send to the seller') : slotId ? 'Apply and hold this time' : 'Apply'} <ArrowRight className="size-4" aria-hidden />
         </Button>
@@ -314,6 +346,7 @@ function Status({ ws, token }) {
           <span>{info.title}</span>
         </h1>
         {info.body && <p className="mt-2 text-zinc-600 dark:text-zinc-400">{info.body}</p>}
+        <SaveToAccount section="applications" match={(a) => a.token === token} item={{ ws, token, title: st.listing?.title || '', at: Date.now() }} what="this application" />
       </div>
 
       {st.viewing && st.status !== 'declined' && st.status !== 'withdrawn' && (
@@ -437,6 +470,40 @@ function CopyText({ value, label }) {
   );
 }
 
+/** Keep this page in the account: a button when signed in, a nudge to sign up when not. */
+function SaveToAccount({ section, match, item, what }) {
+  const account = useAccount();
+  const [busy, setBusy] = useState(false);
+  if (account.status === 'loading') return null;
+  if (!account.link)
+    return (
+      <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
+        <a href="/account/" className="font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-400">
+          Create a free account
+        </a>{' '}
+        to keep {what} with your other homes and rentals.
+      </p>
+    );
+  const saved = (account.data?.[section] ?? []).some(match);
+  return saved ? (
+    <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-emerald-700 dark:text-emerald-400">
+      <CheckCircle2 className="size-4" aria-hidden /> Saved to <a href="/account/" className="underline underline-offset-2">your account</a>
+    </p>
+  ) : (
+    <Button
+      className="mt-3"
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        await account.update(section, (list) => [item, ...list]).catch(() => {});
+        setBusy(false);
+      }}
+    >
+      Save to my account
+    </Button>
+  );
+}
+
 /** This month's rent, how to send it by e-Transfer, "I've sent it", and receipts. */
 function PayRent({ ws, unitId, token }) {
   const [info, setInfo] = useState(null);
@@ -475,6 +542,7 @@ function PayRent({ ws, unitId, token }) {
           {info.tenant ? ` · ${info.tenant}` : ''}
         </p>
         <h1 className={`${h1} mt-1`}>Rent for {monthLabel(st.month)}</h1>
+        <SaveToAccount section="tenancies" match={(x) => x.ws === ws && x.unitId === unitId} item={{ ws, unitId, token, label: [info.unit, info.address].filter(Boolean).join(', '), landlord: info.landlord?.name || '', at: Date.now() }} what="this rental" />
         <p className="mt-3 text-4xl font-semibold tracking-tight tabular-nums text-zinc-950 dark:text-white">
           {money(st.owing)}
           <span className="ml-2 text-base font-medium text-zinc-500 dark:text-zinc-400">{st.owing === 0 ? 'all paid, thank you' : `due on the ${st.dueDay}${['th', 'st', 'nd', 'rd'][st.dueDay % 10 > 3 || [11, 12, 13].includes(st.dueDay) ? 0 : st.dueDay % 10]}`}</span>

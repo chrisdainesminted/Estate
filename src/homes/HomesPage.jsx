@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { BadgeCheck, Bath, BedDouble, Home, Plus } from 'lucide-react';
+import { BadgeCheck, Bath, BedDouble, Heart, Home, Plus } from 'lucide-react';
+import { useAccount } from '../hooks/useAccount.js';
 import Logo from '../components/Logo.jsx';
 import SiteFooter from '../components/SiteFooter.jsx';
+import AccountLink from '../components/AccountLink.jsx';
 import { Button } from '../components/ui.jsx';
 import { call } from '../lib/landlordApi.js';
 import { CITIES, PROVINCES, cityByKey } from '../lib/canada.js';
@@ -28,6 +30,7 @@ export default function HomesPage() {
             <Logo />
           </a>
           <nav aria-label="Site" className="flex items-center gap-1 text-sm">
+            <AccountLink />
             <a href="/app/" className="hidden rounded-md px-3 py-2 font-medium text-zinc-600 hover:bg-well hover:text-zinc-900 sm:inline-block dark:text-zinc-400 dark:hover:text-white">
               Calculators
             </a>
@@ -76,6 +79,22 @@ const readQuery = () => {
 };
 
 function Search() {
+  const account = useAccount();
+  const savedKeys = new Set((account.data?.saved ?? []).map((x) => `${x.ws}:${x.id}`));
+  const toggleSave = (h) => {
+    if (!account.link) {
+      window.location.href = '/account/';
+      return;
+    }
+    const key = `${h.ws}:${h.id}`;
+    account
+      .update('saved', (list) =>
+        savedKeys.has(key)
+          ? list.filter((x) => `${x.ws}:${x.id}` !== key)
+          : [{ ws: h.ws, id: h.id, title: h.title, kind: h.kind, price: h.price, city: h.city, area: h.area, photo: h.photo || '', at: Date.now() }, ...list],
+      )
+      .catch(() => {});
+  };
   const [q, setQ] = useState(readQuery);
   const [res, setRes] = useState(null);
   const [error, setError] = useState('');
@@ -201,7 +220,7 @@ function Search() {
         <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {res.items.map((h) => (
             <li key={h.key}>
-              <Card h={h} />
+              <Card h={h} saved={savedKeys.has(`${h.ws}:${h.id}`)} onSave={() => toggleSave(h)} />
             </li>
           ))}
         </ul>
@@ -226,10 +245,20 @@ function Search() {
   );
 }
 
-function Card({ h }) {
+function Card({ h, saved, onSave }) {
   const type = PROPERTY_TYPES.find((t) => t.key === h.propertyType)?.label;
   const place = [h.area, h.city ? cityByKey(h.city).name.replace(/^Elsewhere in /, '') : ''].filter(Boolean).join(', ');
   return (
+    <div className="relative">
+    <button
+      type="button"
+      onClick={onSave}
+      aria-pressed={saved}
+      aria-label={saved ? `Remove ${h.title} from saved homes` : `Save ${h.title}`}
+      className="absolute top-3 right-3 z-10 grid size-9 place-items-center rounded-full bg-white/90 text-zinc-700 shadow-sm backdrop-blur transition hover:scale-105 dark:bg-zinc-950/70 dark:text-zinc-200"
+    >
+      <Heart className={`size-4 ${saved ? 'fill-rose-500 text-rose-500' : ''}`} aria-hidden />
+    </button>
     <a href={`/listing/#w=${h.ws}&l=${h.id}`} className="tile group block overflow-hidden rounded-xl border border-hairline bg-(--panel) focus-visible:outline-2 focus-visible:outline-(--accent)">
       <div className="aspect-[4/3] bg-zinc-100 dark:bg-white/[0.04]">
         {h.photo ? (
@@ -266,6 +295,7 @@ function Card({ h }) {
         </p>
       </div>
     </a>
+    </div>
   );
 }
 

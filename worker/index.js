@@ -20,6 +20,7 @@ import { COLLECTIONS } from './schema.js';
 import { PHOTO_TYPES, Store, StoreError, hashKey, randomToken } from './store.js';
 import { DirectoryStore, REPORT_REASONS, cleanInbox } from './directory.js';
 import { AccountStore } from './account.js';
+import { LoginStore, normalEmail } from './auth.js';
 import { alertMatches, alertName, feedDoc, freshMatches } from '../src/lib/market.js';
 import { homeFor, normalizeProfile } from '../src/lib/firstHome.js';
 import { cityByKey } from '../src/lib/canada.js';
@@ -232,6 +233,22 @@ export class Directory extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
     this.store = new DirectoryStore(ctx.storage.sql);
+    this.logins = new LoginStore(ctx.storage.sql);
+  }
+
+  /** Email-and-password sign-in (auth.js). Rate-limited per address. */
+  async auth(req) {
+    try {
+      this.store.limit(req.ip, `auth-${req.op}`, req.op === 'login' ? 30 : 10);
+      if (req.op === 'signup') return await this.logins.signup(req.email, req.password, req.account);
+      if (req.op === 'login') return await this.logins.login(req.email, req.password);
+      if (req.op === 'password') return await this.logins.changePassword(req.email, req.password, req.next);
+      if (req.op === 'remove') return (await this.logins.remove(req.email), { ok: true });
+      throw new StoreError(404, 'Unknown request.');
+    } catch (e) {
+      if (e instanceof StoreError) return { error: e.message, status: e.status };
+      throw e;
+    }
   }
 
   upsert(summary, province) {
@@ -373,9 +390,17 @@ export class Account extends DurableObject {
           await this.register(req.id);
           return r;
         }
-        case 'wipe':
+        case 'section':
+          return { [req.name]: a.setSection(req.name, req.body?.value) };
+        case 'setLoginEmail':
+          a.setLoginEmail(req.email);
+          return { ok: true };
+        case 'wipe': {
           await directory(this.env).setAlerting(req.id, false);
+          const login = a.read().loginEmail;
+          if (login) await directory(this.env).auth({ op: 'remove', email: login, ip: 'internal' });
           return a.wipe();
+        }
         default:
           throw new StoreError(404, 'Unknown request.');
       }
@@ -461,6 +486,32 @@ async function api(request, env, url) {
     if (res.error) return json({ error: res.error }, res.status);
     return json({ id, key }, 201);
   }
+  // Sign up, sign in and change password with an email and password.
+  if (parts[0] === 'auth' && parts.length === 2 && method === 'POST') {
+    const body = await readBody(request);
+    const email = normalEmail(body.email);
+    if (parts[1] === 'login') return answer(await directory(env).auth({ op: 'login', email, password: body.password, ip }));
+    if (parts[1] === 'password') return answer(await directory(env).auth({ op: 'password', email, password: body.password, next: body.next, ip }));
+    if (parts[1] === 'signup') {
+      // Attach the account this browser already has, if it sends one that opens; otherwise start a new one.
+      let account = null;
+      if (body.account && ID.test(body.account.id ?? '') && typeof body.account.key === 'string') {
+        const r = await env.ACCOUNT.get(env.ACCOUNT.idFromName(body.account.id)).call({ op: 'read', id: body.account.id, key: body.account.key });
+        if (!r.error && !r.loginEmail) account = { id: body.account.id, key: body.account.key };
+      }
+      if (!account) {
+        account = { id: randomToken(12), key: randomToken(24) };
+        const made = await env.ACCOUNT.get(env.ACCOUNT.idFromName(account.id)).call({ op: 'init', key: account.key });
+        if (made.error) return json({ error: made.error }, made.status);
+      }
+      const res = await directory(env).auth({ op: 'signup', email, password: body.password, account, ip });
+      if (res.error) return json({ error: res.error }, res.status);
+      await env.ACCOUNT.get(env.ACCOUNT.idFromName(account.id)).call({ op: 'setLoginEmail', id: account.id, key: account.key, email });
+      return json(account, 201);
+    }
+    return json({ error: 'Not found.' }, 404);
+  }
+
   if (parts[0] === 'a' && ID.test(parts[1] ?? '')) {
     const id = parts[1];
     const key = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
@@ -474,9 +525,10 @@ async function api(request, env, url) {
       : sub === 'email' && method === 'POST' ? 'emailSend'
       : sub === 'email/check' && method === 'POST' ? 'emailCheck'
       : sub === 'email' && method === 'DELETE' ? 'emailDrop'
+      : /^s\/[a-z]+$/.test(sub) && method === 'PUT' ? 'section'
       : null;
     if (!op) return json({ error: 'Not found.' }, 404);
-    return answer(await env.ACCOUNT.get(env.ACCOUNT.idFromName(id)).call({ op, id, key, body }));
+    return answer(await env.ACCOUNT.get(env.ACCOUNT.idFromName(id)).call({ op, id, key, body, name: sub.slice(2) }));
   }
 
   // The public search, and reporting a listing.

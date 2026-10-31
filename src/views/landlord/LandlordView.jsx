@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CalendarDays, CreditCard, Home, Inbox as InboxIcon, KeyRound, Landmark, ReceiptText, Scale, Settings, Wrench } from 'lucide-react';
 import { Button, Card, CardHeader, ViewHeader } from '../../components/ui.jsx';
 import { ApiError, call, links, saveWorkspace, savedWorkspace } from '../../lib/landlordApi.js';
+import { useAccount } from '../../hooks/useAccount.js';
 import { cityByKey } from '../../lib/canada.js';
 import { rentStatus, today } from '../../lib/landlord.js';
 import { CopyButton, Input } from './shared.jsx';
@@ -99,6 +100,28 @@ export default function LandlordView({ homeCity }) {
       window.removeEventListener('focus', onFocus);
     };
   }, [load]);
+
+  // Signed in: this workspace is kept in the account, and a device without one opens the account's latest.
+  const account = useAccount();
+  const accountWorkspaces = account.data?.workspaces;
+  const wsName = data?.settings?.name;
+  useEffect(() => {
+    if (!accountWorkspaces) return;
+    if (!ws) {
+      const latest = [...accountWorkspaces].sort((a, b) => b.at - a.at)[0];
+      if (latest) {
+        saveWorkspace(latest);
+        setWs({ id: latest.id, key: latest.key });
+      }
+      return;
+    }
+    const known = accountWorkspaces.find((w) => w.id === ws.id);
+    if (!known || (wsName && known.name !== wsName)) {
+      account
+        .update('workspaces', (list) => [{ id: ws.id, key: ws.key, name: wsName || known?.name || 'Landlord workspace', at: known?.at || Date.now() }, ...list.filter((w) => w.id !== ws.id)])
+        .catch(() => {});
+    }
+  }, [accountWorkspaces, ws, wsName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Save a record (create when `id` is null) and fold the answer into what's on screen. */
   const save = useCallback(

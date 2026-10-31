@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { BellRing, Cloud, Copy, Mail, Trash2 } from 'lucide-react';
 import Sheet from './Sheet.jsx';
 import { Button } from './ui.jsx';
-import { accountCall, accountUrl, createAccount, saveAccountLink } from '../lib/account.js';
+import { accountCall, accountUrl, signOut } from '../lib/account.js';
+import AuthForm from './AuthForm.jsx';
 import { alertName } from '../lib/market.js';
 import { cityByKey } from '../lib/canada.js';
 
@@ -50,36 +51,21 @@ export default function AccountSheet({ open, onClose, hosted, account, onAccount
             On your Claude page, your numbers and deals already sync to your Claude account. A Bedrock account is for the website.
           </p>
         ) : !account ? (
-          <>
-            <div>
-              <h3 className="text-base font-semibold text-zinc-950 dark:text-white">Keep your numbers on every device</h3>
-              <p className="mt-1 leading-relaxed text-zinc-600 dark:text-zinc-400">
-                Right now everything is saved only in this browser. An account keeps your numbers, deals, checklist and listing alerts in sync on your phone and
-                computer. No password: you get a private link that opens it.
-              </p>
-            </div>
-            <Button
-              variant="primary"
-              disabled={busy}
-              onClick={() =>
-                run(async () => {
-                  const a = await createAccount();
-                  saveAccountLink(a);
-                  onAccount(a);
-                })
-              }
-            >
-              <Cloud className="size-4" aria-hidden /> {busy ? 'Creating…' : 'Create my account'}
-            </Button>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">Free. Your numbers stay private; see the <a href="/privacy/" className="underline">privacy policy</a>.</p>
-          </>
+          <AuthForm onDone={(link) => onAccount(link)} />
         ) : (
           <>
             <div>
               <h3 className="flex items-center gap-2 text-base font-semibold text-zinc-950 dark:text-white">
-                <Cloud className="size-4 text-emerald-600" aria-hidden /> Your account is on
+                <Cloud className="size-4 text-emerald-600" aria-hidden /> {remote?.loginEmail ? `Signed in as ${remote.loginEmail}` : 'Your account is on'}
               </h3>
-              <p className="mt-1 leading-relaxed text-zinc-600 dark:text-zinc-400">Open this link on your other devices to sync them. Keep it private: anyone with it can see your numbers.</p>
+              <p className="mt-1 leading-relaxed text-zinc-600 dark:text-zinc-400">
+                Your numbers and deals sync wherever you sign in.{' '}
+                <a href="/account/" className="font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-400">
+                  Open your account page
+                </a>{' '}
+                for saved homes, applications, rentals and workspaces.
+              </p>
+              <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">Backup link (opens the account without a password; keep it private):</p>
             </div>
             <input readOnly value={link} aria-label="Your account link" onFocus={(e) => e.target.select()} className={`${field} font-mono text-xs`} />
             <div className="flex flex-wrap gap-2">
@@ -156,8 +142,8 @@ export default function AccountSheet({ open, onClose, hosted, account, onAccount
             </section>
 
             <section className="flex flex-wrap gap-2 border-t border-hairline pt-5">
-              <Button variant="ghost" onClick={() => confirm('Stop syncing on this device? Your account stays; open your link to sync again.') && (saveAccountLink(null), onAccount(null))}>
-                Forget on this device
+              <Button variant="ghost" onClick={() => confirm('Sign out on this device? Your account stays; sign in again any time.') && (signOut(), onAccount(null))}>
+                Sign out on this device
               </Button>
               <Button
                 variant="ghost"
@@ -166,7 +152,7 @@ export default function AccountSheet({ open, onClose, hosted, account, onAccount
                   confirm('Delete your account? Everything saved to it is erased and the link stops working. This browser keeps its own copy.') &&
                   run(async () => {
                     await accountCall(account, '', { method: 'DELETE' });
-                    saveAccountLink(null);
+                    signOut();
                     onAccount(null);
                   })
                 }

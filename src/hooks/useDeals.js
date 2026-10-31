@@ -101,6 +101,16 @@ export function useDeals() {
   const [sync, setSync] = useState('local');
   // A Bedrock account (website only): set when this browser has its private link.
   const [account, setAccount] = useState(accountLink);
+  // Signing in or out anywhere on the page (or in another tab) switches the sync target.
+  useEffect(() => {
+    const on = () => setAccount(accountLink());
+    window.addEventListener('bedrock-account', on);
+    window.addEventListener('storage', on);
+    return () => {
+      window.removeEventListener('bedrock-account', on);
+      window.removeEventListener('storage', on);
+    };
+  }, []);
   const stateRef = useRef(state);
   stateRef.current = state;
   const cloud = useRef(null);
@@ -143,7 +153,14 @@ export function useDeals() {
         if (dead) return;
         const remote = snap.exists ? snap.data() : null;
         const local = stateRef.current;
-        if (remote && Array.isArray(remote.deals) && remote.deals.length && (Number(remote.updatedAt) || 0) >= local.updatedAt) {
+        let preferRemote = false;
+        try {
+          preferRemote = sessionStorage.getItem('bedrock-prefer-account') === '1';
+          sessionStorage.removeItem('bedrock-prefer-account');
+        } catch {
+          // Newest wins.
+        }
+        if (remote && Array.isArray(remote.deals) && remote.deals.length && (preferRemote || (Number(remote.updatedAt) || 0) >= local.updatedAt)) {
           syncedAt.current = Number(remote.updatedAt) || 0;
           setState((s) => normalize(remote, s.activeId));
         } else {

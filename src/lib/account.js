@@ -82,3 +82,43 @@ export function accountRef(link) {
     },
   };
 }
+
+// ---- signing in with an email and password ----
+
+async function authCall(path, body) {
+  const res = await fetch(`/api/auth/${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Couldn’t reach Bedrock. Try again in a minute.');
+  return data;
+}
+
+/** Tell every part of the page (and other tabs) that the account changed. */
+export function announceAccount(link) {
+  saveAccountLink(link);
+  window.dispatchEvent(new CustomEvent('bedrock-account', { detail: link }));
+}
+
+/** A new account with this email and password, keeping what this browser already saved to an account. */
+export async function signUp(email, password) {
+  const link = await authCall('signup', { email, password, account: accountLink() });
+  announceAccount({ id: link.id, key: link.key });
+  return link;
+}
+
+export async function signIn(email, password) {
+  const link = await authCall('login', { email, password });
+  // Signing in to an existing account: its saved library wins over this browser's, once.
+  try {
+    sessionStorage.setItem('bedrock-prefer-account', '1');
+  } catch {
+    // Without it, the newer of the two wins as usual.
+  }
+  announceAccount({ id: link.id, key: link.key });
+  return link;
+}
+
+export const changePassword = (email, password, next) => authCall('password', { email, password, next });
+
+export function signOut() {
+  announceAccount(null);
+}

@@ -7,6 +7,7 @@ import { stepsFor } from '../lib/suites.js';
 import { cityByKey, guessCity } from '../lib/canada.js';
 import CitySelect from '../components/CitySelect.jsx';
 import SiteFooter from '../components/SiteFooter.jsx';
+import AccountLink from '../components/AccountLink.jsx';
 import { DEFAULT_MARKET, INDEX_DOC, INSURANCE_MIN, feedDoc, listingCity, listingToDeal, localMarket } from '../lib/market.js';
 import { money } from '../lib/format.js';
 
@@ -113,6 +114,7 @@ export default function Landing() {
 
 const NAV = [
   ['Find a home', '/homes/'],
+  ['Your account', '/account/'],
   ['List a home', '/app/?view=landlord'],
   ['How it works', '#how'],
   ['Money you can get', '#money'],
@@ -134,13 +136,14 @@ function Nav() {
           <Logo />
         </a>
         <nav aria-label="Sections" className="hidden items-center gap-7 text-sm font-medium text-zinc-600 md:flex dark:text-zinc-400">
-          {NAV.map(([label, href]) => (
+          {NAV.filter(([, href]) => href !== '/account/').map(([label, href]) => (
             <a key={label} className="hover:text-zinc-950 dark:hover:text-white" href={href}>
               {label}
             </a>
           ))}
         </nav>
         <div className="flex items-center gap-1">
+          <AccountLink className="max-sm:hidden" />
           <a href={APP} className={`${primary} px-4 py-2 text-sm`}>
             Open the app
           </a>
