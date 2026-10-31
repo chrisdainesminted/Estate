@@ -381,9 +381,9 @@ function Start({ onHome, onExample }) {
 /** While someone browses the example, say so, and offer the questions. */
 function ExampleNote({ onStart }) {
   return (
-    <div className="flex flex-col gap-3 border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
+    <div className="panel flex flex-col gap-3 px-4 py-3 text-sm text-zinc-700 shadow-[inset_3px_0_0_var(--accent)] sm:flex-row sm:items-center sm:justify-between dark:text-zinc-300">
       <p>
-        <span className="font-semibold">These are example numbers:</span> buying in {placeName(cityByKey(DEFAULT_PROFILE.city))}, {money(DEFAULT_PROFILE.income)} income, {money(DEFAULT_PROFILE.savings)} saved, paying {money(DEFAULT_PROFILE.rentNow)}{' '}
+        <span className="font-semibold text-zinc-950 dark:text-white">These are example numbers:</span> buying in {placeName(cityByKey(DEFAULT_PROFILE.city))}, {money(DEFAULT_PROFILE.income)} income, {money(DEFAULT_PROFILE.savings)} saved, paying {money(DEFAULT_PROFILE.rentNow)}{' '}
         rent.
       </p>
       <Button variant="primary" className="shrink-0" onClick={onStart}>

@@ -30,7 +30,6 @@ import {
   Trash2,
   Undo2,
   Flag,
-  UserRound,
 } from 'lucide-react';
 import { useDeals } from './hooks/useDeals.js';
 import { accountCall } from './lib/account.js';
@@ -57,7 +56,6 @@ import TaxCard from './components/TaxCard.jsx';
 import ProjectionChart from './components/ProjectionChart.jsx';
 import SecondOpinion from './components/SecondOpinion.jsx';
 import DealPicker from './components/DealPicker.jsx';
-import ExportMenu from './components/ExportMenu.jsx';
 import DealMemo from './components/DealMemo.jsx';
 import CommandPalette, { shortcutLabel } from './components/CommandPalette.jsx';
 import Sheet from './components/Sheet.jsx';
@@ -66,7 +64,7 @@ import { SectionGroup, SectionsContext, useSectionsState } from './components/Se
 import Dock from './components/Dock.jsx';
 import Logo, { LogoMark } from './components/Logo.jsx';
 import { useToast } from './components/toast.jsx';
-import { Button, ConfirmButton, SkeletonCard, signedClass } from './components/ui.jsx';
+import { Button, SkeletonCard, signedClass } from './components/ui.jsx';
 import { normalizeProfile } from './lib/firstHome.js';
 import { guessCity } from './lib/canada.js';
 
@@ -80,6 +78,7 @@ const HomeView = lazy(() => import('./views/HomeView.jsx'));
 const LandlordView = lazy(() => import('./views/landlord/LandlordView.jsx'));
 const HelpSheet = lazy(() => import('./components/HelpSheet.jsx'));
 const AccountSheet = lazy(() => import('./components/AccountSheet.jsx'));
+import AppMenu from './components/AppMenu.jsx';
 const ShareSheet = lazy(() => import('./components/ShareSheet.jsx'));
 
 const NO_ADJ = { rateDelta: 0, downPct: null, rentPct: 0 };
@@ -162,10 +161,10 @@ const SYNC_TEXT = {
 function SyncStatus({ sync, account, onOpen }) {
   const s = SYNC_TEXT[sync === 'cloud' && account ? 'account' : sync] ?? SYNC_TEXT.local;
   return (
-    <button type="button" onClick={onOpen} className={`flex max-w-56 items-center gap-1.5 text-left hover:underline ${s.cls}`}>
+    <button type="button" onClick={onOpen} className={`flex items-center gap-1.5 text-left whitespace-nowrap hover:underline ${s.cls}`}>
       <s.icon className="size-3.5 shrink-0" aria-hidden />
       {s.text}
-      {sync === 'local' && !HOSTED && <span className="text-emerald-700 dark:text-emerald-400"> · sync your devices</span>}
+      {sync === 'local' && !HOSTED && <span className="text-emerald-700 dark:text-emerald-400">· Sync</span>}
     </button>
   );
 }
@@ -649,45 +648,33 @@ export default function App() {
               <DealPicker items={baseItems} activeId={activeId} onSelect={pickDeal} onNew={newDeal} />
             </div>
 
-            <div className="ml-auto flex items-center gap-1 lg:ml-0">
-              <button type="button" onClick={() => setPaletteOpen(true)} className={headerIcon} aria-label="Search deals and commands" title={`Search (${shortcutLabel})`}>
-                <Search className="size-4" aria-hidden />
-                <kbd className="hidden rounded-[3px] px-1.5 py-0.5 font-sans text-[11px] text-zinc-500 ring-1 ring-(--line-strong) ring-inset min-[1400px]:inline dark:text-zinc-400">{shortcutLabel}</kbd>
-              </button>
-              {/* On phones, export and start-over live in the search menu to keep the header to one row. */}
-              <div className="max-sm:hidden">
-                <ExportMenu current={current} count={baseItems.length} exports={exports} />
-              </div>
-              <div className="max-sm:hidden">
-                <ConfirmButton
-                  label="Start over with example deals"
-                  title="Start over with the examples?"
-                  body={`This replaces all ${deals.length} saved deals with the five examples. You can undo it right after.`}
-                  confirmLabel="Replace my deals"
-                  onConfirm={() => {
-                    withUndo('Replaced your deals with the examples', lib.resetAll);
-                    setAdj(NO_ADJ);
-                  }}
-                  className={headerIcon}
-                >
-                  <RotateCcw className="size-4" aria-hidden />
-                </ConfirmButton>
-              </div>
+            <div className="ml-auto flex items-center gap-2 lg:ml-0">
               <button
                 type="button"
-                onClick={() => setAccountOpen(true)}
-                className={`${headerIcon} ${lib.account ? 'text-emerald-700 dark:text-emerald-400' : ''}`}
-                aria-label={lib.account ? 'Your account (synced)' : 'Your account: sync your devices'}
-                title={lib.account ? 'Your account' : 'Sync your devices'}
+                onClick={() => setPaletteOpen(true)}
+                aria-label="Search deals and commands"
+                title={`Search (${shortcutLabel})`}
+                className="inline-flex h-9 items-center gap-2 rounded-full bg-well px-2.5 text-sm whitespace-nowrap text-zinc-500 xl:px-3 ring-1 ring-(--line-strong) transition ring-inset hover:text-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:text-zinc-400 dark:hover:text-zinc-200 xl:w-52"
               >
-                <UserRound className="size-4" aria-hidden />
+                <Search className="size-4" aria-hidden />
+                <span className="max-xl:sr-only">Search…</span>
+                <kbd className="ml-auto hidden rounded-md px-1.5 py-0.5 font-sans text-[11px] ring-1 ring-(--line-strong) ring-inset xl:inline">{shortcutLabel}</kbd>
               </button>
-              <button type="button" onClick={() => setHelpOpen(true)} className={headerIcon} aria-label="How Bedrock works" title="How Bedrock works">
-                <CircleHelp className="size-4" aria-hidden />
-              </button>
-              <Button variant="ghost" className="px-2.5" onClick={toggle} aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'} title="Toggle theme">
-                {dark ? <Sun className="size-4" aria-hidden /> : <Moon className="size-4" aria-hidden />}
-              </Button>
+              <AppMenu
+                synced={lib.sync === 'cloud'}
+                syncText={lib.sync === 'cloud' ? (lib.account || HOSTED ? `Synced to your ${lib.account ? 'Bedrock' : 'Claude'} account` : 'Synced') : 'Saved in this browser only'}
+                dark={dark}
+                onToggleTheme={toggle}
+                onAccount={() => setAccountOpen(true)}
+                onHelp={() => setHelpOpen(true)}
+                exports={exports}
+                dealName={current?.deal?.name}
+                count={baseItems.length}
+                onReset={() => {
+                  withUndo('Replaced your deals with the examples', lib.resetAll);
+                  setAdj(NO_ADJ);
+                }}
+              />
             </div>
           </div>
         </header>

@@ -7,7 +7,7 @@ import { InfoTip } from './motion.jsx';
 /** Flat panel with a hairline edge. `delay` (ms) staggers its fade-in when a view opens. */
 export function Card({ className = '', delay = 0, style, children, ...rest }) {
   return (
-    <section className={`panel rise rounded-md ${className}`} style={{ animationDelay: `${delay}ms`, ...style }} {...rest}>
+    <section className={`panel rise ${className}`} style={{ animationDelay: `${delay}ms`, ...style }} {...rest}>
       {children}
     </section>
   );
