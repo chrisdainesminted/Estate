@@ -39,7 +39,7 @@ import { useMarket, useMarketIndex } from './hooks/useMarket.js';
 import { OWN_DOWN_PCT, analyzeDeal, applyAdjustments, isNeutralAdjustment, maxOffer, ownMoney, projectDeal, refiAnalysis, saleAnalysis } from './lib/finance.js';
 import { money, percent, ratio } from './lib/format.js';
 import { DEFAULT_DEAL, MAX_COMPARE, switchRules } from './lib/presets.js';
-import { homePatch, listingCity, listingToDeal, localMarket, normalizeMarket, rankListings } from './lib/market.js';
+import { LISTING_CITIES, homePatch, listingCity, listingToDeal, localMarket, normalizeMarket, rankListings } from './lib/market.js';
 import { quickDeal } from './lib/quick.js';
 import { readShared, sameDeal } from './lib/share.js';
 import { whatIfSummary } from './lib/explain.js';
@@ -193,6 +193,16 @@ function viewFromAddress() {
   url.searchParams.delete('view');
   window.history.replaceState(null, '', url.pathname + url.search + url.hash);
   return v;
+}
+
+/** A listings city named in the address (?city=calgary), from the homepage's link; read once, then tidied away. */
+function cityFromAddress() {
+  const c = new URLSearchParams(window.location.search).get('city');
+  if (!c) return null;
+  const url = new URL(window.location.href);
+  url.searchParams.delete('city');
+  window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+  return LISTING_CITIES.includes(c) ? c : null;
 }
 
 function useStoredView() {
@@ -378,7 +388,12 @@ export default function App() {
   const rents = useMemo(() => normalizeMarket(baseMarket).rents, [baseMarket]);
   // Listings for one city at a time: the one picked on the Listings tab, else where you're buying.
   const marketIndex = useMarketIndex();
-  const listCity = listingCity(baseMarket?.listingCity, homeCity, marketIndex.feed);
+  // The homepage links to a city's listings; open on that city and remember it as the one picked.
+  const [linkedCity] = useState(cityFromAddress);
+  useEffect(() => {
+    if (linkedCity) lib.updateSettings('market', { listingCity: linkedCity });
+  }, [linkedCity]); // eslint-disable-line react-hooks/exhaustive-deps
+  const listCity = listingCity(baseMarket?.listingCity ?? linkedCity, homeCity, marketIndex.feed);
   const market = useMemo(() => localMarket(baseMarket, listCity), [baseMarket, listCity]);
   const marketFeed = useMarket(listCity);
 

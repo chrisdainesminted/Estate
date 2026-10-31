@@ -1,23 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, ArrowUpRight, Building2, ClipboardCheck, Home, KeyRound, Landmark, ListChecks, Lock, Plus } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Building2, ClipboardCheck, Home, KeyRound, Landmark, ListChecks, Lock, Menu, Plus, X } from 'lucide-react';
 import Logo from '../components/Logo.jsx';
 import { DEFAULT_PROFILE, RULES, RULES_CHECKED, benefits, buyCheck, homeFor, incomeToQualify } from '../lib/firstHome.js';
 import { stepsFor } from '../lib/suites.js';
 import { cityByKey, guessCity } from '../lib/canada.js';
 import CitySelect from '../components/CitySelect.jsx';
-import { DEFAULT_MARKET, INSURANCE_MIN, MARKET, listingToDeal } from '../lib/market.js';
+import SiteFooter from '../components/SiteFooter.jsx';
+import { DEFAULT_MARKET, INDEX_DOC, INSURANCE_MIN, feedDoc, listingCity, listingToDeal, localMarket } from '../lib/market.js';
 import { money } from '../lib/format.js';
 
 /**
  * The website's front page at /. Every number on it comes from the same
  * engine as the app, worked out for a sample buyer (DEFAULT_PROFILE) and
  * the city the visitor picks (their time zone's guess to start), and the
- * listings are today's Thunder Bay feed.
+ * listings are the morning run's feed for that city, or Thunder Bay's until
+ * the run reaches it.
  */
 
 const APP = '/app/';
 const open = (view) => `${APP}?view=${view}`;
-const FEED_URL = `/data/${MARKET.doc}.json`;
 const SAMPLE = DEFAULT_PROFILE;
 const placeName = (c) => c.name.replace(/^Elsewhere in /, '');
 
@@ -50,19 +51,30 @@ function buyOption(units, place) {
   return { price, down: c.down, downPct: c.down / price, cashNeeded: c.cashNeeded, payment: c.plan.payment, rest: taxes + insurance + RULES.heatMonthly, rentIn, outgoing, live: outgoing - rentIn, income };
 }
 
-function useFeed() {
-  const [feed, setFeed] = useState(null);
+/** A file the morning run publishes under /data/: null while loading, false if it isn't there. */
+function useData(doc, isValid) {
+  const [state, setState] = useState({ doc: null, data: null });
   useEffect(() => {
     let live = true;
-    fetch(FEED_URL)
+    fetch(`/data/${doc}.json`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((f) => live && setFeed(f && Array.isArray(f.listings) ? f : false))
-      .catch(() => live && setFeed(false));
+      .then((f) => live && setState({ doc, data: isValid(f) ? f : false }))
+      .catch(() => live && setState({ doc, data: false }));
     return () => {
       live = false;
     };
-  }, []);
-  return feed;
+  }, [doc, isValid]);
+  return state.doc === doc ? state.data : null;
+}
+
+const isFeed = (f) => Array.isArray(f?.listings);
+const isIndex = (f) => !!f?.cities;
+
+/** The listings for the picked city once the run has some there, else Thunder Bay's. */
+function useFeed(city) {
+  const index = useData(INDEX_DOC, isIndex);
+  const shown = listingCity(null, city, index || null);
+  return { feed: useData(feedDoc(shown), isFeed), shown, index };
 }
 
 const median = (xs) => {
@@ -73,8 +85,8 @@ const median = (xs) => {
 const longDate = (iso) => (iso ? new Date(`${iso}T12:00:00`).toLocaleDateString('en-CA', { month: 'long', day: 'numeric', year: 'numeric' }) : '');
 
 export default function Landing() {
-  const feed = useFeed();
   const [city, setCity] = useState(guessCity);
+  const { feed, shown, index } = useFeed(city);
   return (
     <div className="min-h-dvh bg-(--page) text-zinc-900 antialiased dark:text-zinc-100">
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-(--panel) focus:px-3 focus:py-2">
@@ -87,18 +99,33 @@ export default function Landing() {
         <How />
         <Features />
         <Money city={city} />
-        <Today feed={feed} />
+        <Today feed={feed} shown={shown} picked={city} index={index} />
         <RedTape city={city} />
         <Trust />
         <Faq />
         <Closing />
       </main>
-      <Footer />
+      <SiteFooter />
     </div>
   );
 }
 
+const NAV = [
+  ['Find a home', '/homes/'],
+  ['List a home', '/app/?view=landlord'],
+  ['How it works', '#how'],
+  ['Money you can get', '#money'],
+  ['Questions', '#faq'],
+];
+
 function Nav() {
+  const [menu, setMenu] = useState(false);
+  useEffect(() => {
+    if (!menu) return undefined;
+    const close = (e) => e.key === 'Escape' && setMenu(false);
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, [menu]);
   return (
     <header className="sticky top-0 z-30 border-b border-hairline bg-(--page)/90 backdrop-blur supports-[backdrop-filter]:bg-(--page)/75">
       <div className={`${shell} flex h-16 items-center justify-between gap-4`}>
@@ -106,26 +133,41 @@ function Nav() {
           <Logo />
         </a>
         <nav aria-label="Sections" className="hidden items-center gap-7 text-sm font-medium text-zinc-600 md:flex dark:text-zinc-400">
-          <a className="hover:text-zinc-950 dark:hover:text-white" href="/homes/">
-            Find a home
-          </a>
-          <a className="hover:text-zinc-950 dark:hover:text-white" href="/app/?view=landlord">
-            List a home
-          </a>
-          <a className="hover:text-zinc-950 dark:hover:text-white" href="#how">
-            How it works
-          </a>
-          <a className="hover:text-zinc-950 dark:hover:text-white" href="#money">
-            Money you can get
-          </a>
-          <a className="hover:text-zinc-950 dark:hover:text-white" href="#faq">
-            Questions
-          </a>
+          {NAV.map(([label, href]) => (
+            <a key={label} className="hover:text-zinc-950 dark:hover:text-white" href={href}>
+              {label}
+            </a>
+          ))}
         </nav>
-        <a href={APP} className={`${primary} px-4 py-2 text-sm`}>
-          Open the app
-        </a>
+        <div className="flex items-center gap-1">
+          <a href={APP} className={`${primary} px-4 py-2 text-sm`}>
+            Open the app
+          </a>
+          <button
+            type="button"
+            onClick={() => setMenu((m) => !m)}
+            aria-expanded={menu}
+            aria-controls="site-menu"
+            aria-label={menu ? 'Close menu' : 'Menu'}
+            className="grid size-10 place-items-center rounded-md text-zinc-700 hover:bg-well md:hidden dark:text-zinc-300"
+          >
+            {menu ? <X className="size-5" aria-hidden /> : <Menu className="size-5" aria-hidden />}
+          </button>
+        </div>
       </div>
+      {menu && (
+        <nav id="site-menu" aria-label="Menu" className="border-t border-hairline md:hidden">
+          <ul className={`${shell} divide-y divide-hairline py-2`}>
+            {NAV.map(([label, href]) => (
+              <li key={label}>
+                <a href={href} onClick={() => setMenu(false)} className="block py-3 text-base font-medium text-zinc-800 dark:text-zinc-200">
+                  {label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
     </header>
   );
 }
@@ -177,14 +219,18 @@ function Hero() {
   );
 }
 
-/** Today's Thunder Bay feed, run through the same numbers as the app's Listings tab. */
-function Today({ feed }) {
+/** The morning run's feed for the city shown, run through the same numbers as the app's Listings tab. */
+function Today({ feed, shown, picked, index }) {
+  const place = cityByKey(shown);
+  const wanted = cityByKey(picked);
+  const covered = index ? Object.values(index.cities).filter((c) => c.count > 0).length : 0;
   const data = useMemo(() => {
     if (!feed) return null;
-    const active = feed.listings.filter((l) => l.status !== 'removed');
+    const market = localMarket(DEFAULT_MARKET, shown);
+    const active = feed.listings.filter((l) => (l.status ?? 'active') === 'active');
     const homes = active
       .filter((l) => l.units >= 2 && l.units <= 4)
-      .map((l) => ({ l, h: homeFor(listingToDeal(l, DEFAULT_MARKET, 'own'), SAMPLE, DEFAULT_MARKET.rate) }))
+      .map((l) => ({ l, h: homeFor(listingToDeal(l, market, 'own'), { ...SAMPLE, city: shown }, market.rate) }))
       .filter((x) => x.h)
       .sort((a, b) => a.h.costToLive - b.h.costToLive);
     return {
@@ -192,16 +238,16 @@ function Today({ feed }) {
       added: feed.lastRun?.added ?? 0,
       date: feed.lastRun?.date,
       median: median(active.map((l) => Number(l.price) || 0).filter(Boolean)),
-      underRent: homes.filter((x) => x.h.costToLive < SAMPLE.rentNow).length,
+      underRent: homes.filter((x) => x.h.costToLive < place.rent).length,
       top: homes.slice(0, 3),
     };
-  }, [feed]);
+  }, [feed, shown, place.rent]);
 
   const stats = [
-    ['Thunder Bay homes for sale we track', data ? String(data.count) : '—'],
+    [`${placeName(place)} homes for sale we track`, data ? String(data.count) : '—'],
     ['New in the latest update', data ? String(data.added) : '—'],
     ['Typical asking price', data ? money(data.median) : '—'],
-    [`2–4 units that cost under ${money(SAMPLE.rentNow)}/mo to live in`, data ? String(data.underRent) : '—'],
+    [`2–4 units that cost less to live in than renting a two-bedroom (${money(place.rent)}/mo)`, data ? String(data.underRent) : '—'],
   ];
 
   return (
@@ -209,10 +255,17 @@ function Today({ feed }) {
       <div className={`${shell} py-16 sm:py-24`}>
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <p className={eyebrow}>Daily listings · Thunder Bay, more cities coming</p>
+            <p className={eyebrow}>Daily listings · {covered > 1 ? `${covered} cities so far` : 'cities across Canada'}</p>
             <h2 id="today-title" className={`${h2} mt-3`}>
               Found every morning. Worked out for you.
             </h2>
+            {shown !== picked && (
+              <p className="mt-3 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
+                {wanted.key.endsWith('-other')
+                  ? `The morning run searches 27 cities; here’s ${placeName(place)} to show how it works.`
+                  : `The morning run hasn’t reached ${placeName(wanted)} yet; it searches every city about once a week. Here’s ${placeName(place)} meanwhile.`}
+              </p>
+            )}
           </div>
           <p className="text-sm text-zinc-500 dark:text-zinc-400" aria-live="polite">
             {data ? `Updated ${longDate(data.date)}` : feed === false ? 'Couldn’t load today’s listings.' : 'Loading today’s listings…'}
@@ -244,7 +297,7 @@ function Today({ feed }) {
               </li>
             ))}
           </ol>
-          <a href={open('listings')} className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700 hover:underline dark:text-emerald-400">
+          <a href={`${open('listings')}&city=${shown}`} className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700 hover:underline dark:text-emerald-400">
             See all {data ? data.count : ''} listings <ArrowRight className="size-4" aria-hidden />
           </a>
         </div>
@@ -356,7 +409,7 @@ function Features() {
   const items = [
     [Home, 'Home check', 'The most you could pay, held back by your income or your savings, and what it costs you each month next to your rent.', 'home'],
     [Landmark, 'Money you can get', 'FHSA refunds, the land transfer tax refund, the buyers’ tax credit and the RRSP Home Buyers’ Plan, added up for you.', 'home'],
-    [ListChecks, 'Morning listings', 'Homes for sale found each morning, with the cost to live in each and whether a bank would say yes. Thunder Bay for now; more cities are coming.', 'listings'],
+    [ListChecks, 'Morning listings', 'Homes for sale in cities across Canada, with the cost to live in each and whether a bank would say yes. Thunder Bay daily, the rest about weekly.', 'listings'],
     [ClipboardCheck, 'Permit guide', 'Adding a basement suite or a backyard home, step by step: what your province and city allow, what to submit, and whether it pays.', 'home'],
     [Home, 'List a home, free', 'Put a home up for rent or for sale with photos. People find it in Bedrock’s search, book a time to see it and message you here.', 'landlord'],
     [KeyRound, 'Landlord tools', 'A page for each rental where people apply and book a viewing from your calendar, rent tracking, repair requests, and expenses sorted for tax time.', 'landlord'],
@@ -518,7 +571,7 @@ const FAQ = [
   ],
   [
     'Where do the listings come from?',
-    'Public listing sites, searched each morning, in Thunder Bay for now. Each one links to its original page, and Bedrock fills gaps like rent with local averages you can change.',
+    'Public listing sites, searched each morning: Thunder Bay every day, and 26 more cities across Canada in turn, so each is refreshed about once a week. Each one links to its original page, and Bedrock fills gaps like rent with local averages you can change.',
   ],
   [
     'What does it cost?',
@@ -526,7 +579,7 @@ const FAQ = [
   ],
   [
     'Does it work where I live?',
-    'Yes, anywhere in Canada. Pick your city and Bedrock uses your province’s land transfer tax and first-buyer programs, with local rent and property tax you can change. The morning listings are Thunder Bay only for now; more cities are coming.',
+    'Yes, anywhere in Canada. Pick your city and Bedrock uses your province’s land transfer tax and first-buyer programs, with local rent and property tax you can change. The morning listings cover 27 cities, from Victoria to St. John’s.',
   ],
 ];
 
@@ -574,29 +627,5 @@ function Closing() {
         </div>
       </div>
     </section>
-  );
-}
-
-function Footer() {
-  return (
-    <footer className="border-t border-hairline">
-      <div className={`${shell} flex flex-col gap-6 py-10 text-sm text-zinc-500 dark:text-zinc-400 sm:flex-row sm:items-center sm:justify-between`}>
-        <div className="flex items-center gap-4">
-          <Logo />
-        </div>
-        <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
-          <a className="hover:text-zinc-950 dark:hover:text-white" href={open('home')}>
-            First home
-          </a>
-          <a className="hover:text-zinc-950 dark:hover:text-white" href={open('listings')}>
-            Listings
-          </a>
-          <a className="hover:text-zinc-950 dark:hover:text-white" href={open('analyze')}>
-            Rental calculator
-          </a>
-        </nav>
-        <p>Estimates, not financial advice. © {new Date().getFullYear()} Bedrock</p>
-      </div>
-    </footer>
   );
 }

@@ -81,7 +81,13 @@ export default function BillingPanel({ data, api, config }) {
                 <Button variant="primary" onClick={addCard} disabled={busy}>
                   <CreditCard className="size-4" aria-hidden /> {busy ? 'Opening Stripe…' : 'Add a card'}
                 </Button>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">You’ll enter it on Stripe’s secure page; Bedrock never sees your card number.</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  You’ll enter it on Stripe’s secure page; Bedrock never sees your card number. Adding a card means you agree to the{' '}
+                  <a href="/terms/#s4" target="_blank" rel="noreferrer" className="underline underline-offset-2">
+                    fees in our terms
+                  </a>
+                  .
+                </p>
               </>
             ) : null}
             {error && (

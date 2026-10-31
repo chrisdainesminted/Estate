@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, ArrowRight, BadgeCheck, CalendarPlus, CheckCircle2, ChevronLeft, ChevronRight, Clock, Flag, Send, ShieldAlert, Wrench } from 'lucide-react';
 import Logo from '../components/Logo.jsx';
+import SiteFooter from '../components/SiteFooter.jsx';
 import { Button } from '../components/ui.jsx';
 import { call, hashParams, links } from '../lib/landlordApi.js';
 import { money } from '../lib/format.js';
@@ -36,8 +37,12 @@ export default function RentPage() {
         {w && l ? <Apply ws={w} listingId={l} /> : w && s ? <Status ws={w} token={s} /> : w && u && t ? <Repair ws={w} unitId={u} token={t} /> : <Nothing />}
       </main>
       <footer className="mx-auto max-w-2xl px-4 pb-10 text-xs text-zinc-500 sm:px-6 dark:text-zinc-400">
-        Your details go only to this landlord. Bedrock deletes closed applications after 180 days.
+        Your details go only to this landlord. Bedrock deletes closed applications after 180 days.{' '}
+        <a href="/privacy/" className="underline underline-offset-2 hover:text-zinc-900 dark:hover:text-white">
+          Privacy
+        </a>
       </footer>
+      <SiteFooter width="max-w-2xl" />
     </div>
   );
 }

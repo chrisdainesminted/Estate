@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BadgeCheck, Bath, BedDouble, Home, Plus } from 'lucide-react';
 import Logo from '../components/Logo.jsx';
+import SiteFooter from '../components/SiteFooter.jsx';
 import { Button } from '../components/ui.jsx';
 import { call } from '../lib/landlordApi.js';
 import { CITIES, PROVINCES, cityByKey } from '../lib/canada.js';
@@ -37,6 +38,7 @@ export default function HomesPage() {
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">{admin ? <Review /> : <Search />}</main>
+      <SiteFooter />
     </div>
   );
 }
