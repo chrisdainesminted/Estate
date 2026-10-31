@@ -47,6 +47,10 @@ export const SCHEMAS = {
     phone: text(40),
     city: text(40),
     signature: text(300),
+    // How tenants pay rent by Interac e-Transfer, shown on their tenant page.
+    etransferEmail: text(120),
+    etransferNote: text(300),
+    autodeposit: bool,
   },
   listings: {
     kind: oneOf('rent', 'sale'),
@@ -90,6 +94,14 @@ export const SCHEMAS = {
     status: oneOf('new', 'viewing', 'approved', 'declined', 'withdrawn'),
     note: text(1000), // the landlord's note, shown on the applicant's status page
     read: bool,
+    // Optional screening details the applicant chose to give.
+    income: num, // household income, a month, before tax
+    employer: text(120),
+    workYears: num,
+    refName: text(100), // a current or past landlord
+    refPhone: text(40),
+    pets: text(200),
+    checks: text(400), // the landlord's screening checklist: the ids of steps done, comma-separated
   },
   units: {
     label: text(80),
@@ -112,6 +124,16 @@ export const SCHEMAS = {
     paidOn: date,
     method: text(40),
     note: text(300),
+  },
+  // A tenant saying they've sent rent by e-Transfer; it counts once the landlord confirms it.
+  claims: {
+    unitId: text(40),
+    month,
+    amount: num,
+    sentOn: date,
+    reference: text(60),
+    note: text(300),
+    status: oneOf('pending', 'confirmed', 'declined'),
   },
   maintenance: {
     unitId: text(40),
@@ -185,7 +207,9 @@ export function clean(collection, input, only) {
 }
 
 /** What an applicant may send. */
-export const APPLY_FIELDS = ['name', 'email', 'phone', 'moveIn', 'people', 'message'];
+export const APPLY_FIELDS = ['name', 'email', 'phone', 'moveIn', 'people', 'message', 'income', 'employer', 'workYears', 'refName', 'refPhone', 'pets'];
+/** What a tenant may send when telling the landlord rent is on its way. */
+export const CLAIM_FIELDS = ['month', 'amount', 'sentOn', 'note'];
 /** What a tenant may send when reporting a repair. */
 export const REPAIR_FIELDS = ['title', 'details', 'urgency', 'reportedBy', 'contact', 'entryOk'];
 

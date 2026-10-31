@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { CalendarPlus, ExternalLink, Plus, Trash2 } from 'lucide-react';
 import { Button, Card, CardHeader, LedgerLine } from '../../components/ui.jsx';
-import { daysUntil, nextIncrease, rentReminder, rentStatus, repairInvite, thisMonth, today } from '../../lib/landlord.js';
+import { daysUntil, increaseNotice, leaseSheet, nextIncrease, payInvite, receiptMessage, rentReminder, rentStatus, thisMonth, today } from '../../lib/landlord.js';
 import { links } from '../../lib/landlordApi.js';
 import { money } from '../../lib/format.js';
-import { dateLabel } from '../../lib/when.js';
+import { dateLabel, downloadIcs, icsFile } from '../../lib/when.js';
 import { CopyButton, Empty, Input, Pill, SendButtons, TextArea, editable } from './shared.jsx';
 
 const STATE = { paid: ['Paid', 'green'], partial: ['Part paid', 'amber'], due: ['Due', 'zinc'], late: ['Late', 'red'], none: ['No rent set', 'zinc'] };
@@ -42,7 +42,8 @@ export default function RentPanel({ data, api, ws, province, settings }) {
           <ul className="divide-y divide-hairline">
             {data.units.map((u) => {
               const s = rentStatus(u, data.payments, on);
-              const [label, tone] = STATE[s.state];
+              const claimed = (data.claims ?? []).some((c) => c.unitId === u.id && c.status === 'pending');
+              const [label, tone] = claimed ? ['Check e-Transfer', 'amber'] : STATE[s.state];
               const leaseDays = u.leaseEnd ? daysUntil(u.leaseEnd, on) : null;
               return (
                 <li key={u.id}>
@@ -87,6 +88,17 @@ function Unit({ unit, data, api, ws, province, settings, on }) {
   const ledger = data.payments.filter((p) => p.unitId === unit.id && String(p.month).startsWith(year)).sort((a, b) => (a.month < b.month ? 1 : -1));
   const inc = nextIncrease(unit, province, on);
   const repairLink = unit.repairToken ? links.repair(ws.id, unit) : '';
+  const payLink = unit.repairToken ? links.pay(ws.id, unit) : '';
+  const claims = (data.claims ?? []).filter((c) => c.unitId === unit.id && c.status === 'pending');
+  const [receiptFor, setReceiptFor] = useState(null);
+  const confirmClaim = async (c, arrived) => {
+    try {
+      if (arrived) await api.save('payments', null, { unitId: unit.id, month: c.month, amount: c.amount, paidOn: c.sentOn || on, method: 'e-Transfer', note: c.note || '' });
+      await api.save('claims', c.id, { status: arrived ? 'confirmed' : 'declined' });
+    } catch (err) {
+      setError(err.message);
+    }
+  };
   const leaseDays = unit.leaseEnd ? daysUntil(unit.leaseEnd, on) : null;
 
   const record = async (e) => {
@@ -103,6 +115,24 @@ function Unit({ unit, data, api, ws, province, settings, on }) {
   if (edit) return <UnitForm unit={unit} api={api} onDone={() => setEdit(false)} />;
   return (
     <>
+      {claims.map((c) => (
+        <Card key={c.id} className="border-amber-500/40 p-5 text-sm">
+          <p className="font-semibold text-zinc-950 dark:text-white">
+            {unit.tenantName || 'Your tenant'} says they sent {money(c.amount)}
+            {c.sentOn ? ` on ${dateLabel(c.sentOn)}` : ''}
+          </p>
+          <p className="mt-1 text-zinc-600 dark:text-zinc-400">
+            For {monthName(c.month)}, with the message <span className="font-mono">{c.reference}</span>
+            {c.note ? `: “${c.note}”` : ''}. Check your bank, then:
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button variant="primary" onClick={() => confirmClaim(c, true)}>
+              It arrived: record it
+            </Button>
+            <Button onClick={() => confirmClaim(c, false)}>It hasn’t arrived</Button>
+          </div>
+        </Card>
+      ))}
       <Card>
         <CardHeader
           title={unit.label || 'Unit'}
@@ -159,7 +189,7 @@ function Unit({ unit, data, api, ws, province, settings, on }) {
                 <th className="px-2 py-2 font-medium">Received</th>
                 <th className="px-2 py-2 text-right font-medium">Amount</th>
                 <th className="w-12 px-5 py-2">
-                  <span className="sr-only">Remove</span>
+                  <span className="sr-only">Receipt and remove</span>
                 </th>
               </tr>
             </thead>
@@ -169,7 +199,10 @@ function Unit({ unit, data, api, ws, province, settings, on }) {
                   <td className="px-5 py-2">{monthName(p.month)}</td>
                   <td className="px-2 py-2 text-zinc-600 dark:text-zinc-400">{p.paidOn ? dateLabel(p.paidOn) : ''}</td>
                   <td className="px-2 py-2 text-right tabular-nums">{money(p.amount)}</td>
-                  <td className="px-5 py-1 text-right">
+                  <td className="px-5 py-1 text-right whitespace-nowrap">
+                    <Button variant="ghost" className="px-2 text-xs" onClick={() => setReceiptFor(receiptFor === p.id ? null : p.id)}>
+                      Receipt
+                    </Button>
                     <Button variant="ghost" aria-label={`Remove the ${monthName(p.month)} payment`} onClick={() => api.remove('payments', p.id)}>
                       <Trash2 className="size-4" aria-hidden />
                     </Button>
@@ -179,18 +212,124 @@ function Unit({ unit, data, api, ws, province, settings, on }) {
             </tbody>
           </table>
         )}
+        {receiptFor && ledger.some((p) => p.id === receiptFor) && (
+          <div className="border-t border-hairline px-5 py-4">
+            <p className="mb-2 text-sm font-semibold text-zinc-950 dark:text-white">Send a receipt</p>
+            <SendButtons email={unit.tenantEmail} phone={unit.tenantPhone} message={receiptMessage({ unit, payment: ledger.find((p) => p.id === receiptFor), settings })} />
+            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">Your tenant can also view and print every receipt on their tenant page.</p>
+          </div>
+        )}
       </Card>
+
+      <RaiseRent unit={unit} api={api} province={province} settings={settings} inc={inc} />
+      <Lease unit={unit} province={province} settings={settings} />
 
       {repairLink && (
         <Card>
-          <CardHeader title="Repair link" subtitle="Your tenant reports problems here; they land in your Inbox and Repairs." />
+          <CardHeader
+            title="Tenant page"
+            subtitle={`Your tenant pays rent by e-Transfer${settings.etransferEmail ? '' : ' (add your e-Transfer email in Settings)'}, tells you once it’s sent, gets receipts, and reports repairs.`}
+          />
           <div className="flex flex-wrap gap-2 p-5">
-            {(unit.tenantEmail || unit.tenantPhone) && <SendButtons email={unit.tenantEmail} phone={unit.tenantPhone} message={repairInvite({ unit, settings, link: repairLink })} />}
+            {(unit.tenantEmail || unit.tenantPhone) && <SendButtons email={unit.tenantEmail} phone={unit.tenantPhone} message={payInvite({ unit, settings, link: payLink })} />}
+            <CopyButton text={payLink} label="Copy rent link" />
             <CopyButton text={repairLink} label="Copy repair link" />
           </div>
         </Card>
       )}
     </>
+  );
+}
+
+/** Raising the rent: within the province's cap, on the right date, with the notice written for you. */
+function RaiseRent({ unit, api, province, settings, inc }) {
+  const [open, setOpen] = useState(false);
+  const [newRent, setNewRent] = useState(inc.newRent ?? unit.rent);
+  const [effective, setEffective] = useState(inc.date);
+  if (!(unit.rent > 0)) return null;
+  const over = inc.cap != null && newRent > inc.newRent;
+  const early = effective < inc.date;
+  const notice = increaseNotice({ unit, settings, province, newRent, effective });
+  const noticeBy = inc.noticeBy;
+  return (
+    <Card>
+      <CardHeader
+        title="Raise the rent"
+        subtitle={inc.cap == null ? `No cap in ${province}; notice by ${dateLabel(noticeBy)} for ${dateLabel(inc.date)}.` : `Up to ${money(inc.newRent)} (${inc.cap}%) from ${dateLabel(inc.date)}; give notice by ${dateLabel(noticeBy)}.`}
+        actions={<Button onClick={() => setOpen((v) => !v)}>{open ? 'Close' : 'Prepare notice'}</Button>}
+      />
+      {open && (
+        <div className="space-y-4 p-5 text-sm">
+          <div className="grid grid-cols-2 gap-4">
+            <Input id="ri-rent" label="New rent" type="number" min="0" step="1" value={newRent} onChange={setNewRent} />
+            <Input id="ri-date" label="Starting" type="date" value={effective} onChange={setEffective} />
+          </div>
+          {over && <p className="text-red-700 dark:text-red-300">That’s above the {inc.cap}% guideline. Above-guideline increases need the board’s approval first.</p>}
+          {early && <p className="text-red-700 dark:text-red-300">That’s too soon: the earliest legal date is {dateLabel(inc.date)}.</p>}
+          <p className="text-zinc-600 dark:text-zinc-400">{inc.rules.noticeNote}</p>
+          <pre className="max-h-56 overflow-auto rounded-md bg-well p-3 font-sans text-[13px] whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">{notice.body}</pre>
+          <div className="flex flex-wrap gap-2">
+            <SendButtons email={unit.tenantEmail} phone={unit.tenantPhone} message={notice} secondary />
+            <Button
+              onClick={() =>
+                downloadIcs(
+                  'rent-increase-notice.ics',
+                  icsFile({ title: `Give rent increase notice: ${unit.label || 'unit'}`, start: `${noticeBy}T13:00:00Z`, minutes: 30, description: `${notice.body}`, uid: `notice-${unit.id}-${effective}` }),
+                )
+              }
+            >
+              <CalendarPlus className="size-4" aria-hidden /> Remind me to send it
+            </Button>
+            {inc.rules.board?.url && (
+              <a href={inc.rules.board.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-md px-3 py-2 font-medium text-emerald-700 hover:bg-well dark:text-emerald-400">
+                {inc.rules.board.name} <ExternalLink className="size-3.5" aria-hidden />
+              </a>
+            )}
+          </div>
+          <div className="border-t border-hairline pt-4">
+            <Button
+              variant="ghost"
+              disabled={over || early}
+              onClick={() => confirm(`Record the increase? Rent becomes ${money(newRent)} and the last increase ${dateLabel(effective)}. Do this once it takes effect.`) && api.save('units', unit.id, { rent: Number(newRent), lastIncrease: effective })}
+            >
+              It’s taken effect: update the rent
+            </Button>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+/** The province's lease form, and this tenancy's details laid out to copy into it. */
+function Lease({ unit, province, settings }) {
+  const [open, setOpen] = useState(false);
+  const l = leaseSheet({ unit, settings, province });
+  return (
+    <Card>
+      <CardHeader title="Lease" subtitle={l.form} actions={<Button onClick={() => setOpen((v) => !v)}>{open ? 'Close' : 'Lease details'}</Button>} />
+      {open && (
+        <div className="space-y-4 p-5 text-sm">
+          <dl className="divide-y divide-hairline">
+            {l.rows.map(([k, v, missing]) => (
+              <div key={k} className="grid grid-cols-[9rem_1fr] gap-3 py-2">
+                <dt className="text-zinc-500 dark:text-zinc-400">{k}</dt>
+                <dd className={v ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-400'}>{v || missing || 'Add it to the unit (Edit)'}</dd>
+              </div>
+            ))}
+          </dl>
+          <div className="flex flex-wrap gap-2">
+            <CopyButton text={l.text} label="Copy details" />
+            {l.url && (
+              <a href={l.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-md px-3 py-2 font-medium text-emerald-700 hover:bg-well dark:text-emerald-400">
+                Get the official form <ExternalLink className="size-3.5" aria-hidden />
+              </a>
+            )}
+          </div>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">Where your province has a required lease form, use it: a homemade lease can’t replace it. Give your tenant a signed copy within the time your province sets.</p>
+        </div>
+      )}
+    </Card>
   );
 }
 

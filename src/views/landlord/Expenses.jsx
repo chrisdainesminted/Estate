@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, Trash2 } from 'lucide-react';
+import { Download, FileText, Trash2 } from 'lucide-react';
 import { Button, Card, CardHeader, LedgerLine } from '../../components/ui.jsx';
 import { T776, today, yearCsv, yearSummary } from '../../lib/landlord.js';
 import { money } from '../../lib/format.js';
@@ -28,6 +28,18 @@ export default function Expenses({ data, api }) {
     } catch (err) {
       setError(err.message);
     }
+  };
+  const [busy, setBusy] = useState(false);
+  const taxPack = async () => {
+    setBusy(true);
+    try {
+      const { buildTaxPdf } = await import('../../lib/taxPdf.js');
+      const blob = await buildTaxPdf({ year, payments: data.payments, expenses: data.expenses, units: data.units, settings: data.settings ?? {} });
+      await saveFile(`Rental income and expenses ${year} - Bedrock.pdf`, blob);
+    } catch (err) {
+      setError(err.message);
+    }
+    setBusy(false);
   };
   const download = () => saveFile(`rental-income-${year}.csv`, yearCsv(summary, data.payments, data.expenses, data.units)).catch((err) => setError(err.message));
 
@@ -122,6 +134,9 @@ export default function Expenses({ data, api }) {
           <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
             Gross rents come from the payments you recorded. Co-owners each report their share. This is a summary to bring to your tax software or accountant, not tax advice.
           </p>
+          <Button variant="primary" className="mt-4 mr-2" onClick={taxPack} disabled={busy}>
+            <FileText className="size-4" aria-hidden /> {busy ? 'Making it…' : `${year} tax pack (PDF)`}
+          </Button>
           <Button className="mt-4" onClick={download}>
             <Download className="size-4" aria-hidden /> Download {year} as a spreadsheet (CSV)
           </Button>

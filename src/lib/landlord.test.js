@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applicationReplies, nextIncrease, rentReminder, rentStatus, yearCsv, yearSummary } from './landlord.js';
+import { applicationReplies, increaseNotice, leaseSheet, nextIncrease, receiptMessage, rentReference, rentReminder, rentStatus, yearCsv, yearSummary } from './landlord.js';
 import { TENANCY, rulesFor } from './tenancyRules.js';
 import { PROVINCES } from './canada.js';
 
@@ -76,5 +76,31 @@ describe('replies', () => {
     expect(r[0].body).toMatch(/https:\/\/x\/rent/);
     expect(r[2].body).toMatch(/\$1,800 a month/);
     expect(r[0].note).not.toMatch(/\.\.$/);
+  });
+});
+
+describe('e-Transfer, increases and leases', () => {
+  const unit = { id: 'u1', label: 'Upper', address: '12 Main St', rent: 2000, dueDay: 1, tenantName: 'Alex Lee', leaseStart: '2026-01-01', deposit: 2000 };
+  const settings = { name: 'Sam', email: 'sam@x.ca', etransferEmail: 'rent@x.ca' };
+
+  it('builds an e-Transfer message from the unit and month', () => {
+    expect(rentReference(unit, '2026-11')).toBe('UPPER-2026-11');
+    expect(rentReference({ label: 'Basement suite #2' }, '2026-12')).toBe('BASEMENT-SUITE-2-2026-12');
+    expect(rentReference({}, '2026-12')).toBe('RENT-2026-12');
+  });
+
+  it('writes a receipt and an increase notice that names the form', () => {
+    expect(receiptMessage({ unit, payment: { month: '2026-11', amount: 2000, paidOn: '2026-11-01', method: 'e-Transfer' }, settings }).body).toMatch(/received \$2,000 on .* for rent for November 2026/);
+    const n = increaseNotice({ unit, settings, province: 'ON', newRent: 2042, effective: '2027-01-01' });
+    expect(n.body).toMatch(/from \$2,000 to \$2,042/);
+    expect(n.body).toMatch(/Ontario’s guideline of 2.1%/);
+    expect(n.body).toMatch(/official notice form/);
+  });
+
+  it('lays out the lease details with the province’s form and deposit rule', () => {
+    const l = leaseSheet({ unit, settings, province: 'ON' });
+    expect(l.form).toMatch(/Standard Lease/);
+    expect(l.text).toMatch(/Rent: \$2,000 a month, due on day 1/);
+    expect(l.text).toMatch(/Interac e-Transfer to rent@x.ca/);
   });
 });

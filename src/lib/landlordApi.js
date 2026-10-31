@@ -56,6 +56,8 @@ export const links = {
   apply: (ws, listingId) => `${links.origin()}/listing/#w=${ws}&l=${listingId}`,
   status: (ws, token) => `${links.origin()}/rent/#w=${ws}&s=${token}`,
   repair: (ws, unit) => `${links.origin()}/rent/#w=${ws}&u=${unit.id}&t=${unit.repairToken}`,
+  // The same tenant link, opening on paying rent.
+  pay: (ws, unit) => `${links.origin()}/rent/#w=${ws}&u=${unit.id}&t=${unit.repairToken}&v=pay`,
   private: (w) => `${links.origin()}/app/?view=landlord#landlord=${w.id}.${w.key}`,
 };
 

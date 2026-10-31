@@ -4,6 +4,7 @@ import { Button, Card, CardHeader } from '../../components/ui.jsx';
 import { applicationReplies } from '../../lib/landlord.js';
 import { links } from '../../lib/landlordApi.js';
 import { dateLabel, whenLabel } from '../../lib/when.js';
+import { money } from '../../lib/format.js';
 import { Empty, Input, Pill, Select, SendButtons, TextArea } from './shared.jsx';
 
 const STATUS = {
@@ -194,6 +195,7 @@ function Application({ app, data, api, ws, settings }) {
           </div>
         </dl>
         {app.message && <p className="border-l-2 border-hairline pl-3 whitespace-pre-line text-zinc-700 dark:text-zinc-300">{app.message}</p>}
+        {listing?.kind !== 'sale' && <Screening app={app} listing={listing} api={api} />}
         <Conversation app={app} thread={thread} api={api} />
 
         {app.status !== 'withdrawn' && (
@@ -356,5 +358,68 @@ function AddApplicant({ data, api, onDone }) {
         </div>
       </form>
     </Card>
+  );
+}
+
+const CHECKS = [
+  ['id', 'Saw photo ID'],
+  ['job', 'Confirmed work and income (a letter or recent pay stub)'],
+  ['ref', 'Called the landlord reference'],
+  ['credit', 'Saw a credit report (their own free copy is fine)'],
+  ['met', 'Met them at the viewing'],
+];
+
+/** What the applicant shared to stand out, the rent against their income, and your screening steps. */
+function Screening({ app, listing, api }) {
+  const done = new Set(String(app.checks || '').split(',').filter(Boolean));
+  const share = app.income > 0 && listing?.rent > 0 ? listing.rent / app.income : null;
+  const toggle = (id) => {
+    const next = new Set(done);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    api.save('applications', app.id, { checks: [...next].join(',') }).catch(() => {});
+  };
+  const facts = [
+    app.income > 0 && ['Income', `${money(app.income)} a month`],
+    app.employer && ['Works at', `${app.employer}${app.workYears > 0 ? `, ${app.workYears} year${app.workYears === 1 ? '' : 's'}` : ''}`],
+    app.refName && ['Landlord reference', `${app.refName}${app.refPhone ? `, ${app.refPhone}` : ''}`],
+    app.pets && ['Pets', app.pets],
+  ].filter(Boolean);
+  return (
+    <section aria-label="Screening" className="rounded-md border border-hairline p-4">
+      <p className="text-sm font-semibold text-zinc-950 dark:text-white">Screening</p>
+      {facts.length > 0 ? (
+        <dl className="mt-2 grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
+          {facts.map(([k, v]) => (
+            <div key={k}>
+              <dt className="text-xs text-zinc-500 dark:text-zinc-400">{k}</dt>
+              <dd className="text-zinc-900 dark:text-zinc-100">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">They didn’t add income or references. You can ask, the same way you ask everyone.</p>
+      )}
+      {share != null && (
+        <p className="mt-3 text-sm">
+          Rent would be <span className={`font-semibold ${share <= 0.3 ? 'text-emerald-700 dark:text-emerald-400' : share <= 0.4 ? 'text-amber-700 dark:text-amber-400' : 'text-red-700 dark:text-red-300'}`}>{Math.round(share * 100)}%</span> of their income
+          {share <= 0.3 ? ', comfortably affordable.' : share <= 0.4 ? ', a stretch but common.' : ', a lot of their income.'}
+          <span className="block text-xs text-zinc-500 dark:text-zinc-400">Weigh it with references and credit, never on its own, and the same way for every applicant.</span>
+        </p>
+      )}
+      <ul className="mt-3 space-y-1.5">
+        {CHECKS.map(([id, label]) => (
+          <li key={id}>
+            <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+              <input type="checkbox" checked={done.has(id)} onChange={() => toggle(id)} className="accent-emerald-600" />
+              {label}
+            </label>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+        Never ask for a Social Insurance Number, and don’t screen on anything human rights law protects. The Rules tab has the basics for your province.
+      </p>
+    </section>
   );
 }

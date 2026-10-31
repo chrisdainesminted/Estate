@@ -124,10 +124,10 @@ const PRIVACY = {
       </p>,
     ],
     [
-      'When you apply for a home or report a repair',
+      'When you apply for a home, report a repair or pay rent',
       <>
         <p>
-          We keep what you send, such as your name, email, phone, move-in date and message, and pass it to that landlord only. We don’t sell it or use it to advertise
+          We keep what you send, such as your name, email, phone, move-in date, message and, if you choose to add them, your income, employer and a landlord reference, and pass it to that landlord only. When you tell your landlord you’ve sent rent, they see the amount and date, and your receipts stay on your tenant page. We don’t sell it or use it to advertise
           to you. Applications that are declined or withdrawn are deleted after 180 days; the landlord can delete yours sooner. Your browser keeps a private link to your
           application so you can check on it.
         </p>

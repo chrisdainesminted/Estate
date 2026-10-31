@@ -3,7 +3,8 @@
 // Object's SQLite database. Pure logic over a `sql.exec(query, ...args)`
 // interface, so it runs the same in the Worker and in tests.
 
-import { APPLY_FIELDS, COLLECTIONS, EMAIL, REPAIR_FIELDS, clean } from './schema.js';
+import { APPLY_FIELDS, CLAIM_FIELDS, COLLECTIONS, EMAIL, REPAIR_FIELDS, clean } from './schema.js';
+import { rentReference, rentStatus } from '../src/lib/landlord.js';
 import { PLAN, isTenanted } from './pricing.js';
 
 const MAX_ITEMS = 3000; // per collection
@@ -458,13 +459,54 @@ export class Store {
 
   unitByToken(unitId, token) {
     const u = this.get('units', unitId);
-    if (!u || !sameText(u.repairToken, token)) throw new StoreError(404, 'This repair link isn’t valid. Ask your landlord for a new one.');
+    if (!u || !sameText(u.repairToken, token)) throw new StoreError(404, 'This tenant link isn’t valid. Ask your landlord for a new one.');
     return u;
   }
 
   repairInfo(unitId, token) {
     const u = this.unitByToken(unitId, token);
     return { unit: u.label || 'Your unit', landlord: this.settingsPublic(false) };
+  }
+
+  /**
+   * The tenant's rent page: this month's rent, how to pay it, rent they've
+   * said they sent, and receipts for the payments the landlord recorded.
+   */
+  payInfo(unitId, token) {
+    const u = this.unitByToken(unitId, token);
+    const on = new Date(this.now()).toISOString().slice(0, 10);
+    const payments = this.list('payments').filter((p) => p.unitId === unitId);
+    const s = this.get('settings', 'main') ?? {};
+    return {
+      unit: u.label || 'Your unit',
+      tenant: u.tenantName || '',
+      address: u.address || '',
+      status: rentStatus(u, payments, on),
+      reference: rentReference(u, on.slice(0, 7)),
+      etransfer: s.etransferEmail ? { email: s.etransferEmail, note: s.etransferNote || '', autodeposit: Boolean(s.autodeposit) } : null,
+      landlord: this.settingsPublic(false),
+      claims: this.list('claims')
+        .filter((c) => c.unitId === unitId)
+        .sort((a, b) => b.created - a.created)
+        .slice(0, 6)
+        .map((c) => ({ id: c.id, month: c.month, amount: c.amount, sentOn: c.sentOn, status: c.status })),
+      receipts: payments
+        .sort((a, b) => (a.month < b.month ? 1 : -1))
+        .slice(0, 24)
+        .map((p) => ({ id: p.id, month: p.month, amount: p.amount, paidOn: p.paidOn, method: p.method || '' })),
+    };
+  }
+
+  /** The tenant says they've sent rent; the landlord confirms it on their side. */
+  payClaim(unitId, token, input, ip) {
+    this.limit(ip, 'claim', 10);
+    if (input?.website) throw new StoreError(400, 'Something went wrong.');
+    const u = this.unitByToken(unitId, token);
+    const data = clean('claims', input, CLAIM_FIELDS);
+    if (!(data.amount > 0)) throw new StoreError(400, 'Enter how much you sent.');
+    const month = data.month || new Date(this.now()).toISOString().slice(0, 7);
+    this.create('claims', { ...data, month, unitId, reference: rentReference(u, month), status: 'pending' });
+    return this.payInfo(unitId, token);
   }
 
   reportRepair(unitId, token, input, ip) {

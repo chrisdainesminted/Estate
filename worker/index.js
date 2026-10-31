@@ -128,6 +128,10 @@ export class Workspace extends DurableObject {
           return s.repairInfo(req.unitId, req.token);
         case 'reportRepair':
           return s.reportRepair(req.unitId, req.token, req.body, req.ip);
+        case 'payInfo':
+          return s.payInfo(req.unitId, req.token);
+        case 'payClaim':
+          return s.payClaim(req.unitId, req.token, req.body, req.ip);
       }
       if (!s.checkKey(await hashKey(req.key ?? ''))) throw new StoreError(401, 'This private link isn’t valid for the workspace.');
       switch (req.op) {
@@ -411,6 +415,8 @@ async function api(request, env, url) {
   else if (rest[0] === 'status' && rest[2] === 'messages' && method === 'POST') call = { op: 'applicantMessage', token: rest[1], body, ip };
   else if (rest[0] === 'repair' && rest.length === 3 && method === 'GET') call = { op: 'repairInfo', unitId: rest[1], token: rest[2] };
   else if (rest[0] === 'repair' && rest.length === 3 && method === 'POST') call = { op: 'reportRepair', unitId: rest[1], token: rest[2], body, ip };
+  else if (rest[0] === 'pay' && rest.length === 3 && method === 'GET') call = { op: 'payInfo', unitId: rest[1], token: rest[2] };
+  else if (rest[0] === 'pay' && rest.length === 3 && method === 'POST') call = { op: 'payClaim', unitId: rest[1], token: rest[2], body, ip };
   // The owner's own records.
   else if (rest.length === 0 && method === 'GET') call = { op: 'all', key };
   else if (rest[0] === 'slots' && rest[1] === 'batch' && method === 'POST') call = { op: 'createSlots', key, body };

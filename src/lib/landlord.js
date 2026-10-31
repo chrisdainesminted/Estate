@@ -4,6 +4,7 @@
 
 import { T776 } from '../../worker/schema.js';
 import { rulesFor } from './tenancyRules.js';
+import { provinceName } from './canada.js';
 import { money } from './format.js';
 import { dateLabel, thisMonth, today, whenLabel } from './when.js';
 
@@ -27,6 +28,19 @@ export function rentStatus(unit, payments, on = today()) {
   const owing = Math.max(rent - paid, 0);
   const state = rent <= 0 ? 'none' : owing === 0 ? 'paid' : day > due ? (paid > 0 ? 'partial' : 'late') : paid > 0 ? 'partial' : 'due';
   return { month, rent, paid, owing, dueDay: due, state };
+}
+
+/**
+ * The message to put on an e-Transfer so the landlord knows what it's for:
+ * the unit and the month, like "UPPER-2026-11".
+ */
+export function rentReference(unit, month) {
+  const tag = String(unit?.label || 'RENT')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 16);
+  return `${tag || 'RENT'}-${month}`;
 }
 
 /** The year's rental income and expenses, by T776 line, from payments and logged expenses. */
@@ -182,3 +196,57 @@ export const mailto = (to, { subject, body }) => `mailto:${encodeURIComponent(to
 export const smsto = (to, { body }) => `sms:${encodeURIComponent((to || '').replace(/[^\d+]/g, ''))}?&body=${encodeURIComponent(body)}`;
 
 export { thisMonth, today };
+
+// ---- rent by e-Transfer, increases, leases ----
+
+const monthName = (ym) => new Date(`${ym}-15T12:00:00`).toLocaleDateString('en-CA', { month: 'long', year: 'numeric' });
+
+/** The tenant's link to pay rent (and report repairs), sent once. */
+export function payInvite({ unit, settings, link }) {
+  return {
+    subject: 'Paying rent and reporting repairs',
+    body: `Hi ${first(unit.tenantName)},\n\nThis is your page for the unit: ${link}\n\nIt shows the rent due and how to send it by e-Transfer (with the message to put on it), lets you tell me once it’s sent, and keeps a receipt for every payment. You can also report repairs there.${sign(settings)}`,
+  };
+}
+
+/** A receipt for one recorded payment, to email or text the tenant. */
+export function receiptMessage({ unit, payment, settings }) {
+  return {
+    subject: `Rent receipt: ${monthName(payment.month)}`,
+    body: `Hi ${first(unit.tenantName)},\n\nThis confirms I received ${plain(money(payment.amount))}${payment.paidOn ? ` on ${dateLabel(payment.paidOn)}` : ''} for rent for ${monthName(payment.month)}${unit.label ? ` (${unit.label}${unit.address ? `, ${unit.address}` : ''})` : ''}${payment.method ? `, paid by ${payment.method}` : ''}. Thank you.${sign(settings)}`,
+  };
+}
+
+/**
+ * A written notice of a rent increase. Provinces with a required form (like
+ * Ontario's N1 and B.C.'s RTB-7) still need that form: this is the covering
+ * note, and the form's name is in it.
+ */
+export function increaseNotice({ unit, settings, province, newRent, effective }) {
+  const r = rulesFor(province);
+  const rise = num(newRent) - num(unit.rent);
+  const share = num(unit.rent) > 0 ? (rise / num(unit.rent)) * 100 : 0;
+  return {
+    subject: `Notice of rent increase${unit.label ? `: ${unit.label}` : ''}`,
+    body:
+      `Hi ${first(unit.tenantName)},\n\nThis is notice that the rent for ${[unit.label, unit.address].filter(Boolean).join(', ') || 'your unit'} will go from ${plain(money(unit.rent))} to ${plain(money(newRent))} a month (an increase of ${plain(money(rise))}, ${share.toFixed(1)}%), starting ${dateLabel(effective)}.` +
+      `${r.cap != null ? ` This is within ${provinceName(province)}’s guideline of ${r.cap}%.` : ''}${r.noticeNote ? ' The official notice form is attached where the province requires one.' : ''}\n\nIf you have any questions, just ask.${sign(settings)}`,
+  };
+}
+
+/** Everything the official lease form asks for, from the unit and your settings, to copy across. */
+export function leaseSheet({ unit, settings, province }) {
+  const r = rulesFor(province);
+  const rows = [
+    ['Landlord', settings.name || '', 'Add your name in Settings'],
+    ['Landlord contact', [settings.email, settings.phone].filter(Boolean).join(', '), 'Add your email or phone in Settings'],
+    ['Tenant', unit.tenantName || ''],
+    ['Tenant contact', [unit.tenantEmail, unit.tenantPhone].filter(Boolean).join(', ')],
+    ['Rental unit', [unit.label, unit.address].filter(Boolean).join(', ')],
+    ['Rent', unit.rent ? `${plain(money(unit.rent))} a month, due on day ${Math.min(Math.max(Math.round(num(unit.dueDay) || 1), 1), 28)}` : ''],
+    ['Paid to', settings.etransferEmail ? `Interac e-Transfer to ${settings.etransferEmail}` : '', 'Add your e-Transfer email in Settings'],
+    ['Term', unit.leaseStart ? `${dateLabel(unit.leaseStart)} to ${unit.leaseEnd ? dateLabel(unit.leaseEnd) : 'month to month'}` : ''],
+    ['Deposit', unit.deposit ? `${plain(money(unit.deposit))}. ${r.deposit}` : r.deposit],
+  ];
+  return { form: r.lease, url: r.leaseUrl || r.board?.url || '', rows, text: rows.map(([k, v]) => `${k}: ${v || '—'}`).join('\n') };
+}

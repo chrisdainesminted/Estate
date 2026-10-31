@@ -127,6 +127,26 @@ describe('repairs', () => {
   });
 });
 
+describe('rent by e-Transfer', () => {
+  it('shows the tenant their rent and how to pay, and takes their word that it’s sent', () => {
+    s.update('settings', 'main', { name: 'Sam', etransferEmail: 'rent@sam.ca', autodeposit: true });
+    const u = s.create('units', { label: 'Upper unit', rent: 1700, dueDay: 1, tenantName: 'Alex' });
+    expect(() => s.payInfo(u.id, 'nope-nope-nope')).toThrow(/isn’t valid/);
+    const info = s.payInfo(u.id, u.repairToken);
+    expect(info).toMatchObject({ unit: 'Upper unit', reference: 'UPPER-UNIT-2026-11', etransfer: { email: 'rent@sam.ca', autodeposit: true } });
+    expect(info.status).toMatchObject({ rent: 1700, owing: 1700 });
+    expect(() => s.payClaim(u.id, u.repairToken, { amount: 0 }, 'ip')).toThrow(/how much/);
+    const after = s.payClaim(u.id, u.repairToken, { amount: 1700, sentOn: '2026-11-01', status: 'confirmed' }, 'ip');
+    expect(after.claims[0]).toMatchObject({ amount: 1700, month: '2026-11', status: 'pending' });
+    // Only the landlord's recorded payment counts as paid, and becomes a receipt.
+    expect(after.status.owing).toBe(1700);
+    s.create('payments', { unitId: u.id, month: '2026-11', amount: 1700, paidOn: '2026-11-02' });
+    const paid = s.payInfo(u.id, u.repairToken);
+    expect(paid.status.state).toBe('paid');
+    expect(paid.receipts[0]).toMatchObject({ month: '2026-11', amount: 1700 });
+  });
+});
+
 describe('photos, messages and publishing', () => {
   let listing;
   beforeEach(() => {

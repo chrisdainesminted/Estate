@@ -33,6 +33,16 @@ export default function SettingsPanel({ settings, api, ws, province, homeCity, c
             <CitySelect id="st-city" label="Where your rentals are" value={f.city || ''} onChange={set('city')} />
             <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">Sets the province rules ({province}) for rent increases and notices.</p>
           </div>
+          <div className="border-t border-hairline pt-4 sm:col-span-2">
+            <p className="text-sm font-semibold text-zinc-950 dark:text-white">Rent by Interac e-Transfer</p>
+            <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">Shown on each tenant’s rent page, with a message that says which unit and month it’s for.</p>
+          </div>
+          <Input id="st-et" label="E-Transfer email" type="email" value={f.etransferEmail || ''} onChange={set('etransferEmail')} />
+          <label className="flex items-center gap-2 self-end pb-2.5 text-sm text-zinc-700 dark:text-zinc-300">
+            <input type="checkbox" checked={Boolean(f.autodeposit)} onChange={(e) => set('autodeposit')(e.target.checked)} className="accent-emerald-600" />
+            Autodeposit is on
+          </label>
+          <Input id="st-etnote" label="Anything else tenants should know (optional)" value={f.etransferNote || ''} onChange={set('etransferNote')} className="sm:col-span-2" placeholder="Rent is due on the 1st. Cheques also accepted." />
           <TextArea id="st-sig" label="Sign your messages" value={f.signature} onChange={set('signature')} rows={2} className="sm:col-span-2" placeholder={'Chris\n807-555-0100'} />
           {error && (
             <p role="alert" className="text-sm text-red-700 sm:col-span-2 dark:text-red-300">

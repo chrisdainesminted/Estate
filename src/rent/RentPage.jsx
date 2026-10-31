@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, ArrowRight, BadgeCheck, CalendarPlus, CheckCircle2, ChevronLeft, ChevronRight, Clock, Flag, Send, ShieldAlert, Wrench } from 'lucide-react';
+import { AlertTriangle, ArrowRight, BadgeCheck, CalendarPlus, CheckCircle2, ChevronLeft, ChevronRight, Clock, Copy, Flag, Printer, Receipt, Send, ShieldAlert, Wallet, Wrench } from 'lucide-react';
 import Logo from '../components/Logo.jsx';
 import SiteFooter from '../components/SiteFooter.jsx';
 import { Button } from '../components/ui.jsx';
@@ -14,7 +14,8 @@ import { DEFAULT_MARKET } from '../lib/market.js';
 /**
  * The public side of the landlord tools, one page chosen by its link:
  * #w=…&l=… applies for a listing and picks a viewing time, #w=…&s=… is an
- * applicant's own status page, #w=…&u=…&t=… reports a repair.
+ * applicant's own status page, #w=…&u=…&t=… is a tenant's page: report a
+ * repair, or (with &v=pay) pay rent and get receipts.
  */
 export default function RentPage() {
   const [params, setParams] = useState(() => hashParams(location.hash));
@@ -23,7 +24,7 @@ export default function RentPage() {
     window.addEventListener('hashchange', on);
     return () => window.removeEventListener('hashchange', on);
   }, []);
-  const { w, l, s, u, t } = params;
+  const { w, l, s, u, t, v } = params;
   return (
     <div className="min-h-dvh bg-(--page) text-zinc-900 antialiased dark:text-zinc-100">
       <header className="border-b border-hairline">
@@ -34,7 +35,7 @@ export default function RentPage() {
         </div>
       </header>
       <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
-        {w && l ? <Apply ws={w} listingId={l} /> : w && s ? <Status ws={w} token={s} /> : w && u && t ? <Repair ws={w} unitId={u} token={t} /> : <Nothing />}
+        {w && l ? <Apply ws={w} listingId={l} /> : w && s ? <Status ws={w} token={s} /> : w && u && t ? <Tenant ws={w} unitId={u} token={t} start={v === 'pay' ? 'pay' : 'repair'} /> : <Nothing />}
       </main>
       <footer className="mx-auto max-w-2xl px-4 pb-10 text-xs text-zinc-500 sm:px-6 dark:text-zinc-400">
         Your details go only to this landlord. Bedrock deletes closed applications after 180 days.{' '}
@@ -120,7 +121,7 @@ function SlotPicker({ slots, value, onChange, noneLabel = 'None of these work fo
 function Apply({ ws, listingId }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
-  const [form, setForm] = useState({ name: '', email: '', phone: '', moveIn: '', people: '', message: '', website: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', moveIn: '', people: '', message: '', income: '', employer: '', workYears: '', refName: '', refPhone: '', pets: '', website: '' });
   const [slotId, setSlotId] = useState('');
   const [sending, setSending] = useState(false);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -140,7 +141,8 @@ function Apply({ ws, listingId }) {
     setError('');
     setSending(true);
     try {
-      const body = { ...form, people: form.people ? Number(form.people) : undefined, slotId: slotId || undefined };
+      const n = (v) => (v === '' || v == null ? undefined : Number(v));
+      const body = { ...form, people: n(form.people), income: n(form.income), workYears: n(form.workYears), slotId: slotId || undefined };
       if (!body.moveIn) delete body.moveIn;
       const { token } = await call(`/w/${ws}/listings/${listingId}/apply`, { method: 'POST', body });
       try {
@@ -195,6 +197,35 @@ function Apply({ ws, listingId }) {
                 <Field id="ap-people" title="How many people would live there">
                   <input id="ap-people" type="number" min="1" max="20" inputMode="numeric" className={input} value={form.people} onChange={set('people')} />
                 </Field>
+                <details className="group rounded-md border border-hairline sm:col-span-2">
+                  <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                    Stand out: add income and references <span className="font-normal text-zinc-500 dark:text-zinc-400">(optional)</span>
+                  </summary>
+                  <div className="grid gap-4 border-t border-hairline p-4 sm:grid-cols-2">
+                    <Field id="ap-income" title="Household income, a month before tax">
+                      <input id="ap-income" type="number" min="0" step="100" inputMode="numeric" className={input} value={form.income} onChange={set('income')} />
+                    </Field>
+                    <Field id="ap-employer" title="Where you work">
+                      <input id="ap-employer" className={input} value={form.employer} onChange={set('employer')} maxLength={120} />
+                    </Field>
+                    <Field id="ap-years" title="Years there">
+                      <input id="ap-years" type="number" min="0" step="0.5" inputMode="decimal" className={input} value={form.workYears} onChange={set('workYears')} />
+                    </Field>
+                    <Field id="ap-pets" title="Pets">
+                      <input id="ap-pets" className={input} value={form.pets} onChange={set('pets')} maxLength={200} placeholder="None, or one cat" />
+                    </Field>
+                    <Field id="ap-ref" title="A current or past landlord">
+                      <input id="ap-ref" className={input} value={form.refName} onChange={set('refName')} maxLength={100} />
+                    </Field>
+                    <Field id="ap-refphone" title="Their phone">
+                      <input id="ap-refphone" type="tel" className={input} value={form.refPhone} onChange={set('refPhone')} maxLength={40} />
+                    </Field>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 sm:col-span-2">
+                      Only this landlord sees these. You never need to give your Social Insurance Number. If they ask for a credit check, you can get your own report free from
+                      Equifax or TransUnion and share it.
+                    </p>
+                  </div>
+                </details>
               </>
             )}
             <div className="sm:col-span-2">
@@ -359,6 +390,228 @@ function Status({ ws, token }) {
           </button>
         )}
       </section>
+    </div>
+  );
+}
+
+/** A tenant's page: pay rent and get receipts, or report a repair. */
+function Tenant({ ws, unitId, token, start }) {
+  const [tab, setTab] = useState(start);
+  return (
+    <div>
+      <div role="tablist" aria-label="Tenant page" className="mb-8 inline-flex overflow-hidden rounded-md border border-(--line-strong) text-sm">
+        {[
+          ['pay', 'Pay rent', Wallet],
+          ['repair', 'Report a repair', Wrench],
+        ].map(([k, label, Icon], i) => (
+          <button
+            key={k}
+            type="button"
+            role="tab"
+            aria-selected={tab === k}
+            onClick={() => setTab(k)}
+            className={`inline-flex items-center gap-1.5 px-4 py-2 ${i ? 'border-l border-(--line-strong)' : ''} ${tab === k ? 'bg-zinc-950/[0.05] font-semibold text-zinc-950 shadow-[inset_0_-2px_0_var(--accent)] dark:bg-white/[0.07] dark:text-white' : 'font-medium text-zinc-600 hover:bg-well dark:text-zinc-400'}`}
+          >
+            <Icon className="size-4" aria-hidden /> {label}
+          </button>
+        ))}
+      </div>
+      {tab === 'pay' ? <PayRent ws={ws} unitId={unitId} token={token} /> : <Repair ws={ws} unitId={unitId} token={token} />}
+    </div>
+  );
+}
+
+const monthLabel = (ym) => new Date(`${ym}-15T12:00:00`).toLocaleDateString('en-CA', { month: 'long', year: 'numeric' });
+
+function CopyText({ value, label }) {
+  const [done, setDone] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() => navigator.clipboard?.writeText(value).then(() => (setDone(true), setTimeout(() => setDone(false), 1500)))}
+      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-well dark:text-emerald-400"
+      aria-label={`Copy ${label}`}
+    >
+      <Copy className="size-3.5" aria-hidden /> {done ? 'Copied' : 'Copy'}
+    </button>
+  );
+}
+
+/** This month's rent, how to send it by e-Transfer, "I've sent it", and receipts. */
+function PayRent({ ws, unitId, token }) {
+  const [info, setInfo] = useState(null);
+  const [error, setError] = useState('');
+  const [form, setForm] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [receipt, setReceipt] = useState(null);
+  const base = `/w/${ws}/pay/${unitId}/${token}`;
+  useEffect(() => {
+    call(base)
+      .then((d) => (setInfo(d), setForm({ amount: d.status.owing || d.status.rent || '', sentOn: new Date().toLocaleDateString('en-CA'), note: '', website: '' })))
+      .catch((e) => setError(e.message));
+  }, [base]);
+  if (error && !info) return <Problem>{error}</Problem>;
+  if (!info) return <Loading />;
+  if (receipt) return <RentReceipt r={receipt} info={info} onBack={() => setReceipt(null)} />;
+  const st = info.status;
+  const pending = info.claims.filter((c) => c.status === 'pending');
+  const send = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      const d = await call(base, { method: 'POST', body: { ...form, amount: Number(form.amount), month: st.month } });
+      setInfo(d);
+    } catch (err) {
+      setError(err.message);
+    }
+    setBusy(false);
+  };
+  return (
+    <div className="space-y-8">
+      <div>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          {info.unit}
+          {info.tenant ? ` · ${info.tenant}` : ''}
+        </p>
+        <h1 className={`${h1} mt-1`}>Rent for {monthLabel(st.month)}</h1>
+        <p className="mt-3 text-4xl font-semibold tracking-tight tabular-nums text-zinc-950 dark:text-white">
+          {money(st.owing)}
+          <span className="ml-2 text-base font-medium text-zinc-500 dark:text-zinc-400">{st.owing === 0 ? 'all paid, thank you' : `due on the ${st.dueDay}${['th', 'st', 'nd', 'rd'][st.dueDay % 10 > 3 || [11, 12, 13].includes(st.dueDay) ? 0 : st.dueDay % 10]}`}</span>
+        </p>
+        {st.paid > 0 && st.owing > 0 && <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{money(st.paid)} of {money(st.rent)} received so far.</p>}
+      </div>
+
+      {info.etransfer ? (
+        <div className="rounded-xl border border-(--line-strong) bg-(--panel) p-5">
+          <p className="font-semibold text-zinc-950 dark:text-white">Pay by Interac e-Transfer</p>
+          <dl className="mt-3 divide-y divide-hairline text-sm">
+            <div className="flex items-center justify-between gap-3 py-2">
+              <dt className="text-zinc-500 dark:text-zinc-400">Send to</dt>
+              <dd className="flex items-center gap-1 font-medium text-zinc-950 dark:text-white">
+                {info.etransfer.email} <CopyText value={info.etransfer.email} label="the email" />
+              </dd>
+            </div>
+            <div className="flex items-center justify-between gap-3 py-2">
+              <dt className="text-zinc-500 dark:text-zinc-400">Message</dt>
+              <dd className="flex items-center gap-1 font-mono font-medium text-zinc-950 dark:text-white">
+                {info.reference} <CopyText value={info.reference} label="the message" />
+              </dd>
+            </div>
+            <div className="flex items-center justify-between gap-3 py-2">
+              <dt className="text-zinc-500 dark:text-zinc-400">Amount</dt>
+              <dd className="font-medium tabular-nums text-zinc-950 dark:text-white">{money(st.owing || st.rent)}</dd>
+            </div>
+          </dl>
+          <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
+            {info.etransfer.autodeposit ? 'Autodeposit is on, so no security question is needed.' : 'If your bank asks for a security question, agree the answer with your landlord another way, never in the message.'}
+            {info.etransfer.note ? ` ${info.etransfer.note}` : ''}
+          </p>
+        </div>
+      ) : (
+        <p className="rounded-xl border border-hairline p-5 text-sm text-zinc-600 dark:text-zinc-400">
+          {info.landlord.name} hasn’t added e-Transfer details yet. Pay the way you’ve agreed, then let them know below.
+        </p>
+      )}
+
+      {st.owing > 0 && form && (
+        <form onSubmit={send} className="space-y-4">
+          <h2 className="text-lg font-semibold text-zinc-950 dark:text-white">Sent it? Let {info.landlord.name} know</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field id="pay-amt" title="Amount sent">
+              <input id="pay-amt" type="number" min="1" step="0.01" className={input} value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} />
+            </Field>
+            <Field id="pay-on" title="Sent on">
+              <input id="pay-on" type="date" className={input} value={form.sentOn} onChange={(e) => setForm((f) => ({ ...f, sentOn: e.target.value }))} />
+            </Field>
+          </div>
+          <Field id="pay-note" title="Note (optional)">
+            <input id="pay-note" className={input} value={form.note} maxLength={300} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} />
+          </Field>
+          <input type="text" name="website" tabIndex={-1} autoComplete="off" value={form.website} onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))} className="hidden" aria-hidden />
+          {error && (
+            <p role="alert" className="text-sm text-red-700 dark:text-red-300">
+              {error}
+            </p>
+          )}
+          <Button type="submit" variant="primary" disabled={busy}>
+            <Send className="size-4" aria-hidden /> {busy ? 'Sending…' : 'I’ve sent it'}
+          </Button>
+        </form>
+      )}
+
+      {pending.length > 0 && (
+        <div className="rounded-md bg-amber-500/10 p-4 text-sm text-amber-950 ring-1 ring-amber-600/20 ring-inset dark:text-amber-100">
+          {pending.map((c) => (
+            <p key={c.id}>
+              You said you sent {money(c.amount)} {c.sentOn ? `on ${dateLabel(c.sentOn)}` : ''}. Waiting for {info.landlord.name} to confirm it arrived.
+            </p>
+          ))}
+        </div>
+      )}
+
+      <div>
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-950 dark:text-white">
+          <Receipt className="size-5 text-emerald-700 dark:text-emerald-400" aria-hidden /> Receipts
+        </h2>
+        {info.receipts.length === 0 ? (
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Receipts appear here once {info.landlord.name} records a payment.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-hairline rounded-md border border-hairline">
+            {info.receipts.map((r) => (
+              <li key={r.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+                <span>
+                  <span className="font-medium text-zinc-950 dark:text-white">{monthLabel(r.month)}</span>
+                  <span className="block text-xs text-zinc-500 dark:text-zinc-400">{r.paidOn ? `Received ${dateLabel(r.paidOn)}` : 'Received'}</span>
+                </span>
+                <span className="flex items-center gap-3">
+                  <span className="tabular-nums">{money(r.amount)}</span>
+                  <Button className="px-2.5 py-1" onClick={() => setReceipt(r)}>
+                    View
+                  </Button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** A rent receipt, ready to print or save as a PDF from the browser. */
+function RentReceipt({ r, info, onBack }) {
+  return (
+    <div>
+      <div className="mb-6 flex gap-2 print:hidden">
+        <Button onClick={onBack}>
+          <ChevronLeft className="size-4" aria-hidden /> Back
+        </Button>
+        <Button variant="primary" onClick={() => window.print()}>
+          <Printer className="size-4" aria-hidden /> Print or save as PDF
+        </Button>
+      </div>
+      <article className="rounded-xl border border-(--line-strong) bg-(--panel) p-6 print:border-0 print:p-0">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">Rent receipt</p>
+        <h1 className={`${h1} mt-2`}>{money(r.amount)} received</h1>
+        <dl className="mt-6 divide-y divide-hairline text-sm">
+          {[
+            ['For', `Rent for ${monthLabel(r.month)}`],
+            ['Received', r.paidOn ? dateLabel(r.paidOn) : '—'],
+            ['How', r.method || '—'],
+            ['From', info.tenant || 'The tenant'],
+            ['Home', [info.unit, info.address].filter(Boolean).join(', ')],
+            ['Landlord', info.landlord.name],
+            ['Receipt no.', r.id.slice(0, 10).toUpperCase()],
+          ].map(([k, val]) => (
+            <div key={k} className="flex justify-between gap-6 py-2.5">
+              <dt className="text-zinc-500 dark:text-zinc-400">{k}</dt>
+              <dd className="text-right font-medium text-zinc-950 dark:text-white">{val}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="mt-6 text-xs text-zinc-500 dark:text-zinc-400">Recorded by {info.landlord.name} with Bedrock. Keep it for your records and your provincial rent credit, where there is one.</p>
+      </article>
     </div>
   );
 }
