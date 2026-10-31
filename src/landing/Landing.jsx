@@ -165,13 +165,13 @@ function Hero({ city, onCity }) {
               <span className="live-dot" aria-hidden /> For first-time buyers across Canada
             </p>
             <h1 className="mt-6 max-w-4xl text-[40px] font-extrabold leading-[1.02] tracking-[-0.042em] text-balance text-zinc-950 sm:text-6xl lg:text-[72px] dark:text-white">
-              Own your first home.{' '}
+              Own your{' '}
               <span className="bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 bg-clip-text text-transparent dark:from-emerald-300 dark:via-emerald-400 dark:to-teal-300">
-                Let a tenant help pay for it.
+                first home.
               </span>
             </h1>
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-zinc-600 sm:text-xl dark:text-zinc-400">
-              See what a bank would lend you, the money you can claim, and how renting out a suite makes your first home cost less than rent.
+            <p className="mt-6 max-w-md text-lg leading-relaxed text-pretty text-zinc-600 sm:text-xl dark:text-zinc-400">
+              See how rental income could help you afford your first home.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <a href={open('home')} className={primary}>

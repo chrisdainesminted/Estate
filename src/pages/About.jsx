@@ -19,7 +19,7 @@ export default function About() {
       <h1 className={`${h1} mt-3`}>Homeownership, worked out honestly.</h1>
       <p className={lede}>
         Most first-time buyers in Canada are told the same thing: save for years, then hope. Squarely exists because there’s a better path most people never hear about: buy a
-        home with a second unit, rent it out, and let the tenant help you qualify and pay the mortgage.
+        home with a second unit, rent it out, and put that rent toward qualifying and the mortgage.
       </p>
 
       <h2 className={h2}>What it does</h2>
