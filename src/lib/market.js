@@ -1,5 +1,5 @@
 // Daily listings for cities across Canada: the facts the morning run saves
-// for each property, how Bedrock turns one into a deal, and how the list is
+// for each property, how Squarely turns one into a deal, and how the list is
 // ranked. Pure functions, shared by the page and the run's scripts.
 
 import { DEFAULT_TARGETS, allCash, analyzeDeal, maxOffer, ownMoney } from './finance.js';
@@ -474,7 +474,7 @@ export function planRun(index, count = 4) {
 
 const dayNumber = (iso) => Math.floor(Date.parse(`${iso}T12:00:00Z`) / 86400000);
 
-/** Days since the morning run first found a listing (how long Bedrock has seen it for sale), or null. */
+/** Days since the morning run first found a listing (how long Squarely has seen it for sale), or null. */
 export function daysListed(listing, today = new Date().toISOString().slice(0, 10)) {
   if (!listing?.firstSeen || !/^\d{4}-\d{2}-\d{2}$/.test(listing.firstSeen)) return null;
   return Math.max(dayNumber(today) - dayNumber(listing.firstSeen), 0);

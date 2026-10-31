@@ -1,4 +1,4 @@
-// Second opinion from Claude: the prompt Bedrock sends, and a parser that
+// Second opinion from Claude: the prompt Squarely sends, and a parser that
 // turns the reply into plain blocks for rendering as text (never HTML).
 
 import { provinceName } from './canada.js';
@@ -8,7 +8,7 @@ const r0 = (v) => (Number.isFinite(v) ? Math.round(v) : null);
 const r2 = (v) => (Number.isFinite(v) ? Math.round(v * 100) / 100 : null);
 const pct1 = (v) => (Number.isFinite(v) ? Math.round(v * 1000) / 10 : null);
 
-/** The facts Claude sees: inputs as entered and the numbers Bedrock computed. */
+/** The facts Claude sees: inputs as entered and the numbers Squarely computed. */
 export function opinionFacts({ deal, a, sale, refi, offer }, targets) {
   return {
     name: deal.name,

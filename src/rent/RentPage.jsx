@@ -31,7 +31,7 @@ export default function RentPage() {
     <div className="min-h-dvh bg-(--page) text-zinc-900 antialiased dark:text-zinc-100">
       <header className="border-b border-hairline">
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4 sm:px-6">
-          <a href="/" aria-label="Bedrock home">
+          <a href="/" aria-label="Squarely home">
             <Logo />
           </a>
           <AccountLink />
@@ -41,7 +41,7 @@ export default function RentPage() {
         {w && l ? <Apply ws={w} listingId={l} /> : w && s ? <Status ws={w} token={s} /> : w && u && t ? <Tenant ws={w} unitId={u} token={t} start={v === 'pay' ? 'pay' : 'repair'} /> : <Nothing />}
       </main>
       <footer className="mx-auto max-w-2xl px-4 pb-10 text-xs text-zinc-500 sm:px-6 dark:text-zinc-400">
-        Your details go only to this landlord. Bedrock deletes closed applications after 180 days.{' '}
+        Your details go only to this landlord. Squarely deletes closed applications after 180 days.{' '}
         <a href="/privacy/" className="underline underline-offset-2 hover:text-zinc-900 dark:hover:text-white">
           Privacy
         </a>
@@ -678,7 +678,7 @@ function RentReceipt({ r, info, onBack }) {
             </div>
           ))}
         </dl>
-        <p className="mt-6 text-xs text-zinc-500 dark:text-zinc-400">Recorded by {info.landlord.name} with Bedrock. Keep it for your records and your provincial rent credit, where there is one.</p>
+        <p className="mt-6 text-xs text-zinc-500 dark:text-zinc-400">Recorded by {info.landlord.name} with Squarely. Keep it for your records and your provincial rent credit, where there is one.</p>
       </article>
     </div>
   );
@@ -878,7 +878,7 @@ function SafetyNote({ sale }) {
         {sale
           ? 'See the home in person and use a real estate lawyer before you pay anything. Never wire money or pay a deposit to hold a viewing.'
           : 'See the place in person before you pay anything. Never send a deposit, e-Transfer or ID to someone who can’t show it to you, or who says they’re away.'}{' '}
-        Bedrock never asks you for money.
+        Squarely never asks you for money.
       </p>
     </aside>
   );
@@ -914,7 +914,7 @@ function ReportListing({ listingKey }) {
           await call('/listings/report', { method: 'POST', body: { key: listingKey, reason, note } });
           setDone(true);
         } catch (err) {
-          setError(err.status === 404 ? 'This listing isn’t in Bedrock’s public listings; tell the person who sent you the link.' : err.message);
+          setError(err.status === 404 ? 'This listing isn’t in Squarely’s public listings; tell the person who sent you the link.' : err.message);
         }
       }}
     >

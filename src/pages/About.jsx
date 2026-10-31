@@ -9,23 +9,23 @@ const PRINCIPLES = [
   [Lock, 'Private by default', 'No account needed. Your income, savings and deals stay in your browser unless you choose to sync them.'],
   [Scale, 'The real rules, shown', `Down payments, mortgage insurance, the stress test, land transfer tax and every first-buyer program, for each province, checked ${checked} and linked to the official source.`],
   [Calculator, 'Every number explained', 'Each figure says what it means and how it was worked out. How we calculate lists the formulas.'],
-  [ShieldCheck, 'Only real listings', 'Homes for sale come from public listing sites and link to their own page; homes posted on Bedrock can be reported, and reported ones are reviewed.'],
+  [ShieldCheck, 'Only real listings', 'Homes for sale come from public listing sites and link to their own page; homes posted on Squarely can be reported, and reported ones are reviewed.'],
 ];
 
 export default function About() {
   return (
     <PageShell>
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">About Bedrock</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">About Squarely</p>
       <h1 className={`${h1} mt-3`}>Homeownership, worked out honestly.</h1>
       <p className={lede}>
-        Most first-time buyers in Canada are told the same thing: save for years, then hope. Bedrock exists because there’s a better path most people never hear about: buy a
+        Most first-time buyers in Canada are told the same thing: save for years, then hope. Squarely exists because there’s a better path most people never hear about: buy a
         home with a second unit, rent it out, and let the tenant help you qualify and pay the mortgage.
       </p>
 
       <h2 className={h2}>What it does</h2>
       <div className={prose}>
         <p>
-          Bedrock shows what a bank would lend you, on your own and with a tenant, under your province’s real rules; the government money you can claim; and what any home would
+          Squarely shows what a bank would lend you, on your own and with a tenant, under your province’s real rules; the government money you can claim; and what any home would
           cost you to live in each month. It finds homes for sale every morning in {LISTING_CITIES.length} cities and runs each one through your numbers. When you’re ready, it
           walks you through every step to closing day.
         </p>
@@ -46,7 +46,7 @@ export default function About() {
         ))}
       </ul>
 
-      <h2 className={h2}>How Bedrock makes money</h2>
+      <h2 className={h2}>How Squarely makes money</h2>
       <div className={prose}>
         <p>
           <Home className="mr-1.5 inline size-4 text-emerald-700 dark:text-emerald-400" aria-hidden />
@@ -58,12 +58,12 @@ export default function About() {
           month. That’s about a quarter of what a property manager charges.
         </p>
         <p>
-          If you ask to talk to a mortgage broker, the broker may pay Bedrock a referral fee. It never changes your rate or costs you anything, and we only pass on your
+          If you ask to talk to a mortgage broker, the broker may pay Squarely a referral fee. It never changes your rate or costs you anything, and we only pass on your
           details when you ask us to.
         </p>
       </div>
 
-      <h2 className={h2}>What Bedrock isn’t</h2>
+      <h2 className={h2}>What Squarely isn’t</h2>
       <div className={prose}>
         <p>
           It isn’t a brokerage, a lender or an adviser, and its numbers are estimates. A mortgage broker confirms what you can borrow, and a lawyer (a notary in Québec) handles

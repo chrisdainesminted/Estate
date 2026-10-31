@@ -10,7 +10,7 @@ import { cityByKey } from '../lib/canada.js';
 const field = 'field w-full px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100';
 
 /**
- * Your Bedrock account: sync your numbers and deals to every device with a
+ * Your Squarely account: sync your numbers and deals to every device with a
  * private link, and get listing alerts by email. No password; the link is
  * the key, so it's shown with a plain warning.
  */
@@ -48,7 +48,7 @@ export default function AccountSheet({ open, onClose, hosted, account, onAccount
         {hosted ? (
           <p className="flex items-start gap-2 text-zinc-700 dark:text-zinc-300">
             <Cloud className="mt-0.5 size-4 shrink-0 text-emerald-600" aria-hidden />
-            On your Claude page, your numbers and deals already sync to your Claude account. A Bedrock account is for the website.
+            On your Claude page, your numbers and deals already sync to your Claude account. A Squarely account is for the website.
           </p>
         ) : !account ? (
           <AuthForm onDone={(link) => onAccount(link)} />
@@ -73,7 +73,7 @@ export default function AccountSheet({ open, onClose, hosted, account, onAccount
                 <Copy className="size-4" aria-hidden /> {copied ? 'Copied' : 'Copy link'}
               </Button>
               <a
-                href={`mailto:?subject=${encodeURIComponent('My Bedrock account link')}&body=${encodeURIComponent(`Open this to sync Bedrock on this device:\n\n${link}\n\nKeep it private.`)}`}
+                href={`mailto:?subject=${encodeURIComponent('My Squarely account link')}&body=${encodeURIComponent(`Open this to sync Squarely on this device:\n\n${link}\n\nKeep it private.`)}`}
                 className="inline-flex items-center gap-1.5 rounded-md px-3.5 py-2 font-medium text-zinc-800 ring-1 ring-(--line-strong) ring-inset hover:bg-well dark:text-zinc-100"
               >
                 <Mail className="size-4" aria-hidden /> Email it to myself

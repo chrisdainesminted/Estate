@@ -1,20 +1,22 @@
-// Renders the brand images in public/ from the strata mark (src/lib/brand.js):
+// Renders the brand images in public/ from the mark (src/lib/brand.js):
 // the app icons and the link preview. Needs Playwright with Chromium.
 // Usage: node scripts/brand-icons.cjs
 const { chromium } = require('playwright');
 const path = require('path');
 
 const PUBLIC = path.join(__dirname, '..', 'public');
-const STRATA = [
-  { x: 28, y: 6, w: 20 },
-  { x: 14, y: 19.5, w: 34 },
-  { x: 0, y: 33, w: 48 },
+const MARK = [
+  { x: 0, y: 0, w: 48, h: 8 },
+  { x: 0, y: 40, w: 48, h: 8 },
+  { x: 0, y: 8, w: 8, h: 32 },
+  { x: 40, y: 8, w: 8, h: 32 },
+  { x: 16, y: 16, w: 16, h: 16 },
 ];
 const ONYX = '#0b0b0c';
 const GREEN = '#34d399';
 const FONT = '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">';
 const mark = (size, fill = GREEN) =>
-  `<svg width="${size}" height="${size}" viewBox="0 0 48 48">${STRATA.map((s) => `<rect x="${s.x}" y="${s.y}" width="${s.w}" height="9" fill="${fill}"/>`).join('')}</svg>`;
+  `<svg width="${size}" height="${size}" viewBox="0 0 48 48">${MARK.map((s) => `<rect x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" fill="${fill}"/>`).join('')}</svg>`;
 
 // A full-bleed square: the phone rounds the corners itself, and the mark sits
 // inside the maskable safe zone (the middle 80%).
@@ -27,10 +29,10 @@ const ledgerLine = (label, value, opts = {}) =>
 
 const og = `<body style="margin:0;width:1200px;height:630px;background:${ONYX};font-family:Inter,sans-serif;display:flex;box-sizing:border-box;padding:72px 80px;gap:72px">
   <div style="flex:1 1 0;display:flex;flex-direction:column;justify-content:space-between">
-    <div style="display:flex;align-items:center;gap:18px">${mark(52)}<span style="font-size:46px;font-weight:700;letter-spacing:-0.035em;color:#fafafa">Bedrock</span></div>
+    <div style="display:flex;align-items:center;gap:18px">${mark(52)}<span style="font-size:46px;font-weight:700;letter-spacing:-0.035em;color:#fafafa">Squarely</span></div>
     <div>
       <div style="font-size:54px;line-height:1.08;font-weight:700;letter-spacing:-0.035em;color:#fafafa">A lender can approve a deal that <span style="color:${GREEN}">still loses you money.</span></div>
-      <div style="margin-top:26px;font-size:22px;color:#a1a1aa">Lender DSCR vs real cash flow · Canadian and US rules · Daily Thunder Bay rentals</div>
+      <div style="margin-top:26px;font-size:22px;color:#a1a1aa">Rent, buy or manage · Real numbers · Anywhere in Canada</div>
     </div>
   </div>
   <div style="width:400px;align-self:center;border:1px solid #232326;background:#0f0f11;padding:28px 30px;font-size:21px">

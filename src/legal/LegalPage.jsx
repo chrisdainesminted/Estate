@@ -25,13 +25,13 @@ const contact = CONTACT_EMAIL ? (
 
 const TERMS = {
   title: 'Terms of use',
-  intro: 'These terms cover using Bedrock: the calculators, the home listings, and the tools for landlords. Using the site means you agree to them.',
+  intro: 'These terms cover using Squarely: the calculators, the home listings, and the tools for landlords. Using the site means you agree to them.',
   sections: [
     [
-      'What Bedrock is, and isn’t',
+      'What Squarely is, and isn’t',
       <>
         <p>
-          Bedrock is software. It estimates what you could buy, what a home would cost you, and how a rental would perform, and it lets owners list homes and manage
+          Squarely is software. It estimates what you could buy, what a home would cost you, and how a rental would perform, and it lets owners list homes and manage
           tenancies. It isn’t a real estate brokerage, a mortgage lender or broker, a lawyer or an accountant, and nothing on it is financial, legal or tax advice.
         </p>
         <p>
@@ -50,7 +50,7 @@ const TERMS = {
         </p>
         <p>
           The morning listings in the calculators are homes for sale found on public listing sites. Each links to its original page, which is the one to trust;
-          Bedrock fills in gaps, such as rent, with local averages.
+          Squarely fills in gaps, such as rent, with local averages.
         </p>
       </>,
     ],
@@ -74,7 +74,7 @@ const TERMS = {
       <>
         <p>
           Searching, applying, booking viewings, the calculators and listing a home are free. The rent tracker is free for your first tenanted unit. Each further
-          tenanted unit costs 2% of the rent you track for it, at most $30 a month, in Canadian dollars; vacant units are free. Bedrock is software you use: you collect
+          tenanted unit costs 2% of the rent you track for it, at most $30 a month, in Canadian dollars; vacant units are free. Squarely is software you use: you collect
           rent and run your tenancies yourself.
         </p>
         <p>
@@ -87,7 +87,7 @@ const TERMS = {
     [
       'Using the site fairly',
       <p>
-        Don’t use Bedrock to break the law, mislead or harass anyone, send spam, collect other people’s information, or get around its limits. Don’t try to break into
+        Don’t use Squarely to break the law, mislead or harass anyone, send spam, collect other people’s information, or get around its limits. Don’t try to break into
         it or overload it. We limit how often some things can be done, like applying or reporting, to keep it working for everyone.
       </p>,
     ],
@@ -95,7 +95,7 @@ const TERMS = {
       'Responsibility',
       <>
         <p>
-          We work to keep Bedrock accurate and running, but it’s provided as it is, without promises that it’s error-free or always available. As far as the law
+          We work to keep Squarely accurate and running, but it’s provided as it is, without promises that it’s error-free or always available. As far as the law
           allows, we aren’t responsible for decisions you make with its estimates, for what other people post or do, or for indirect losses. If we are found
           responsible, our total responsibility is limited to what you paid us in the 12 months before. Nothing here takes away rights you have under consumer
           protection law.
@@ -105,7 +105,7 @@ const TERMS = {
     [
       'Changes, and the law that applies',
       <p>
-        We may update these terms; the date at the top says when they last changed, and continuing to use Bedrock after a change means you accept it. We’ll give
+        We may update these terms; the date at the top says when they last changed, and continuing to use Squarely after a change means you accept it. We’ll give
         landlords with a card on file notice of any change to fees before it applies. These terms are governed by the laws of Ontario and of Canada. Questions: {contact}.
       </p>,
     ],
@@ -114,7 +114,7 @@ const TERMS = {
 
 const PRIVACY = {
   title: 'Privacy',
-  intro: 'What Bedrock keeps about you, where, and for how long. The short version: the calculators keep your numbers in your own browser, and we keep only what’s needed for listings, applications and the landlord tools.',
+  intro: 'What Squarely keeps about you, where, and for how long. The short version: the calculators keep your numbers in your own browser, and we keep only what’s needed for listings, applications and the landlord tools.',
   sections: [
     [
       'The calculators: nothing leaves your device',
@@ -184,7 +184,7 @@ const PRIVACY = {
     [
       'Cookies and tracking',
       <p>
-        Bedrock uses no advertising or analytics trackers. It uses your browser’s storage for the things above (your numbers, your theme, your private links), not to
+        Squarely uses no advertising or analytics trackers. It uses your browser’s storage for the things above (your numbers, your theme, your private links), not to
         follow you around the web.
       </p>,
     ],
@@ -205,7 +205,7 @@ export default function LegalPage({ page }) {
     <div className="min-h-dvh bg-(--page) text-zinc-900 antialiased dark:text-zinc-100">
       <header className="border-b border-hairline">
         <div className="mx-auto flex h-14 max-w-3xl items-center justify-between gap-3 px-4 sm:px-6">
-          <a href="/" aria-label="Bedrock home">
+          <a href="/" aria-label="Squarely home">
             <Logo />
           </a>
           <a href={other[1]} className="rounded-md px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-well hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white">

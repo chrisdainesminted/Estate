@@ -20,7 +20,7 @@ const COLUMNS = [
     ],
   ],
   [
-    'Bedrock',
+    'Squarely',
     [
       ['About', '/about/'],
       ['How we calculate', '/methods/'],
@@ -38,7 +38,7 @@ export default function SiteFooter({ width = 'max-w-6xl' }) {
       <div className={`mx-auto w-full ${width} px-4 py-12 text-sm sm:px-6`}>
         <div className="grid gap-10 sm:grid-cols-[1.4fr_repeat(3,1fr)]">
           <div className="max-w-xs">
-            <a href="/" aria-label="Bedrock home" className="inline-block rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--accent)">
+            <a href="/" aria-label="Squarely home" className="inline-block rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--accent)">
               <Logo />
             </a>
             <p className="mt-3 leading-relaxed text-zinc-500 dark:text-zinc-400">
@@ -61,7 +61,7 @@ export default function SiteFooter({ width = 'max-w-6xl' }) {
           ))}
         </div>
         <p className="mt-10 border-t border-hairline pt-6 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-          Estimates, not financial, legal or tax advice. Bedrock isn’t a real estate brokerage or a lender; a mortgage broker or lawyer confirms the real numbers. © {new Date().getFullYear()} Bedrock
+          Estimates, not financial, legal or tax advice. Squarely isn’t a real estate brokerage or a lender; a mortgage broker or lawyer confirms the real numbers. © {new Date().getFullYear()} Squarely
         </p>
       </div>
     </footer>

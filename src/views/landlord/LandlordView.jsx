@@ -289,7 +289,7 @@ function Offline() {
     <div className="space-y-6">
       <Header />
       <Card className="p-5 text-sm text-zinc-700 dark:text-zinc-300">
-        The landlord tools need Bedrock’s server, so they work on the website:{' '}
+        The landlord tools need Squarely’s server, so they work on the website:{' '}
         <a className="font-medium text-emerald-700 underline dark:text-emerald-400" href="https://bedrock.signia83.workers.dev/app/?view=landlord" target="_blank" rel="noreferrer">
           bedrock.signia83.workers.dev
         </a>
@@ -313,7 +313,7 @@ function Reconnect({ onReady }) {
         onReady(w);
       }}
     >
-      <Input id="ll-link" label="Your private link" value={text} onChange={(v) => (setText(v), setBad(false))} className="min-w-64 flex-1" hint={bad ? 'That isn’t a Bedrock private link.' : undefined} />
+      <Input id="ll-link" label="Your private link" value={text} onChange={(v) => (setText(v), setBad(false))} className="min-w-64 flex-1" hint={bad ? 'That isn’t a Squarely private link.' : undefined} />
       <Button type="submit">Open</Button>
     </form>
   );
@@ -331,7 +331,7 @@ function Start({ onReady }) {
       saveWorkspace(w);
       setMade(w);
     } catch (e) {
-      setError(e instanceof ApiError && (e.status === 0 || e.status === 404 || e.status === 405) ? 'The landlord tools need Bedrock’s server, so they work on the website, not in this copy.' : e.message);
+      setError(e instanceof ApiError && (e.status === 0 || e.status === 404 || e.status === 405) ? 'The landlord tools need Squarely’s server, so they work on the website, not in this copy.' : e.message);
     }
     setBusy(false);
   };
@@ -380,7 +380,7 @@ function Start({ onReady }) {
           </ul>
           <div className="space-y-4">
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Replies go out from your own email or phone, written for you and sent only when you press send. Applicants’ details are kept on Bedrock’s server for your workspace only, and closed applications are deleted
+              Replies go out from your own email or phone, written for you and sent only when you press send. Applicants’ details are kept on Squarely’s server for your workspace only, and closed applications are deleted
               after 180 days.
             </p>
             <Button variant="primary" onClick={create} disabled={busy}>

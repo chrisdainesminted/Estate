@@ -311,7 +311,7 @@ export class Store {
   // ---- the public directory ----
 
   /**
-   * What Bedrock's public search shows of a listing, or null when it
+   * What Squarely's public search shows of a listing, or null when it
    * shouldn't be there (not public, off, or its owner's email not yet
    * confirmed where confirming is required).
    */

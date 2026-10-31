@@ -19,7 +19,7 @@ export async function call(path, { method = 'GET', body, key } = {}) {
     }
     res = await fetch(`/api${path}`, init);
   } catch {
-    throw new ApiError(0, 'Couldn’t reach Bedrock. Check your connection and try again.');
+    throw new ApiError(0, 'Couldn’t reach Squarely. Check your connection and try again.');
   }
   let data = null;
   try {

@@ -74,7 +74,7 @@ export default function AuthForm({ start = 'signup', onDone, compact = false }) 
       const link = await (signup ? signUp(email, password) : signIn(email, password));
       onDone?.(link, mode);
     } catch (err) {
-      setError(err.message === 'Failed to fetch' ? 'This works on the Bedrock website.' : err.message);
+      setError(err.message === 'Failed to fetch' ? 'This works on the Squarely website.' : err.message);
     }
     setBusy(false);
   };

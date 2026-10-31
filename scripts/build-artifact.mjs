@@ -14,7 +14,7 @@ const body = html.match(/<body>([\s\S]*?)<\/body>/)[1];
 
 const keep = (re) => (head.match(re) || []).join('\n');
 const fragment = [
-  '<title>Bedrock</title>',
+  '<title>Squarely</title>',
   '<meta name="claude:viewport-fit-sides" content="cover">',
   keep(/<link rel="preconnect"[^>]*>/g),
   keep(/<link href="https:\/\/fonts\.googleapis\.com[^>]*>/g),

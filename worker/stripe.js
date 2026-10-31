@@ -1,6 +1,6 @@
 // Just enough of Stripe's API for landlord billing: save a card through
 // Stripe Checkout, charge it each month, and check that webhook calls
-// really come from Stripe. Card details never touch Bedrock.
+// really come from Stripe. Card details never touch Squarely.
 
 import { StoreError } from './store.js';
 

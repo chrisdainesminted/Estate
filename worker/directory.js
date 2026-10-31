@@ -1,4 +1,4 @@
-// Bedrock's public listings: one shared index of the homes landlords and
+// Squarely's public listings: one shared index of the homes landlords and
 // sellers chose to publish, searchable by kind, place, price and size.
 // Each workspace sends its listing's summary here when it changes. People
 // can report a listing; three reports from different addresses hide it

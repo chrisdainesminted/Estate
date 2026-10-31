@@ -152,7 +152,7 @@ function build(deal, targets, adjusted = false) {
 
 const SYNC_TEXT = {
   cloud: { icon: Cloud, text: 'Synced to your Claude account', cls: 'text-emerald-700 dark:text-emerald-400' },
-  account: { icon: Cloud, text: 'Synced to your Bedrock account', cls: 'text-emerald-700 dark:text-emerald-400' },
+  account: { icon: Cloud, text: 'Synced to your Squarely account', cls: 'text-emerald-700 dark:text-emerald-400' },
   connecting: { icon: Cloud, text: 'Connecting to your account…', cls: '' },
   error: { icon: CloudOff, text: 'Couldn’t reach your account. Changes are saved in this browser.', cls: 'text-amber-700 dark:text-amber-300' },
   local: { icon: HardDrive, text: 'Saved in this browser', cls: '' },
@@ -191,7 +191,7 @@ function useAllTabs() {
 
 // The website's home page: the site root when the app runs on the website at /app/; from
 // anywhere else (the hosted Claude page) the public site, opened in a new tab.
-// The hosted Claude page (not under /app/) syncs to the Claude account; the website uses Bedrock accounts.
+// The hosted Claude page (not under /app/) syncs to the Claude account; the website uses Squarely accounts.
 const HOSTED = typeof window !== 'undefined' && !window.location.pathname.startsWith('/app');
 const HOME_PAGE = typeof window !== 'undefined' && window.location.pathname.startsWith('/app') ? '/' : 'https://bedrock.signia83.workers.dev/';
 
@@ -514,7 +514,7 @@ export default function App() {
       })),
       { id: 'act-new', group: 'Actions', label: 'New deal', icon: Plus, keywords: 'add create', run: newDeal },
       { id: 'act-quick', group: 'Actions', label: 'Quick check a property', icon: Calculator, keywords: 'price rent simple fast beginner try', run: () => setHelpOpen(true) },
-      { id: 'act-help', group: 'Actions', label: 'How Bedrock works', icon: CircleHelp, keywords: 'help guide words terms glossary meaning tabs start beginner', run: () => setHelpOpen(true) },
+      { id: 'act-help', group: 'Actions', label: 'How Squarely works', icon: CircleHelp, keywords: 'help guide words terms glossary meaning tabs start beginner', run: () => setHelpOpen(true) },
       {
         id: 'act-rules',
         group: 'Actions',
@@ -622,8 +622,8 @@ export default function App() {
               <a
                 href={HOME_PAGE}
                 {...(HOME_PAGE.startsWith('http') ? { target: '_blank', rel: 'noreferrer' } : {})}
-                aria-label="Bedrock home page"
-                title="Bedrock home page"
+                aria-label="Squarely home page"
+                title="Squarely home page"
                 className="block rounded-sm transition hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-500"
               >
                 <Logo />
@@ -662,7 +662,7 @@ export default function App() {
               </button>
               <AppMenu
                 synced={lib.sync === 'cloud'}
-                syncText={lib.sync === 'cloud' ? (lib.account || HOSTED ? `Synced to your ${lib.account ? 'Bedrock' : 'Claude'} account` : 'Synced') : 'Saved in this browser only'}
+                syncText={lib.sync === 'cloud' ? (lib.account || HOSTED ? `Synced to your ${lib.account ? 'Squarely' : 'Claude'} account` : 'Synced') : 'Saved in this browser only'}
                 dark={dark}
                 onToggleTheme={toggle}
                 onAccount={() => setAccountOpen(true)}
@@ -844,7 +844,7 @@ export default function App() {
             <div className="flex shrink-0 flex-col gap-2">
               <a href={HOME_PAGE} {...(HOME_PAGE.startsWith('http') ? { target: '_blank', rel: 'noreferrer' } : {})} className="flex items-center gap-2 hover:opacity-80">
                 <LogoMark className="size-6" />
-                <span className="font-semibold text-zinc-800 dark:text-zinc-200">Bedrock</span>
+                <span className="font-semibold text-zinc-800 dark:text-zinc-200">Squarely</span>
               </a>
               <SyncStatus sync={lib.sync} account={lib.account} onOpen={() => setAccountOpen(true)} />
             </div>

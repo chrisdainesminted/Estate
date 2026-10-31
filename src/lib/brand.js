@@ -1,10 +1,11 @@
-// The Bedrock mark: three layers of rock that step up to the right, the
-// strata everything else is built on, rising like a chart. Bars on a 48-unit
-// square, each 9 tall. Logo.jsx, the PDF memo, public/favicon.svg and the app
-// icons (scripts/brand-icons.cjs) all draw this geometry.
-export const STRATA = [
-  { x: 28, y: 6, w: 20 },
-  { x: 14, y: 19.5, w: 34 },
-  { x: 0, y: 33, w: 48 },
+// The Squarely mark: a square lot with a home square in the middle, drawn
+// as five bars on a 48-unit square. Logo.jsx, the PDF memo,
+// public/favicon.svg and the app icons (scripts/brand-icons.cjs) all draw
+// this geometry.
+export const MARK = [
+  { x: 0, y: 0, w: 48, h: 8 },
+  { x: 0, y: 40, w: 48, h: 8 },
+  { x: 0, y: 8, w: 8, h: 32 },
+  { x: 40, y: 8, w: 8, h: 32 },
+  { x: 16, y: 16, w: 16, h: 16 },
 ];
-export const STRATA_HEIGHT = 9;

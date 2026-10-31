@@ -1,4 +1,4 @@
-// A Bedrock account on the website: the private link that opens it (kept in
+// A Squarely account on the website: the private link that opens it (kept in
 // this browser), calls to /api/a/<id>, and a small adapter that lets the deal
 // library sync to it the same way it syncs to a Claude account on the hosted
 // page: get, set, and a snapshot listener (here, polling while the tab is open).
@@ -54,7 +54,7 @@ export async function accountCall(link, path = '', { method = 'GET', body } = {}
 export async function createAccount() {
   const res = await fetch('/api/accounts', { method: 'POST' });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || 'Couldn’t create an account here. It works on the Bedrock website.');
+  if (!res.ok) throw new Error(data.error || 'Couldn’t create an account here. It works on the Squarely website.');
   return { id: data.id, key: data.key };
 }
 
@@ -88,7 +88,7 @@ export function accountRef(link) {
 async function authCall(path, body) {
   const res = await fetch(`/api/auth/${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || 'Couldn’t reach Bedrock. Try again in a minute.');
+  if (!res.ok) throw new Error(data.error || 'Couldn’t reach Squarely. Try again in a minute.');
   return data;
 }
 

@@ -63,7 +63,7 @@ export default function ShareSheet({ deal, onClose }) {
             {status === 'copied' ? 'Copied' : 'Copy link'}
           </Button>
           {canShare && (
-            <Button onClick={() => navigator.share({ title: deal.name, text: `${deal.name}, on Bedrock`, url: link }).catch(() => {})}>
+            <Button onClick={() => navigator.share({ title: deal.name, text: `${deal.name}, on Squarely`, url: link }).catch(() => {})}>
               <Share2 className="size-4" aria-hidden /> Share…
             </Button>
           )}

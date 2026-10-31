@@ -88,7 +88,7 @@ export default function ListingsMap({ items, place, homes }) {
       <div ref={box} className="listing-map h-[28rem] w-full overflow-hidden rounded-md sm:h-[34rem]" role="region" aria-label={`Map of listings in ${where}`} />
       <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400" aria-live="polite">
         {state.status === 'loading' && 'Placing listings on the map…'}
-        {state.status === 'error' && 'The map works on the Bedrock website; it couldn’t load here.'}
+        {state.status === 'error' && 'The map works on the Squarely website; it couldn’t load here.'}
         {state.status === 'ready' &&
           `${state.shown} of ${items.length} listings placed${state.pending ? `; finding the rest (${state.pending} to go)…` : '.'} Green dots make money each month per door; grey ones don’t.`}
       </p>

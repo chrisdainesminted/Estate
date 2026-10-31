@@ -35,7 +35,7 @@ const BLANK = {
 /** Days until a public listing drops out of search unless it's renewed. */
 const daysLeft = (l) => KEEP_DAYS - Math.floor((Date.now() - (l.renewedAt || l.updated)) / 86400000);
 
-/** Your homes for rent or sale: their public pages, photos, and whether they show in Bedrock's search. */
+/** Your homes for rent or sale: their public pages, photos, and whether they show in Squarely's search. */
 export default function ListingsPanel({ data, api, ws, homeCity, config, settings, go }) {
   const [editingId, setEditingId] = useState(null); // a listing id, 'new', or null
   const editing = editingId === 'new' ? BLANK : data.listings.find((l) => l.id === editingId);
@@ -54,7 +54,7 @@ export default function ListingsPanel({ data, api, ws, homeCity, config, setting
         />
         {needsEmail && (
           <p className="flex flex-wrap items-center justify-between gap-2 border-b border-hairline bg-amber-50 px-5 py-3 text-sm text-amber-950 dark:bg-amber-500/10 dark:text-amber-100">
-            Confirm your email to show listings in Bedrock’s public search.
+            Confirm your email to show listings in Squarely’s public search.
             <Button onClick={() => go('settings')}>Confirm it</Button>
           </p>
         )}
@@ -104,7 +104,7 @@ export default function ListingsPanel({ data, api, ws, homeCity, config, setting
         <p className="border-t border-hairline px-5 py-3 text-xs text-zinc-500 dark:text-zinc-400">
           Listings in public search show on{' '}
           <a href="/homes/" className="underline">
-            Bedrock’s homes page
+            Squarely’s homes page
           </a>{' '}
           for 60 days at a time. You can also post the link in a Kijiji, Facebook Marketplace or Rentals.ca ad.
         </p>
@@ -216,11 +216,11 @@ function ListingForm({ listing, data, api, ws, homeCity, onSaved, onDone }) {
           </label>
           <label className="flex items-center gap-2 text-sm text-zinc-700 sm:col-span-2 dark:text-zinc-300">
             <input type="checkbox" checked={f.public !== false} onChange={(e) => set('public')(e.target.checked)} className="size-4 accent-emerald-600" />
-            Show it in Bedrock’s public search (otherwise only people with the link see it)
+            Show it in Squarely’s public search (otherwise only people with the link see it)
           </label>
           <p className="text-xs text-zinc-500 sm:col-span-2 dark:text-zinc-400">
             {sale
-              ? 'Describe the home honestly; private sellers must disclose defects they know of. Bedrock isn’t a brokerage: buyers should use a real estate lawyer, and you may want one too.'
+              ? 'Describe the home honestly; private sellers must disclose defects they know of. Squarely isn’t a brokerage: buyers should use a real estate lawyer, and you may want one too.'
               : 'Describe the place, not the tenant you want: ads can’t say “no kids”, “professionals only” or anything else that turns people away for who they are.'}
           </p>
           {error && (

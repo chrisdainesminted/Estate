@@ -170,5 +170,5 @@ export const SCREENING = [
   'Don’t refuse, or treat differently, anyone because of race, ancestry, place of origin, colour, ethnic origin, citizenship, religion, sex, sexual orientation, gender identity, age, marital or family status, disability, or receiving public assistance.',
   'Ask every applicant the same things. Income, references and credit checks are fine, applied the same way to everyone.',
   'Don’t ask for a Social Insurance Number; it isn’t needed to rent.',
-  'Keep applicants’ details private, use them only to choose a tenant, and delete them when you’re done. Bedrock deletes closed applications after 180 days.',
+  'Keep applicants’ details private, use them only to choose a tenant, and delete them when you’re done. Squarely deletes closed applications after 180 days.',
 ];

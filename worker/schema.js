@@ -68,7 +68,7 @@ export const SCHEMAS = {
     parking: text(120),
     details: text(3000),
     active: bool,
-    public: bool, // shown on Bedrock's public listings, not only by its link
+    public: bool, // shown on Squarely's public listings, not only by its link
     price: num, // asking price, for a home for sale
     sqft: num,
     lot: text(60),

@@ -99,7 +99,7 @@ export function useDeals() {
   const [state, setState] = useState(loadLocal);
   // 'local' (browser only), 'connecting', 'cloud' (synced to account), 'error'
   const [sync, setSync] = useState('local');
-  // A Bedrock account (website only): set when this browser has its private link.
+  // A Squarely account (website only): set when this browser has its private link.
   const [account, setAccount] = useState(accountLink);
   // Signing in or out anywhere on the page (or in another tab) switches the sync target.
   useEffect(() => {

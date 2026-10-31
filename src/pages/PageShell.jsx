@@ -16,7 +16,7 @@ export default function PageShell({ width = 'max-w-3xl', children }) {
     <div className="min-h-dvh bg-(--page) text-zinc-900 antialiased dark:text-zinc-100">
       <header className="border-b border-hairline">
         <div className={`mx-auto flex h-14 ${width} items-center justify-between gap-3 px-4 sm:px-6`}>
-          <a href="/" aria-label="Bedrock home" className="shrink-0">
+          <a href="/" aria-label="Squarely home" className="shrink-0">
             <Logo />
           </a>
           <nav aria-label="Site" className="flex items-center gap-1 overflow-x-auto text-sm">

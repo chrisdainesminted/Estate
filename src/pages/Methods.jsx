@@ -7,7 +7,7 @@ import { CANADA_CHECKED } from '../lib/canada.js';
 import { money } from '../lib/format.js';
 
 /**
- * How Bedrock works out its numbers. Every figure here is read from the
+ * How Squarely works out its numbers. Every figure here is read from the
  * same constants the app runs on, so this page can't drift from the code.
  */
 
@@ -65,7 +65,7 @@ export default function Methods() {
     <PageShell>
       <h1 className={h1}>How we calculate</h1>
       <p className={lede}>
-        Every number Bedrock shows, and where it comes from. Lending rules were last checked {day(RULES_CHECKED)}; provincial taxes and programs {day(CANADA_CHECKED)}. These
+        Every number Squarely shows, and where it comes from. Lending rules were last checked {day(RULES_CHECKED)}; provincial taxes and programs {day(CANADA_CHECKED)}. These
         are estimates: a lender, a lawyer and your city decide the real answers.
       </p>
       <nav aria-label="On this page" className="mt-8 flex flex-wrap gap-2 text-sm">
@@ -178,7 +178,7 @@ export default function Methods() {
             their own page are kept; sold, conditional and expired ones are dropped, and a listing not seen again for a week or so leaves the list.
           </p>
           <p>
-            Where a listing doesn’t state rents, Bedrock estimates them from a rent table by bedroom count, scaled to each city by its average rent. A home is tagged{' '}
+            Where a listing doesn’t state rents, Squarely estimates them from a rent table by bedroom count, scaled to each city by its average rent. A home is tagged{' '}
             <em>under the going rate</em> when its price per door is at least 15% below the median of similar homes (houses, 2–4 units or 5+ units) on that city’s list.
           </p>
         </div>

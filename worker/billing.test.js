@@ -52,7 +52,7 @@ suite('stripe', () => {
   it('charges once per landlord and month, with an idempotency key', async () => {
     const calls = [];
     const fake = async (url, init) => (calls.push({ url, init }), { ok: true, status: 200, json: async () => ({ id: 'pi_1', status: 'succeeded' }) });
-    const r = await stripeClient('sk_test', fake).charge('cus_1', 'pm_1', 2400, 'Bedrock', { workspace: 'ws1', month: '2026-11' }, 'bedrock-ws1-2026-11');
+    const r = await stripeClient('sk_test', fake).charge('cus_1', 'pm_1', 2400, 'Squarely', { workspace: 'ws1', month: '2026-11' }, 'bedrock-ws1-2026-11');
     expect(r.data.status).toBe('succeeded');
     expect(calls[0].url).toMatch(/payment_intents$/);
     expect(calls[0].init.headers['idempotency-key']).toBe('bedrock-ws1-2026-11');

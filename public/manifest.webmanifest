@@ -1,6 +1,6 @@
 {
-  "name": "Bedrock",
-  "short_name": "Bedrock",
+  "name": "Squarely",
+  "short_name": "Squarely",
   "description": "Your first home anywhere in Canada: what a bank would lend you, the money you can claim, listings in 27 cities, and tools for landlords.",
   "start_url": "./app/",
   "scope": "./",

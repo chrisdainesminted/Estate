@@ -46,7 +46,7 @@ export function icsFile({ title, start, minutes = 30, location = '', description
   return [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Bedrock//Viewing//EN',
+    'PRODID:-//Squarely//Viewing//EN',
     'BEGIN:VEVENT',
     `UID:${uid || `${stamp(start)}@bedrock`}`,
     `DTSTAMP:${stamp(Date.now())}`,

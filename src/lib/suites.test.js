@@ -17,7 +17,7 @@ describe('suitePayback', () => {
     expect(suitePayback({ buildCost: 300000, rent: 500, borrowPct: 100 }).paybackYears).toBeNull();
   });
 
-  it('lists the same permit steps everywhere, with city pages where Bedrock has them', () => {
+  it('lists the same permit steps everywhere, with city pages where Squarely has them', () => {
     expect(new Set(STEPS.map((s) => s.key)).size).toBe(STEPS.length);
     expect(stepsFor('calgary').map((s) => s.key)).toEqual(STEPS.map((s) => s.key));
     expect(stepsFor('thunder-bay').every((s) => s.url.startsWith('https://'))).toBe(true);

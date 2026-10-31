@@ -1,8 +1,8 @@
 # Daily listings run, across Canada
 
-The scheduled "Bedrock listings" task follows this every morning. It finds properties for sale in Thunder Bay (every day) and in a few more Canadian cities taken in turn (so each gets searched about once a week), saves each city's list to the Bedrock page's database, and reports any that beat the owner's targets. The page's Listings tab does the full analysis live from what this run saves, using the owner's current assumptions moved to each city.
+The scheduled "Squarely listings" task follows this every morning. It finds properties for sale in Thunder Bay (every day) and in a few more Canadian cities taken in turn (so each gets searched about once a week), saves each city's list to the Squarely page's database, and reports any that beat the owner's targets. The page's Listings tab does the full analysis live from what this run saves, using the owner's current assumptions moved to each city.
 
-- Bedrock page: https://claude.ai/artifact/5KH4ZZHoZ8CvCKF5CXutGJ
+- Squarely page: https://claude.ai/artifact/5KH4ZZHoZ8CvCKF5CXutGJ
 - Saved feeds: collection `data/users/me`, one document per city, named by the `plan` command (Thunder Bay's is `thunderbay`, Calgary's `calgary`, St. John's `stjohns`, and so on)
 - Index of every city: collection `data/users/me`, document `markets`
 - Owner's library and settings: collection `data/users/me`, document `bedrock` (read it; never write it)

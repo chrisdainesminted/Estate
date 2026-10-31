@@ -11,7 +11,7 @@ import { money } from '../lib/format.js';
 import { PROPERTY_TYPES } from '../../worker/schema.js';
 
 /**
- * Bedrock's public listings: homes and rooms for rent, and homes for sale
+ * Squarely's public listings: homes and rooms for rent, and homes for sale
  * by owner, across Canada. The search lives in the address, so a search
  * can be shared. #admin opens the review of reported listings.
  */
@@ -26,7 +26,7 @@ export default function HomesPage() {
     <div className="min-h-dvh bg-(--page) text-zinc-900 antialiased dark:text-zinc-100">
       <header className="border-b border-hairline">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
-          <a href="/" aria-label="Bedrock home">
+          <a href="/" aria-label="Squarely home">
             <Logo />
           </a>
           <nav aria-label="Site" className="flex items-center gap-1 text-sm">
@@ -239,7 +239,7 @@ function Search() {
         </nav>
       )}
       <p className="border-t border-hairline pt-4 text-xs text-zinc-500 dark:text-zinc-400">
-        Listings are posted by their owners; Bedrock isn’t a real estate brokerage and doesn’t check every listing. See a place in person before you pay anything, and report anything that looks wrong.
+        Listings are posted by their owners; Squarely isn’t a real estate brokerage and doesn’t check every listing. See a place in person before you pay anything, and report anything that looks wrong.
       </p>
     </div>
   );

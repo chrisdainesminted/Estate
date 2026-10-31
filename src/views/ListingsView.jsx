@@ -91,7 +91,7 @@ function History({ days, story, below }) {
     <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-zinc-600 dark:text-zinc-400">
       {days != null && (
         <span>
-          <span className="font-semibold text-zinc-900 dark:text-zinc-100">{days === 0 ? 'New today' : `${days} day${days === 1 ? '' : 's'}`}</span> on Bedrock’s list
+          <span className="font-semibold text-zinc-900 dark:text-zinc-100">{days === 0 ? 'New today' : `${days} day${days === 1 ? '' : 's'}`}</span> on Squarely’s list
         </span>
       )}
       <span className="inline-flex items-center gap-2">
@@ -529,8 +529,8 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
 
       {status === 'checking' && <SkeletonCard className="h-[28rem]" />}
       {status === 'local' && (
-        <Notice title="Listings arrive on your hosted Bedrock page">
-          The morning run saves listings to your Claude account, so they show up on your Bedrock page at claude.ai. This copy of the page can’t
+        <Notice title="Listings arrive on your hosted Squarely page">
+          The morning run saves listings to your Claude account, so they show up on your Squarely page at claude.ai. This copy of the page can’t
           read them.
         </Notice>
       )}

@@ -17,7 +17,7 @@ const Ext = ({ href, children }) => (
 /* ---------- Am I ready? ---------- */
 
 /**
- * The steps between "I want to buy" and closing day. Steps Bedrock can see
+ * The steps between "I want to buy" and closing day. Steps Squarely can see
  * for itself (savings, programs) tick themselves; the rest you tick.
  */
 export function ReadyChecklist({ p, ready, onReady, ratePct, taxPct, rentEach, benefitsTotal }) {
@@ -247,7 +247,7 @@ export function BrokerForm({ p, maxPrice }) {
       if (!res.ok) throw new Error(data.error || 'Couldn’t send that. Try again in a minute.');
       setState({ status: 'sent', error: '' });
     } catch (err) {
-      setState({ status: 'idle', error: err.message === 'Failed to fetch' ? 'This works on the Bedrock website. Open it there to send.' : err.message });
+      setState({ status: 'idle', error: err.message === 'Failed to fetch' ? 'This works on the Squarely website. Open it there to send.' : err.message });
     }
   };
   if (state.status === 'sent') {
@@ -310,7 +310,7 @@ export function BrokerForm({ p, maxPrice }) {
       <label className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
         <input type="checkbox" required checked={f.consent} onChange={set('consent')} className="mt-1 accent-emerald-600" />
         <span>
-          Pass my details to one licensed mortgage broker so they can contact me. Bedrock may be paid a referral fee by the broker; it never changes your rate or costs you
+          Pass my details to one licensed mortgage broker so they can contact me. Squarely may be paid a referral fee by the broker; it never changes your rate or costs you
           anything. <a href="/privacy/" className="underline underline-offset-2">Privacy</a>
         </span>
       </label>

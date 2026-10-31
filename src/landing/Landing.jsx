@@ -132,7 +132,7 @@ function Nav() {
   return (
     <header className="sticky top-0 z-30 border-b border-hairline bg-(--page)/90 backdrop-blur supports-[backdrop-filter]:bg-(--page)/75">
       <div className={`${shell} flex h-16 items-center justify-between gap-4`}>
-        <a href="/" aria-label="Bedrock home" className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--accent)">
+        <a href="/" aria-label="Squarely home" className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--accent)">
           <Logo />
         </a>
         <nav aria-label="Sections" className="hidden items-center gap-7 text-sm font-medium text-zinc-600 md:flex dark:text-zinc-400">
@@ -193,7 +193,7 @@ function Hero({ city, onCity }) {
               </span>
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-zinc-600 sm:text-xl dark:text-zinc-400">
-              Bedrock shows what a bank would lend you, the government money you can claim where you live, and how renting out part of a home cuts both the income you need and what it costs you each month.
+              Squarely shows what a bank would lend you, the government money you can claim where you live, and how renting out part of a home cuts both the income you need and what it costs you each month.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <a href={open('home')} className={primary}>
@@ -214,7 +214,7 @@ function Hero({ city, onCity }) {
               src="/landing/desktop-listings.webp"
               width="1600"
               height="1000"
-              alt="Bedrock’s Listings tab: homes for sale ranked by cash flow, each with what it would cost to live in, the lender’s DSCR and the return."
+              alt="Squarely’s Listings tab: homes for sale ranked by cash flow, each with what it would cost to live in, the lender’s DSCR and the return."
               className="block h-auto w-full"
               loading="lazy"
             />
@@ -224,7 +224,7 @@ function Hero({ city, onCity }) {
               src="/landing/phone-home.webp"
               width="780"
               height="1688"
-              alt="Bedrock on a phone, the Home tab: you could buy up to $293,000, with what renting out a unit adds."
+              alt="Squarely on a phone, the Home tab: you could buy up to $293,000, with what renting out a unit adds."
               className="block h-auto w-full"
               loading="lazy"
             />
@@ -518,7 +518,7 @@ function Features() {
     [Landmark, 'Money you can get', 'FHSA refunds, the land transfer tax refund, the buyers’ tax credit and the RRSP Home Buyers’ Plan, added up for you.', 'home'],
     [ListChecks, 'Morning listings', 'Homes for sale in 27 cities, with the cost to live in each and whether a bank would say yes. Thunder Bay daily, the rest about weekly.', 'listings'],
     [ClipboardCheck, 'Permit guide', 'Adding a basement suite or a backyard home, step by step: what your province and city allow, what to submit, and whether it pays.', 'home'],
-    [Plus, 'List a home, free', 'Put a home up for rent or for sale with photos. People find it in Bedrock’s search, book a time to see it and message you here.', 'landlord'],
+    [Plus, 'List a home, free', 'Put a home up for rent or for sale with photos. People find it in Squarely’s search, book a time to see it and message you here.', 'landlord'],
     [KeyRound, 'Landlord tools', 'Applications and viewings from your calendar, rent tracking, repair requests, and expenses sorted for tax time.', 'landlord'],
     [Building2, 'Rental math', 'Every cost of a rental, the lender’s DSCR test, a stress test and a 10-year outlook, in plain words.', 'analyze'],
   ];
@@ -566,7 +566,7 @@ function Features() {
                 width="780"
                 height="1688"
                 loading="lazy"
-                alt="Bedrock’s Listings tab on a phone, with each home’s cost to live in."
+                alt="Squarely’s Listings tab on a phone, with each home’s cost to live in."
                 className="shot mx-auto mt-6 -mb-40 w-[62%] max-w-[16rem] rounded-[20px] transition duration-500 group-hover:-translate-y-2 sm:-mb-56 lg:mt-auto lg:-mb-64"
               />
             </a>
@@ -633,7 +633,7 @@ function RedTape({ city }) {
               Add a suite without getting lost at city hall.
             </h2>
             <p className="mt-4 text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
-              Most Canadian cities now allow a basement suite or a backyard home on a house lot, and many allow three or four homes. Bedrock walks you through the permit, the rules
+              Most Canadian cities now allow a basement suite or a backyard home on a house lot, and many allow three or four homes. Squarely walks you through the permit, the rules
               in your province, and how fast the rent pays back the build.
             </p>
           </div>
@@ -686,15 +686,15 @@ const FAQ = [
   ],
   [
     'Will a bank count the rent from the other unit?',
-    'For a two-unit home you live in, insured lenders can count the rent toward your income. With three or four units, about half of it. Bedrock uses those rules when it works out what you can borrow.',
+    'For a two-unit home you live in, insured lenders can count the rent toward your income. With three or four units, about half of it. Squarely uses those rules when it works out what you can borrow.',
   ],
   [
     'Is this financial advice?',
-    'No. Bedrock gives you careful estimates so you walk into a broker’s office knowing your numbers. A mortgage broker or lender confirms the real ones.',
+    'No. Squarely gives you careful estimates so you walk into a broker’s office knowing your numbers. A mortgage broker or lender confirms the real ones.',
   ],
   [
     'Where do the listings come from?',
-    'Public listing sites, searched each morning: Thunder Bay every day, and 26 more cities across Canada in turn, so each is refreshed about once a week. Each one links to its original page, and Bedrock fills gaps like rent with local averages you can change.',
+    'Public listing sites, searched each morning: Thunder Bay every day, and 26 more cities across Canada in turn, so each is refreshed about once a week. Each one links to its original page, and Squarely fills gaps like rent with local averages you can change.',
   ],
   [
     'What does it cost?',
@@ -702,7 +702,7 @@ const FAQ = [
   ],
   [
     'Does it work where I live?',
-    'Yes, anywhere in Canada. Pick your city and Bedrock uses your province’s land transfer tax and first-buyer programs, with local rent and property tax you can change. The morning listings cover 27 cities, from Victoria to St. John’s.',
+    'Yes, anywhere in Canada. Pick your city and Squarely uses your province’s land transfer tax and first-buyer programs, with local rent and property tax you can change. The morning listings cover 27 cities, from Victoria to St. John’s.',
   ],
 ];
 

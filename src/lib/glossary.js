@@ -83,7 +83,7 @@ export const GLOSSARY = {
   },
   arv: {
     term: 'After-repair value (ARV)',
-    body: 'What the property is worth once the rehab is done. Bedrock grows value from here instead of the price, so a good rehab shows up as equity.',
+    body: 'What the property is worth once the rehab is done. Squarely grows value from here instead of the price, so a good rehab shows up as equity.',
   },
   refinance: {
     term: 'Cash-out refinance',
@@ -131,7 +131,7 @@ export const GLOSSARY = {
   },
   listingRents: {
     term: 'Stated or estimated rents',
-    body: 'Stated rents are the current rents a listing gives. Where it doesn’t give one, Bedrock uses your rent table for that many bedrooms. Estimates can be off, so check them before you offer.',
+    body: 'Stated rents are the current rents a listing gives. Where it doesn’t give one, Squarely uses your rent table for that many bedrooms. Estimates can be off, so check them before you offer.',
   },
   allCash: {
     term: 'Bought outright',
@@ -147,6 +147,6 @@ export const GLOSSARY = {
   },
   utilities: {
     term: 'Owner-paid utilities',
-    body: 'In many multi-unit buildings the owner pays water and sometimes heat. Bedrock adds this amount per unit per month to listings with 2 or more units. Set it to 0 if tenants pay everything.',
+    body: 'In many multi-unit buildings the owner pays water and sometimes heat. Squarely adds this amount per unit per month to listings with 2 or more units. Set it to 0 if tenants pay everything.',
   },
 };

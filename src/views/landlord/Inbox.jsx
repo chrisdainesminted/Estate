@@ -129,19 +129,19 @@ function Application({ app, data, api, ws, settings }) {
     setBody(r.body);
   };
   /**
-   * As a reply goes out, move the application along. Sent in Bedrock, the
+   * As a reply goes out, move the application along. Sent in Squarely, the
    * message itself is on the applicant's page; sent by email or text, a
    * short note goes there instead.
    */
-  const record = async (inBedrock = false) => {
+  const record = async (inSquarely = false) => {
     if (!reply) return;
     setBusy(true);
     setError('');
     try {
       if (reply.releaseSlot && slot) await api.moveSlot(app.id, '');
-      if (inBedrock) await api.message(app.id, body);
-      await api.save('applications', app.id, { status: reply.status, ...(inBedrock ? {} : { note: reply.note }), read: true });
-      if (inBedrock) setPick(null);
+      if (inSquarely) await api.message(app.id, body);
+      await api.save('applications', app.id, { status: reply.status, ...(inSquarely ? {} : { note: reply.note }), read: true });
+      if (inSquarely) setPick(null);
     } catch (e) {
       setError(e.message);
     }
@@ -216,13 +216,13 @@ function Application({ app, data, api, ws, settings }) {
                 <div className="flex flex-wrap items-center gap-2">
                   {app.token && (
                     <Button variant="primary" disabled={busy} onClick={() => record(true)}>
-                      <Send className="size-4" aria-hidden /> Send in Bedrock
+                      <Send className="size-4" aria-hidden /> Send in Squarely
                     </Button>
                   )}
                   {(app.email || app.phone) && <SendButtons email={app.email} phone={app.phone} message={{ subject: reply.subject, body }} onSent={() => record(false)} secondary />}
                 </div>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  In Bedrock, it shows on {first(app.name)}’s page, where they can reply. Email or text opens your own app with it filled in. Either way the application moves to “{(STATUS[reply.status] ?? STATUS.new)[0]}”.
+                  In Squarely, it shows on {first(app.name)}’s page, where they can reply. Email or text opens your own app with it filled in. Either way the application moves to “{(STATUS[reply.status] ?? STATUS.new)[0]}”.
                 </p>
                 {busy && <p className="text-xs text-zinc-500">Saving…</p>}
               </div>

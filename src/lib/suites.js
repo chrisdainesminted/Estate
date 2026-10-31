@@ -3,7 +3,7 @@
 // steps, and whether the rent pays the build back. The steps are the same
 // almost everywhere; the rules differ by province and city, so the guide
 // gives the national and provincial picture, and the city's own pages and
-// grants where Bedrock has checked them (Thunder Bay so far).
+// grants where Squarely has checked them (Thunder Bay so far).
 // SUITE_RULES_CHECKED says when.
 
 import { monthlyPI } from './finance.js';
@@ -40,14 +40,14 @@ const CITY_RULES = {
   ],
 };
 
-/** What's allowed where you are, in short lines: the province's law, then the city's by-law where Bedrock has it. */
+/** What's allowed where you are, in short lines: the province's law, then the city's by-law where Squarely has it. */
 export function allowedFor(city) {
   const c = cityByKey(city);
   const general = { text: 'Most Canadian cities now allow a second unit on a house lot, a basement suite or a backyard home, and many allow three or four. Your city’s zoning by-law has the size, setback and parking rules.' };
   return [...(PROVINCE_RULES[c.province] ?? [general]), ...(CITY_RULES[c.key] ?? [])];
 }
 
-/** The permit steps, in order: the same almost everywhere, with the city's pages where Bedrock has them. */
+/** The permit steps, in order: the same almost everywhere, with the city's pages where Squarely has them. */
 export function stepsFor(city) {
   const c = cityByKey(city);
   const tb = c.key === 'thunder-bay';
@@ -95,7 +95,7 @@ export function stepsFor(city) {
 /** The steps' keys, for saving progress (the same everywhere). */
 export const STEPS = stepsFor('on-other');
 
-/** Money toward building: national, plus the city's grants where Bedrock has checked them. */
+/** Money toward building: national, plus the city's grants where Squarely has checked them. */
 export function moneyFor(city) {
   const local =
     cityByKey(city).key === 'thunder-bay'

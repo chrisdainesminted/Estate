@@ -100,7 +100,7 @@ function ConfirmEmail({ settings, api }) {
   };
   return (
     <Card>
-      <CardHeader title="Confirm your email" subtitle="Listings show in Bedrock’s public search once you do. It helps keep fake listings out." />
+      <CardHeader title="Confirm your email" subtitle="Listings show in Squarely’s public search once you do. It helps keep fake listings out." />
       <div className="space-y-3 p-5 text-sm">
         {!settings.email ? (
           <p className="text-zinc-600 dark:text-zinc-400">Add your email above and save first.</p>

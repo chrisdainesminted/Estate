@@ -35,7 +35,7 @@ export default function Expenses({ data, api }) {
     try {
       const { buildTaxPdf } = await import('../../lib/taxPdf.js');
       const blob = await buildTaxPdf({ year, payments: data.payments, expenses: data.expenses, units: data.units, settings: data.settings ?? {} });
-      await saveFile(`Rental income and expenses ${year} - Bedrock.pdf`, blob);
+      await saveFile(`Rental income and expenses ${year} - Squarely.pdf`, blob);
     } catch (err) {
       setError(err.message);
     }

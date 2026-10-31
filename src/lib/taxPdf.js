@@ -41,7 +41,7 @@ export async function buildTaxPdf({ year, payments, expenses, units, settings })
   const s = yearSummary(payments, expenses, year);
   const yr = String(year);
 
-  text('Bedrock · Rental income and expenses', m, y, { size: 9, bold: true, color: ACCENT });
+  text('Squarely · Rental income and expenses', m, y, { size: 9, bold: true, color: ACCENT });
   text(`Prepared ${new Date().toLocaleDateString('en-CA')}`, m + W, y, { size: 8.5, color: MUTED, align: 'right' });
   y += 26;
   text(`Tax year ${yr}`, m, y, { size: 22, bold: true });
@@ -132,6 +132,6 @@ export async function buildTaxPdf({ year, payments, expenses, units, settings })
       y += 12;
     });
 
-  doc.setProperties({ title: `Rental income and expenses ${yr} - Bedrock`, creator: 'Bedrock' });
+  doc.setProperties({ title: `Rental income and expenses ${yr} - Squarely`, creator: 'Squarely' });
   return doc.output('blob');
 }

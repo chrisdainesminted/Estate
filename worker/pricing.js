@@ -1,6 +1,6 @@
-// What Bedrock charges a landlord for the rent tracker: a small share of the
+// What Squarely charges a landlord for the rent tracker: a small share of the
 // rent on each unit with a tenant, capped per unit, with one unit free.
-// Renters and buyers never pay, and vacant units cost nothing. Bedrock is
+// Renters and buyers never pay, and vacant units cost nothing. Squarely is
 // software the landlord uses; it doesn't collect rent or manage tenancies.
 
 export const PLAN = {

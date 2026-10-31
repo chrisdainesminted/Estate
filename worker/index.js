@@ -82,7 +82,7 @@ export class Workspace extends DurableObject {
           s.meta('billingCustomer'),
           s.billing().card.paymentMethod,
           bill.cents,
-          `Bedrock rent tracker, ${req.month}: ${bill.tenanted} tenanted unit${bill.tenanted === 1 ? '' : 's'}`,
+          `Squarely rent tracker, ${req.month}: ${bill.tenanted} tenanted unit${bill.tenanted === 1 ? '' : 's'}`,
           { workspace: req.ws, month: req.month },
           `bedrock-${req.ws}-${req.month}`,
         );
@@ -216,7 +216,7 @@ export class Workspace extends DurableObject {
         case 'verifySend': {
           if (!canEmail(this.env)) throw new StoreError(501, 'Email isn’t set up on this site yet.');
           const { email, code } = await s.startVerify();
-          await sendEmail(this.env, email, `Your Bedrock code: ${code}`, `Your code is ${code}. Enter it in Bedrock to confirm your email. It expires in 15 minutes.\n\nIf you didn’t ask for this, ignore this email.`);
+          await sendEmail(this.env, email, `Your Squarely code: ${code}`, `Your code is ${code}. Enter it in Squarely to confirm your email. It expires in 15 minutes.\n\nIf you didn’t ask for this, ignore this email.`);
           return { ok: true, email };
         }
         case 'verifyCheck': {
@@ -309,7 +309,7 @@ export class Directory extends DurableObject {
       this.geoAt = Date.now();
       try {
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=ca&q=${encodeURIComponent(q)}`, {
-          headers: { 'user-agent': 'Bedrock/1.0 (https://bedrock.signia83.workers.dev/)', 'accept-language': 'en-CA' },
+          headers: { 'user-agent': 'Squarely/1.0 (https://bedrock.signia83.workers.dev/)', 'accept-language': 'en-CA' },
         });
         if (!res.ok) break; // leave the rest for later rather than record a miss
         const hit = (await res.json())[0];
@@ -385,7 +385,7 @@ export class Account extends DurableObject {
         case 'emailSend': {
           if (!canEmail(this.env)) throw new StoreError(501, 'Email isn’t set up on this site yet; alerts show in the app for now.');
           const { email, code } = await a.startEmail(req.body?.email);
-          await sendEmail(this.env, email, `Your Bedrock code: ${code}`, `Your code is ${code}. Enter it in Bedrock to get listing alerts by email. It expires in 15 minutes.\n\nIf you didn’t ask for this, ignore this email.`);
+          await sendEmail(this.env, email, `Your Squarely code: ${code}`, `Your code is ${code}. Enter it in Squarely to get listing alerts by email. It expires in 15 minutes.\n\nIf you didn’t ask for this, ignore this email.`);
           return { ok: true, email };
         }
         case 'emailCheck': {
@@ -459,7 +459,7 @@ export class Account extends DurableObject {
         ].join('\n'),
       )
       .join('\n\n');
-    await sendEmail(this.env, email, `Bedrock: ${sections.reduce((n, x) => n + x.fresh.length, 0)} homes match your alerts`, `${body}\n\nSee them all in Bedrock: ${origin}/app/?view=listings\n\nTo stop these emails, open Bedrock and turn off email alerts in your account.`);
+    await sendEmail(this.env, email, `Squarely: ${sections.reduce((n, x) => n + x.fresh.length, 0)} homes match your alerts`, `${body}\n\nSee them all in Squarely: ${origin}/app/?view=listings\n\nTo stop these emails, open Squarely and turn off email alerts in your account.`);
     return { sent: true };
   }
 }
@@ -514,8 +514,8 @@ async function api(request, env, url) {
         await sendEmail(
           env,
           email,
-          'Reset your Bedrock password',
-          `Someone (hopefully you) asked to reset the password for your Bedrock account.\n\nChoose a new password here: ${link}\n\nThe link works once and expires in an hour. After the reset, sign in again on your other devices; your old backup link stops working and your account page shows a new one.\n\nIf you didn’t ask for this, ignore this email: your password stays the same.`,
+          'Reset your Squarely password',
+          `Someone (hopefully you) asked to reset the password for your Squarely account.\n\nChoose a new password here: ${link}\n\nThe link works once and expires in an hour. After the reset, sign in again on your other devices; your old backup link stops working and your account page shows a new one.\n\nIf you didn’t ask for this, ignore this email: your password stays the same.`,
         );
       }
       // The same answer whether or not there's an account with that email.

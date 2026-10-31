@@ -248,7 +248,7 @@ export default function Account() {
       <PageShell width="max-w-5xl">
         <div className="grid items-start gap-10 lg:grid-cols-[1fr_24rem]">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">Your Bedrock account</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">Your Squarely account</p>
             <h1 className={`${h1} mt-3`}>Everything you’re working on, in one place.</h1>
             {status === 'error' && <p className="mt-3 text-sm text-red-700 dark:text-red-300">Couldn’t open the account saved on this device. Sign in again.</p>}
             <ul className="mt-8 space-y-5">

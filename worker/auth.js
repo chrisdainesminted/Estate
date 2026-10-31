@@ -1,4 +1,4 @@
-// Email-and-password sign-in for Bedrock accounts. A login record maps an
+// Email-and-password sign-in for Squarely accounts. A login record maps an
 // email (stored only as a hash) to an account. The password is never kept:
 // only a PBKDF2 hash to check it, and the account's key sealed with a second
 // key derived from the password, so the record alone can't open the account.

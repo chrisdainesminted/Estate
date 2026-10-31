@@ -14,7 +14,7 @@ function Heading({ id, children }) {
   );
 }
 
-/** How Bedrock works: a quick check, what each tab is for, and the words it uses. */
+/** How Squarely works: a quick check, what each tab is for, and the words it uses. */
 export default function HelpSheet({ onClose, views, country, city, rents, onQuickCheck, moreHidden, onShowAll }) {
   const [q, setQ] = useState('');
   const shown = useMemo(() => {
@@ -23,10 +23,10 @@ export default function HelpSheet({ onClose, views, country, city, rents, onQuic
   }, [q]);
 
   return (
-    <Sheet open onClose={onClose} title="How Bedrock works" desktop>
+    <Sheet open onClose={onClose} title="How Squarely works" desktop>
       <div className="space-y-7 pb-4">
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Bedrock tells you whether a rental property would put money in your pocket each month, and whether a lender would lend on it.
+          Squarely tells you whether a rental property would put money in your pocket each month, and whether a lender would lend on it.
         </p>
 
         <section aria-labelledby="help-check" className="space-y-3">

@@ -1,4 +1,4 @@
-// A Bedrock account: someone's numbers, deals and listing alerts, their
+// A Squarely account: someone's numbers, deals and listing alerts, their
 // renter profile, saved homes, applications and tenant pages, and their
 // landlord workspaces, kept so they follow them to every device. It opens
 // with its key: from a private link, or from signing in with an email and

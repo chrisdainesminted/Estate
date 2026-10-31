@@ -76,7 +76,7 @@ export default function AppMenu({ synced, syncText, dark, onToggleTheme, onAccou
           </button>
           <button type="button" role="menuitem" onClick={act(onHelp)} className={item}>
             <CircleHelp className={icon} aria-hidden />
-            How Bedrock works
+            How Squarely works
           </button>
           <button type="button" role="menuitem" onClick={act(onReset)} className={item}>
             <RotateCcw className={icon} aria-hidden />
