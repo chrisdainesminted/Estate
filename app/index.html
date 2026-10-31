@@ -22,6 +22,41 @@
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
     <script>
+      // After an update, a page this browser kept can ask for script files
+      // that no longer exist. Reload once to pick up the new version.
+      (function () {
+        var key = 'sq-reloaded';
+        function heal() {
+          try {
+            if (sessionStorage.getItem(key)) return;
+            sessionStorage.setItem(key, '1');
+          } catch (e) {
+            return;
+          }
+          location.reload();
+        }
+        window.addEventListener(
+          'error',
+          function (e) {
+            var t = e.target;
+            if (t && (t.tagName === 'SCRIPT' || t.tagName === 'LINK') && /\/assets\//.test(t.src || t.href || '')) heal();
+          },
+          true,
+        );
+        window.addEventListener('vite:preloadError', function (e) {
+          e.preventDefault();
+          heal();
+        });
+        window.addEventListener('load', function () {
+          setTimeout(function () {
+            try {
+              sessionStorage.removeItem(key);
+            } catch (e) {}
+          }, 10000);
+        });
+      })();
+    </script>
+    <script>
       // Pick the theme before paint to avoid a flash: onyx (dark) unless
       // the person switched to light with the in-app toggle.
       (function () {

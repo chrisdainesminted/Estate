@@ -7,6 +7,15 @@ import { accountCall, accountLink } from '../lib/account.js';
  * workspaces). Changes show at once and are saved in the background.
  * status: 'none' (signed out) | 'loading' | 'ready' | 'error'
  */
+/** Every list and the profile present, whatever the server sent back. */
+const LISTS = ['saved', 'applications', 'tenancies', 'workspaces', 'alerts'];
+function complete(d) {
+  const out = d && typeof d === 'object' ? { ...d } : {};
+  for (const k of LISTS) if (!Array.isArray(out[k])) out[k] = [];
+  if (!out.profile || typeof out.profile !== 'object') out.profile = {};
+  return out;
+}
+
 export function useAccount() {
   const [link, setLink] = useState(accountLink);
   const [data, setData] = useState(null);
@@ -32,7 +41,7 @@ export function useAccount() {
     }
     setStatus('loading');
     try {
-      setData(await accountCall(link));
+      setData(complete(await accountCall(link)));
       setStatus('ready');
     } catch {
       setStatus('error');

@@ -8,6 +8,33 @@
 /data/*
   Cache-Control: public, max-age=300
 
+# Pages are rechecked on every visit, so a browser never runs an old page
+# against script files an update has replaced.
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/app/*
+  Cache-Control: no-cache
+/homes/*
+  Cache-Control: no-cache
+/listing/*
+  Cache-Control: no-cache
+/rent/*
+  Cache-Control: no-cache
+/account/*
+  Cache-Control: no-cache
+/about/*
+  Cache-Control: no-cache
+/contact/*
+  Cache-Control: no-cache
+/methods/*
+  Cache-Control: no-cache
+/terms/*
+  Cache-Control: no-cache
+/privacy/*
+  Cache-Control: no-cache
+
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
