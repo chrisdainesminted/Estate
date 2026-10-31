@@ -19,9 +19,9 @@ export function LogoMark({ className = 'size-7' }) {
 
 export default function Logo() {
   return (
-    <div className="flex items-center gap-2.5">
-      <LogoMark className="size-6" />
-      <span className="text-[19px] font-bold tracking-[-0.035em] text-zinc-950 dark:text-white">Squarely</span>
+    <div className="flex items-center gap-3">
+      <LogoMark className="size-8" />
+      <span className="text-[22px] font-bold tracking-[-0.035em] text-zinc-950 dark:text-white">Squarely</span>
     </div>
   );
 }
