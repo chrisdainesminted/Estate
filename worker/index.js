@@ -18,7 +18,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { COLLECTIONS } from './schema.js';
 import { PHOTO_TYPES, Store, StoreError, hashKey, randomToken } from './store.js';
-import { DirectoryStore, REPORT_REASONS } from './directory.js';
+import { DirectoryStore, REPORT_REASONS, cleanInbox } from './directory.js';
 import { cityByKey } from '../src/lib/canada.js';
 import { monthlyBill } from './pricing.js';
 import { stripeClient, verifyWebhook } from './stripe.js';
@@ -289,6 +289,12 @@ export class Directory extends DurableObject {
           return this.store.report(req.key, req.ip, req.reason, req.note);
         case 'reported':
           return this.store.reported();
+        case 'addInbox':
+          return this.store.addInbox(req.kind, req.data, req.ip);
+        case 'inbox':
+          return this.store.inbox();
+        case 'inboxDone':
+          return this.store.inboxDone(req.id, req.done);
         case 'geocode':
           return await this.geocode(req.queries, req.ip);
         case 'review':
@@ -340,6 +346,15 @@ async function api(request, env, url) {
     if (typeof body.key !== 'string' || body.key.length > 140) return json({ error: 'Not found.' }, 404);
     return answer(await directory(env).call({ op: 'report', key: body.key, ip, reason: REPORT_REASONS.includes(body.reason) ? body.reason : 'other', note: body.note }));
   }
+  // A note to the site's owner, or a request to be put in touch with a mortgage broker.
+  if ((parts[0] === 'contact' || parts[0] === 'broker') && parts.length === 1 && method === 'POST') {
+    const body = await readBody(request);
+    if (body.website) return json({ ok: true }); // the honeypot field people never see
+    const data = cleanInbox(parts[0], body);
+    if (data.error) return json({ error: data.error }, 400);
+    return answer(await directory(env).call({ op: 'addInbox', kind: parts[0], data, ip }));
+  }
+
   // Map points for listing addresses ("228 Archibald Street S, Thunder Bay, ON").
   if (parts[0] === 'geo' && method === 'POST') {
     const body = await readBody(request);
@@ -354,6 +369,11 @@ async function api(request, env, url) {
     const key = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
     if (!env.ADMIN_KEY || !sameText(key, env.ADMIN_KEY)) return json({ error: 'Not allowed.' }, 401);
     if (parts[1] === 'reported' && method === 'GET') return answer(await directory(env).call({ op: 'reported' }));
+    if (parts[1] === 'inbox' && method === 'GET') return answer(await directory(env).call({ op: 'inbox' }));
+    if (parts[1] === 'inbox' && method === 'POST') {
+      const body = await readBody(request);
+      return answer(await directory(env).call({ op: 'inboxDone', id: body.id, done: Boolean(body.done) }));
+    }
     if (parts[1] === 'review' && method === 'POST') {
       const body = await readBody(request);
       return answer(await directory(env).call({ op: 'review', key: String(body.key || ''), keep: Boolean(body.keep) }));

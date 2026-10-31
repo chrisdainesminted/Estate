@@ -10,7 +10,7 @@ import { DEFAULT_SUITE, normalizeSuite } from '../lib/suites.js';
 // Per-library settings that travel with the deals: offer targets, the growth
 // plan, tax inputs, the assumptions used to underwrite daily listings, your
 // first-home numbers and your progress on adding a suite.
-const DEFAULT_SETTINGS = { targets: DEFAULT_TARGETS, plan: DEFAULT_PLAN, tax: DEFAULT_TAX, market: DEFAULT_MARKET, home: DEFAULT_PROFILE, suite: DEFAULT_SUITE };
+const DEFAULT_SETTINGS = { targets: DEFAULT_TARGETS, plan: DEFAULT_PLAN, tax: DEFAULT_TAX, market: DEFAULT_MARKET, home: DEFAULT_PROFILE, suite: DEFAULT_SUITE, ready: {}, rvb: {} };
 
 function normalizeSettings(s) {
   return {
@@ -20,6 +20,10 @@ function normalizeSettings(s) {
     market: normalizeMarket(s?.market),
     home: normalizeProfile(s?.home),
     suite: normalizeSuite(s?.suite),
+    // The "Am I ready?" checklist: step id → true once done.
+    ready: Object.fromEntries(Object.entries(s?.ready && typeof s.ready === 'object' ? s.ready : {}).filter(([, v]) => v === true)),
+    // Rent vs buy: your own growth and return assumptions, if you changed them.
+    rvb: Object.fromEntries(Object.entries(s?.rvb && typeof s.rvb === 'object' ? s.rvb : {}).filter(([, v]) => Number.isFinite(Number(v))).map(([k, v]) => [k, Number(v)])),
   };
 }
 

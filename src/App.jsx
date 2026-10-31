@@ -699,6 +699,10 @@ export default function App() {
                 liveDealId={liveDealId ?? activeId}
                 onHome={(patch) => lib.updateSettings('home', patch)}
                 onSuite={(patch) => lib.updateSettings('suite', patch)}
+                ready={lib.settings.ready}
+                rvb={lib.settings.rvb}
+                onReady={(patch) => lib.updateSettings('ready', patch)}
+                onRvb={(patch) => lib.updateSettings('rvb', patch)}
                 onPickDeal={setLiveDealId}
                 onOpen={openDeal}
               />

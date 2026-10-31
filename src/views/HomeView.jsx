@@ -9,6 +9,7 @@ import { INSURANCE_MIN } from '../lib/market.js';
 import { Button, Card, CardHeader, LedgerHeading, LedgerLine, NumberField, Segmented, SelectField, SummaryCard, ViewHeader, signedClass } from '../components/ui.jsx';
 import { Section, SectionGroup } from '../components/Section.jsx';
 import CitySelect from '../components/CitySelect.jsx';
+import { BrokerForm, ReadyChecklist, RentVsBuy } from './HomeExtras.jsx';
 
 const checkedOn = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' });
 const monthFrom = (months) => new Date(new Date().getFullYear(), new Date().getMonth() + months, 1).toLocaleDateString('en-CA', { month: 'long', year: 'numeric' });
@@ -398,7 +399,7 @@ function ExampleNote({ onStart }) {
  * be ready, what living in one of your deals would cost, and how to add a
  * rental unit through the permits.
  */
-export default function HomeView({ profile: p, suite, market, items, liveDealId, onHome, onSuite, onPickDeal, onOpen }) {
+export default function HomeView({ profile: p, suite, ready = {}, rvb = {}, market, items, liveDealId, onHome, onSuite, onReady, onRvb, onPickDeal, onOpen }) {
   const ratePct = Number(market.rate);
   // Rent for a second unit and property tax where the profile is buying (the city's, unless they set their own).
   const local = localFor(p);
@@ -470,11 +471,20 @@ export default function HomeView({ profile: p, suite, market, items, liveDealId,
         <Section id="home-path" title="When you’ll be ready" meaning="How long until your savings cover the down payment and closing costs on the home you want.">
           <Path p={p} onHome={onHome} ratePct={ratePct} taxPct={taxPct} rentEach={rentEach} />
         </Section>
+        <Section id="home-ready" title="Am I ready?" meaning="Every step from saving to closing day, with the ones your numbers already cover ticked for you.">
+          <ReadyChecklist p={p} ready={ready} onReady={onReady} ratePct={ratePct} taxPct={taxPct} rentEach={rentEach} benefitsTotal={b.total} />
+        </Section>
+        <Section id="home-rvb" title="Rent or buy, over 10 years" meaning="What you’d be worth after ten years if you bought the home you’re aiming for, against renting and investing the difference.">
+          <RentVsBuy p={p} rvb={rvb} onRvb={onRvb} ratePct={ratePct} taxPct={taxPct} rentEach={rentEach} insuranceMonthly={insurance(p.targetUnits)} />
+        </Section>
         <Section id="home-live" title="Live in one of your deals" meaning="Could you buy it, and what would it cost you each month once the other units’ rent comes in?">
           <LiveInDeal p={p} items={items} dealId={liveDealId} onPick={onPickDeal} ratePct={ratePct} onOpen={onOpen} />
         </Section>
         <Section id="home-suite" title="Add a suite or backyard home" meaning="Turn a house you own (or buy) into one that pays you rent: what’s allowed where you are, the permit steps, and whether it pays.">
           <SuiteGuide s={suite} onSuite={onSuite} city={local.city.key} />
+        </Section>
+        <Section id="home-broker" title="Talk to a mortgage broker" meaning="Get pre-approved: a licensed broker compares lenders for you, free and with no obligation.">
+          <BrokerForm p={p} maxPrice={duplex.price} />
         </Section>
       </SectionGroup>
 

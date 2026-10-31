@@ -1,5 +1,5 @@
 import { beforeEach, describe as suite, expect, it } from 'vitest';
-import { DirectoryStore } from './directory.js';
+import { DirectoryStore, cleanInbox } from './directory.js';
 
 const sqlite = await import('node:sqlite').catch(() => null);
 const describe = sqlite ? suite : suite.skip;
@@ -67,5 +67,34 @@ describe('map points', () => {
     d.geoPut('a', [48.4, -89.2]);
     d.geoPut('b', null);
     expect(d.geoGet(['a', 'b', 'c'])).toEqual({ known: { a: [48.4, -89.2] }, missing: ['c'] });
+  });
+});
+
+describe('owner inbox', () => {
+  it('keeps contact notes and broker requests, newest first, until marked done', () => {
+    d.addInbox('contact', { name: 'A', email: 'a@b.ca', message: 'Hello there' }, '1.1.1.1');
+    now += 1000;
+    d.addInbox('broker', { name: 'B', email: 'b@b.ca', consent: true }, '1.1.1.1');
+    const [first, second] = d.inbox();
+    expect(first).toMatchObject({ kind: 'broker', name: 'B', done: false });
+    expect(second.kind).toBe('contact');
+    d.inboxDone(first.id, true);
+    expect(d.inbox()[1]).toMatchObject({ name: 'B', done: true });
+  });
+
+  it('limits how many one address can send', () => {
+    for (let i = 0; i < 5; i++) d.addInbox('contact', { name: 'A' }, '2.2.2.2');
+    expect(() => d.addInbox('contact', { name: 'A' }, '2.2.2.2')).toThrow(/Too many/);
+  });
+});
+
+describe('form checks', () => {
+  it('needs a name, a real-looking email, and a message or consent', () => {
+    expect(cleanInbox('contact', { name: '', email: 'a@b.ca', message: 'hi there' }).error).toMatch(/name/);
+    expect(cleanInbox('contact', { name: 'A', email: 'nope', message: 'hi there' }).error).toMatch(/email/);
+    expect(cleanInbox('contact', { name: 'A', email: 'a@b.ca', message: 'hey' }).error).toMatch(/message/);
+    expect(cleanInbox('contact', { name: ' A ', email: 'a@b.ca', message: 'Hello there', extra: 'x' })).toEqual({ name: 'A', email: 'a@b.ca', topic: '', message: 'Hello there' });
+    expect(cleanInbox('broker', { name: 'A', email: 'a@b.ca' }).error).toMatch(/Tick/);
+    expect(cleanInbox('broker', { name: 'A', email: 'a@b.ca', consent: true, price: '400000' })).toMatchObject({ price: 400000, consent: true });
   });
 });

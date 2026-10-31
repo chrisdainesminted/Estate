@@ -273,10 +273,12 @@ function Card({ h }) {
 function Review() {
   const [key, setKey] = useState(() => sessionStorage.getItem('bedrock-admin') || '');
   const [list, setList] = useState(null);
+  const [inbox, setInbox] = useState([]);
   const [error, setError] = useState('');
   const load = async (k = key) => {
     try {
       setList(await call('/admin/reported', { key: k }));
+      setInbox(await call('/admin/inbox', { key: k }).catch(() => []));
       sessionStorage.setItem('bedrock-admin', k);
       setError('');
     } catch (e) {
@@ -296,7 +298,8 @@ function Review() {
           load();
         }}
       >
-        <h1 className="text-2xl font-semibold text-zinc-950 dark:text-white">Review reported listings</h1>
+        <h1 className="text-2xl font-semibold text-zinc-950 dark:text-white">Owner’s desk</h1>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">Reported listings, contact messages and broker requests.</p>
         <div>
           <label htmlFor="adm-key" className={label}>
             Admin key
@@ -313,9 +316,38 @@ function Review() {
         </Button>
       </form>
     );
+  const mark = async (id, done) => {
+    await call('/admin/inbox', { method: 'POST', key, body: { id, done } });
+    load();
+  };
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-zinc-950 dark:text-white">Reported listings</h1>
+      <h1 className="text-2xl font-semibold text-zinc-950 dark:text-white">Messages and broker requests</h1>
+      {inbox.length === 0 && <p className="text-sm text-zinc-600 dark:text-zinc-400">No messages yet.</p>}
+      <ul className="space-y-3">
+        {inbox.map((m) => (
+          <li key={m.id} className={`panel space-y-1.5 p-4 text-sm ${m.done ? 'opacity-60' : ''}`}>
+            <p className="font-semibold text-zinc-950 dark:text-white">
+              {m.kind === 'broker' ? 'Broker request' : `Message${m.topic ? ` · ${m.topic}` : ''}`} · {m.name} ·{' '}
+              <a className="underline" href={`mailto:${m.email}`}>
+                {m.email}
+              </a>
+              {m.phone ? ` · ${m.phone}` : ''}
+            </p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">{new Date(m.at).toLocaleString('en-CA')}</p>
+            {m.kind === 'broker' && (
+              <p className="text-zinc-700 dark:text-zinc-300">
+                {[m.city, m.timeline, m.price > 0 && `could buy ${money(m.price)}`, m.income > 0 && `income ${money(m.income)}`].filter(Boolean).join(' · ')}
+              </p>
+            )}
+            {(m.message || m.note) && <p className="whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">{m.message || m.note}</p>}
+            <Button className="mt-1" onClick={() => mark(m.id, !m.done)}>
+              {m.done ? 'Mark as not done' : 'Mark done'}
+            </Button>
+          </li>
+        ))}
+      </ul>
+      <h2 className="pt-4 text-xl font-semibold text-zinc-950 dark:text-white">Reported listings</h2>
       {list.length === 0 && <p className="text-sm text-zinc-600 dark:text-zinc-400">Nothing to review.</p>}
       <ul className="space-y-3">
         {list.map((h) => (

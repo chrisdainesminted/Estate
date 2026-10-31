@@ -11,6 +11,27 @@ const KEEP_DAYS = 60;
 const HIDE_AT = 3;
 const PAGE = 24;
 const DAY = 86400000;
+const INBOX_DAYS = 365;
+
+/** Contact and broker forms */
+const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
+const clip = (v, n) => String(v ?? '').trim().slice(0, n);
+
+/** What the contact and broker forms may send, trimmed; { error } if it's not enough to answer. */
+export function cleanInbox(kind, b) {
+  const name = clip(b.name, 100);
+  const email = clip(b.email, 200);
+  const phone = clip(b.phone, 40);
+  if (!name) return { error: 'Add your name.' };
+  if (!EMAIL.test(email)) return { error: 'Add an email address we can reply to.' };
+  if (kind === 'contact') {
+    const message = clip(b.message, 4000);
+    if (message.length < 5) return { error: 'Add a message.' };
+    return { name, email, topic: clip(b.topic, 40), message };
+  }
+  if (b.consent !== true) return { error: 'Tick the box so we can pass your details to a broker.' };
+  return { name, email, phone, city: clip(b.city, 60), timeline: clip(b.timeline, 40), price: Math.max(Number(b.price) || 0, 0), income: Math.max(Number(b.income) || 0, 0), note: clip(b.note, 1000), consent: true };
+}
 
 export const REPORT_REASONS = ['scam', 'not-available', 'wrong-info', 'discriminatory', 'other'];
 
@@ -26,6 +47,30 @@ export class DirectoryStore {
     sql.exec('CREATE TABLE IF NOT EXISTS billed (ws TEXT PRIMARY KEY, charged TEXT)');
     // Addresses already turned into map points (lat null: looked up, not found), so each is asked about once.
     sql.exec('CREATE TABLE IF NOT EXISTS geo (q TEXT PRIMARY KEY, lat REAL, lng REAL, at INTEGER)');
+    // Messages to the site's owner: contact-form notes and requests to talk to a mortgage broker.
+    sql.exec('CREATE TABLE IF NOT EXISTS inbox (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT, data TEXT, at INTEGER, done INTEGER DEFAULT 0)');
+  }
+
+  // ---- the owner's inbox ----
+
+  /** Keep a contact note or broker request; personal details are dropped after INBOX_DAYS. */
+  addInbox(kind, data, ip) {
+    this.limit(ip, `inbox-${kind}`, 5);
+    this.sql.exec('INSERT INTO inbox (kind, data, at) VALUES (?, ?, ?)', kind, JSON.stringify(data), this.now());
+    this.sql.exec('DELETE FROM inbox WHERE at < ?', this.now() - INBOX_DAYS * DAY);
+    return { ok: true };
+  }
+
+  inbox() {
+    return this.sql
+      .exec('SELECT id, kind, data, at, done FROM inbox ORDER BY done, at DESC LIMIT 300')
+      .toArray()
+      .map((r) => ({ id: r.id, kind: r.kind, at: r.at, done: Boolean(r.done), ...JSON.parse(r.data) }));
+  }
+
+  inboxDone(id, done) {
+    this.sql.exec('UPDATE inbox SET done = ? WHERE id = ?', done ? 1 : 0, Number(id));
+    return { ok: true };
   }
 
   // ---- map points for listing addresses ----
