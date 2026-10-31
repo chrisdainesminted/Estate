@@ -59,7 +59,7 @@ export default function Welcome({ country, city, rents, onQuickCheck }) {
           onClick={dismiss}
           className="mt-3 rounded-lg text-sm font-medium text-emerald-700 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:text-emerald-300"
         >
-          Or look at the example deals first
+          Skip for now
         </button>
       </div>
     </Card>

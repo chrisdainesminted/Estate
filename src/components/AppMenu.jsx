@@ -80,7 +80,7 @@ export default function AppMenu({ synced, syncText, dark, onToggleTheme, onAccou
           </button>
           <button type="button" role="menuitem" onClick={act(onReset)} className={item}>
             <RotateCcw className={icon} aria-hidden />
-            Start over with the examples
+            Start over
           </button>
         </div>
       )}

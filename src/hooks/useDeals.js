@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { DEFAULT_DEAL, MAX_COMPARE, PRESET_DEALS, PRESET_OWNED, makeDeal } from '../lib/presets.js';
+import { DEFAULT_DEAL, MAX_COMPARE, makeDeal, switchRules } from '../lib/presets.js';
+import { guessCity } from '../lib/canada.js';
 import { capability } from '../lib/runtime.js';
 import { accountLink, accountRef } from '../lib/account.js';
 import { cleanAlert } from '../../worker/account.js';
-import { DEFAULT_TARGETS, DEFAULT_TAX } from '../lib/finance.js';
+import { DEFAULT_TARGETS, DEFAULT_TAX, OWN_DOWN_PCT } from '../lib/finance.js';
 import { DEFAULT_PLAN } from '../lib/growth.js';
 import { DEFAULT_MARKET, normalizeMarket } from '../lib/market.js';
 import { DEFAULT_PROFILE, normalizeProfile } from '../lib/firstHome.js';
@@ -41,13 +42,24 @@ function freeSlot(compare) {
   return -1;
 }
 
+/** One blank property to start from: Canadian rules, in the city this browser's time zone suggests. */
+function blankDeal() {
+  const m = DEFAULT_MARKET;
+  let city;
+  try {
+    city = guessCity();
+  } catch {
+    city = undefined;
+  }
+  return makeDeal({ ...switchRules(DEFAULT_DEAL, 'ca'), ...(city ? { city } : {}), name: 'My first property', downPct: OWN_DOWN_PCT, rate: m.rate, refiRate: m.rate, termYears: m.amortYears });
+}
+
 function freshState(updatedAt = 0) {
-  const prospects = PRESET_DEALS.map((d) => makeDeal({ ...d, example: true }));
-  const owned = PRESET_OWNED.map((d) => makeDeal({ ...d, example: true }));
+  const deal = blankDeal();
   return {
-    deals: [...prospects, ...owned],
-    activeId: prospects[0].id,
-    compare: prospects.map((d, slot) => ({ id: d.id, slot })),
+    deals: [deal],
+    activeId: deal.id,
+    compare: [{ id: deal.id, slot: 0 }],
     settings: normalizeSettings(DEFAULT_SETTINGS),
     updatedAt,
   };
@@ -55,7 +67,10 @@ function freshState(updatedAt = 0) {
 
 function normalize(saved, activeId) {
   // Fill in any fields added since the deal was saved.
-  const deals = saved.deals.map((d) => {
+  // Untouched example deals from older versions are dropped; edited ones were
+  // already marked as the person's own.
+  const kept = saved.deals.filter((d) => !d.example);
+  const deals = (kept.length ? kept : [blankDeal()]).map((d) => {
     const { slot, ...rest } = d; // v1 stored color slots on deals
     return { ...DEFAULT_DEAL, ...rest, id: d.id || makeDeal().id };
   });
@@ -63,8 +78,9 @@ function normalize(saved, activeId) {
   let compare = Array.isArray(saved.compare) ? saved.compare.filter((c) => ids.has(c.id) && c.slot >= 0 && c.slot < MAX_COMPARE) : null;
   if (!compare) {
     // v1: every deal was compared, using its own slot.
-    compare = saved.deals.slice(0, MAX_COMPARE).map((d, i) => ({ id: d.id, slot: Number.isInteger(d.slot) ? d.slot : i }));
+    compare = deals.slice(0, MAX_COMPARE).map((d, i) => ({ id: d.id, slot: Number.isInteger(d.slot) ? d.slot : i }));
   }
+  if (!compare.length) compare = [{ id: deals[0].id, slot: 0 }];
   const want = activeId ?? saved.activeId;
   return {
     deals,
@@ -82,7 +98,7 @@ function loadLocal() {
       if (saved && Array.isArray(saved.deals) && saved.deals.length > 0) return normalize(saved);
     }
   } catch {
-    // Storage blocked or corrupt — fall through to the examples.
+    // Storage blocked or corrupt — fall through to a blank property.
   }
   return freshState();
 }

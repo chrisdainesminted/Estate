@@ -551,11 +551,11 @@ export default function App() {
       {
         id: 'act-reset',
         group: 'Actions',
-        label: 'Start over with the example deals',
+        label: 'Start over with a blank property',
         icon: RotateCcw,
-        keywords: 'reset examples',
+        keywords: 'reset clear blank start over',
         run: () => {
-          withUndo('Replaced your deals with the examples', lib.resetAll);
+          withUndo('Cleared your deals', lib.resetAll);
           setAdj(NO_ADJ);
         },
       },
@@ -671,7 +671,7 @@ export default function App() {
                 dealName={current?.deal?.name}
                 count={baseItems.length}
                 onReset={() => {
-                  withUndo('Replaced your deals with the examples', lib.resetAll);
+                  withUndo('Cleared your deals', lib.resetAll);
                   setAdj(NO_ADJ);
                 }}
               />
