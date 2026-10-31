@@ -10,7 +10,7 @@ import SiteFooter from '../components/SiteFooter.jsx';
  */
 
 export const UPDATED = '2026-10-31';
-// Shown wherever the pages say how to reach us; until it's set they say a contact address is coming.
+// Shown wherever the pages say how to reach us; until it's set they point to the contact form.
 export const CONTACT_EMAIL = '';
 
 const contact = CONTACT_EMAIL ? (
@@ -18,7 +18,9 @@ const contact = CONTACT_EMAIL ? (
     {CONTACT_EMAIL}
   </a>
 ) : (
-  'the contact address we’ll post on this page'
+  <a href="/contact/" className="font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-400">
+    our contact form
+  </a>
 );
 
 const TERMS = {
@@ -144,6 +146,14 @@ const PRIVACY = {
           what’s in it; ask us and we’ll delete all of it, except charge records we must keep for tax law.
         </p>
       </>,
+    ],
+    [
+      'When you contact us or ask for a mortgage broker',
+      <p>
+        We keep what you send through the contact form (your name, email and message) to answer you. If you ask to talk to a mortgage broker, we keep your name, email,
+        phone, city, timing and anything you chose to share (like your income), and pass them to one licensed broker so they can contact you; the broker may pay us a referral
+        fee. Both are deleted after a year.
+      </p>,
     ],
     [
       'Records that keep the site safe',

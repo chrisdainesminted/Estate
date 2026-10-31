@@ -22,7 +22,9 @@ const COLUMNS = [
   [
     'Bedrock',
     [
-      ['How it works', '/#how'],
+      ['About', '/about/'],
+      ['How we calculate', '/methods/'],
+      ['Contact', '/contact/'],
       ['Questions', '/#faq'],
       ['Terms of use', '/terms/'],
       ['Privacy', '/privacy/'],

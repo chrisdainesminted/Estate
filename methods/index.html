@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>How we calculate · Bedrock</title>
+    <meta name="description" content="Every number Bedrock shows and where it comes from: lending rules, insurance, closing costs, programs, rental math and listings." />
+    <meta name="theme-color" content="#0b0b0c" />
+    
+    <link rel="icon" href="/favicon.ico?v=3" sizes="48x48" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=3" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap" rel="stylesheet" />
+    <script>
+      // Same theme as the app: onyx unless the person picked light there.
+      (function () {
+        var saved = null;
+        try {
+          saved = localStorage.getItem('dscr-theme');
+        } catch (e) {}
+        document.documentElement.classList.toggle('dark', saved !== 'light');
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/pages/methods.jsx"></script>
+  </body>
+</html>
