@@ -419,3 +419,29 @@ html.dark .shot {
     print-color-adjust: exact;
   }
 }
+
+/* ---------- Listings map ---------- */
+
+.listing-map {
+  border: 1px solid var(--color-hairline);
+  background: var(--panel);
+}
+/* Dark mode: invert the light map tiles into a dark map, keeping the dots' own colours. */
+html.dark .listing-map .map-tiles {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9);
+}
+.listing-map .leaflet-popup-content-wrapper,
+.listing-map .leaflet-popup-tip {
+  background: var(--popover);
+  color: inherit;
+}
+.listing-map .leaflet-popup-content {
+  font: 13px/1.45 var(--font-sans);
+}
+.listing-map .leaflet-popup-content a {
+  color: var(--accent);
+}
+
+.listing-map.leaflet-container {
+  background: var(--color-well);
+}

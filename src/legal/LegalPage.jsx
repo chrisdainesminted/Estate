@@ -159,6 +159,7 @@ const PRIVACY = {
         <li>Stripe stores cards and takes landlords’ payments.</li>
         <li>Resend sends verification emails.</li>
         <li>Google Fonts serves the site’s typeface, which means your browser asks Google for it.</li>
+        <li>OpenStreetMap draws the listings map: your browser loads its map images, and listing addresses (never yours) are looked up on its Nominatim service.</li>
       </ul>,
     ],
     [

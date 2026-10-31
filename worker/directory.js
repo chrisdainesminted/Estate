@@ -24,6 +24,26 @@ export class DirectoryStore {
     sql.exec('CREATE TABLE IF NOT EXISTS reports (key TEXT, ip TEXT, reason TEXT, note TEXT, at INTEGER, PRIMARY KEY (key, ip))');
     sql.exec('CREATE TABLE IF NOT EXISTS hits (bucket TEXT PRIMARY KEY, n INTEGER)');
     sql.exec('CREATE TABLE IF NOT EXISTS billed (ws TEXT PRIMARY KEY, charged TEXT)');
+    // Addresses already turned into map points (lat null: looked up, not found), so each is asked about once.
+    sql.exec('CREATE TABLE IF NOT EXISTS geo (q TEXT PRIMARY KEY, lat REAL, lng REAL, at INTEGER)');
+  }
+
+  // ---- map points for listing addresses ----
+
+  /** Known points for these addresses, and the ones never looked up. */
+  geoGet(queries) {
+    const known = {};
+    const missing = [];
+    for (const q of queries) {
+      const row = this.sql.exec('SELECT lat, lng FROM geo WHERE q = ?', q).toArray()[0];
+      if (!row) missing.push(q);
+      else if (row.lat != null) known[q] = [row.lat, row.lng];
+    }
+    return { known, missing };
+  }
+
+  geoPut(q, point) {
+    this.sql.exec('INSERT OR REPLACE INTO geo (q, lat, lng, at) VALUES (?, ?, ?, ?)', q, point?.[0] ?? null, point?.[1] ?? null, this.now());
   }
 
   // ---- landlords with a card on file, for the monthly charge ----

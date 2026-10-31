@@ -471,3 +471,44 @@ export function planRun(index, count = 4) {
     .map((x) => x.k);
   return [HOME_MARKET, ...others];
 }
+
+const dayNumber = (iso) => Math.floor(Date.parse(`${iso}T12:00:00Z`) / 86400000);
+
+/** Days since the morning run first found a listing (how long Bedrock has seen it for sale), or null. */
+export function daysListed(listing, today = new Date().toISOString().slice(0, 10)) {
+  if (!listing?.firstSeen || !/^\d{4}-\d{2}-\d{2}$/.test(listing.firstSeen)) return null;
+  return Math.max(dayNumber(today) - dayNumber(listing.firstSeen), 0);
+}
+
+/** The asking price's moves since first seen: first price, change since then, and the points to draw. */
+export function priceStory(listing) {
+  const h = (Array.isArray(listing?.priceHistory) ? listing.priceHistory : []).filter((p) => Number(p.price) > 0);
+  const points = h.length ? h.map((p) => ({ date: p.date, price: Number(p.price) })) : [{ date: listing?.firstSeen ?? null, price: Number(listing?.price) || 0 }];
+  const first = points[0].price;
+  const now = Number(listing?.price) || points.at(-1).price;
+  return { first, now, change: now - first, moves: points.length - 1, points };
+}
+
+/**
+ * Listings priced well under the rest of their city's list: the asking
+ * price per door at least `cut` below the median per door of the same kind
+ * (houses, 2–4 units, 5+ units, each against its own), once a kind has
+ * at least `minGroup` listings to compare. Returns Map id → share below.
+ */
+export function underMarket(listings, { cut = 0.15, minGroup = 4 } = {}) {
+  const active = (listings ?? []).filter((l) => (l.status ?? 'active') === 'active' && Number(l.price) > 0);
+  const kind = (l) => typeOf(Math.max(Math.round(Number(l.units) || 1), 1));
+  const perDoor = (l) => Number(l.price) / Math.max(Math.round(Number(l.units) || 1), 1);
+  const out = new Map();
+  for (const k of LISTING_TYPES.map((t) => t.key)) {
+    const group = active.filter((l) => kind(l) === k);
+    if (group.length < minGroup) continue;
+    const sorted = group.map(perDoor).sort((a, b) => a - b);
+    const mid = sorted.length % 2 ? sorted[(sorted.length - 1) / 2] : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
+    for (const l of group) {
+      const below = 1 - perDoor(l) / mid;
+      if (below >= cut) out.set(l.id, Math.round(below * 100) / 100);
+    }
+  }
+  return out;
+}

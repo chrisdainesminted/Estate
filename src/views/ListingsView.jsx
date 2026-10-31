@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react';
+import { Suspense, lazy, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRight, Check, ChevronDown, ExternalLink, Eye, EyeOff, Radar, RotateCcw, SlidersHorizontal } from 'lucide-react';
-import { DEFAULT_MARKET, LISTING_CITIES, LISTING_TYPES, SORTS, localMarket, droppedInLatestRun, isNew, lensTargets, listingPageUrl, listingToDeal, rankListings, siteName, typeOf } from '../lib/market.js';
+import { DEFAULT_MARKET, LISTING_CITIES, LISTING_TYPES, SORTS, localMarket, daysListed, droppedInLatestRun, isNew, priceStory, underMarket, lensTargets, listingPageUrl, listingToDeal, rankListings, siteName, typeOf } from '../lib/market.js';
 import { homeFor } from '../lib/firstHome.js';
 import { PROVINCES, cityByKey, provinceName } from '../lib/canada.js';
 import { listingSentence } from '../lib/explain.js';
 import { money, percent } from '../lib/format.js';
 import { Button, Card, CardHeader, DscrChip, NumberField, Segmented, SelectField, SkeletonCard, ViewHeader, signedClass } from '../components/ui.jsx';
 import { InfoTip } from '../components/motion.jsx';
+
+const ListingsMap = lazy(() => import('../components/ListingsMap.jsx'));
 
 const KIND = { 1: 'House', 2: 'Duplex', 3: 'Triplex', 4: 'Fourplex' };
 // Shorter type names so the three filters fit across a phone.
@@ -76,12 +78,54 @@ function dayLabel(isoDate) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+/** How long it's been for sale, how its price has moved, and how it compares with the rest of the list. */
+function History({ days, story, below }) {
+  const { points, first, now, change, moves } = story;
+  const w = 120;
+  const h = 28;
+  const prices = points.map((p) => p.price);
+  const lo = Math.min(...prices);
+  const hi = Math.max(...prices);
+  const xy = points.map((p, i) => [points.length > 1 ? (i / (points.length - 1)) * w : w / 2, hi === lo ? h / 2 : h - 3 - ((p.price - lo) / (hi - lo)) * (h - 6)]);
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-zinc-600 dark:text-zinc-400">
+      {days != null && (
+        <span>
+          <span className="font-semibold text-zinc-900 dark:text-zinc-100">{days === 0 ? 'New today' : `${days} day${days === 1 ? '' : 's'}`}</span> on Bedrock’s list
+        </span>
+      )}
+      <span className="inline-flex items-center gap-2">
+        {moves > 0 && (
+          <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="overflow-visible" aria-hidden>
+            <polyline points={xy.map((p) => p.join(',')).join(' ')} fill="none" strokeWidth="2" className={change < 0 ? 'stroke-emerald-500' : 'stroke-amber-500'} />
+            {xy.map(([x, y], i) => (
+              <circle key={i} cx={x} cy={y} r="2.5" className={change < 0 ? 'fill-emerald-500' : 'fill-amber-500'} />
+            ))}
+          </svg>
+        )}
+        {moves === 0 ? (
+          'No price changes yet'
+        ) : (
+          <span>
+            {money(first)} → <span className="font-semibold text-zinc-900 dark:text-zinc-100">{money(now)}</span>{' '}
+            <span className={change < 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}>
+              ({change < 0 ? '−' : '+'}
+              {money(Math.abs(change))}, {moves} change{moves === 1 ? '' : 's'})
+            </span>
+          </span>
+        )}
+      </span>
+      {below > 0 && <span className="font-medium text-emerald-700 dark:text-emerald-400">Priced {Math.round(below * 100)}% under similar homes on this list, per door</span>}
+    </div>
+  );
+}
+
 const COLUMNS = 8;
 // Sorted here rather than in rankListings: it needs your Home numbers.
 const LIVE_SORT = { key: 'live', label: 'Cheapest to live in' };
 
 /** One listing as a table row; opening it adds a row under it with the details and what to do next. */
-function ListingRow({ s, home, rank, sort, feed, imported, hidden, onAnalyze, onHide, onUnhide }) {
+function ListingRow({ s, home, rank, sort, feed, below, imported, hidden, onAnalyze, onHide, onUnhide }) {
   const [open, setOpen] = useState(false);
   const l = s.listing;
   const link = listingPageUrl(l.url, l.address);
@@ -92,7 +136,15 @@ function ListingRow({ s, home, rank, sort, feed, imported, hidden, onAnalyze, on
   const detailsId = `listing-${l.id}-details`;
   const kind = KIND[l.units] ?? `${l.units} units`;
   const more = [l.yearBuilt && `Built ${l.yearBuilt}`, l.mls && `MLS® ${l.mls}`].filter(Boolean);
-  const tags = [s.meets && 'Beats your targets', isNew(l, feed) && 'New', drop > 0 && `Down ${money(drop)}`, hidden && 'Hidden'].filter(Boolean);
+  const days = daysListed(l);
+  const story = priceStory(l);
+  const tags = [
+    s.meets && 'Beats your targets',
+    isNew(l, feed) && 'New',
+    drop > 0 && `Down ${money(drop)}`,
+    below > 0 && `${Math.round(below * 100)}% under the going rate`,
+    hidden && 'Hidden',
+  ].filter(Boolean);
   const cell = 'px-2 py-3 text-right align-top';
 
   return (
@@ -149,6 +201,7 @@ function ListingRow({ s, home, rank, sort, feed, imported, hidden, onAnalyze, on
               <p className="max-w-3xl text-sm leading-snug text-zinc-800 dark:text-zinc-200">{listingSentence(s)}</p>
               {l.highlights && <p className="mt-1.5 max-w-3xl text-sm text-zinc-600 dark:text-zinc-400">{l.highlights}</p>}
               <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{[...more, confirmed].filter(Boolean).join(' · ')}</p>
+              <History days={days} story={story} below={below} />
               <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-6">
                 <Metric label="Cash flow / door" tip="netCashFlow" sub="a month, after every cost">
                   <span className={signedClass(s.perDoor)}>{money(s.perDoor, { signed: true })}</span>
@@ -316,6 +369,7 @@ function CityPicker({ city, index, onCity }) {
 export default function ListingsView({ feedState, indexState, city, onCity, market, targets, profile, importedIds, onMarket, onAnalyze, onHide, onUnhide }) {
   const { status, feed } = feedState;
   const [sort, setSort] = useState('perDoor');
+  const [layout, setLayout] = useState('list');
   const [onlyMeets, setOnlyMeets] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -341,6 +395,7 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
     return [...list].sort((x, y) => cost(x) - cost(y));
   }, [active, market, targets, sort, showHidden, homes]);
   const hiddenSet = useMemo(() => new Set(market.hidden), [market.hidden]);
+  const belowMap = useMemo(() => underMarket(active), [active]);
   const visible = ranked.filter((s) => !hiddenSet.has(s.listing.id));
   const shown = onlyMeets ? ranked.filter((s) => s.meets) : ranked;
   const hiddenCount = active.filter((l) => hiddenSet.has(l.id)).length;
@@ -459,6 +514,15 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
                 </button>
               )}
               <div className="flex flex-wrap items-center gap-2 md:ml-auto">
+                <Segmented
+                  label="Show as"
+                  value={layout}
+                  onChange={setLayout}
+                  options={[
+                    { value: 'list', label: 'List' },
+                    { value: 'map', label: 'Map' },
+                  ]}
+                />
                 <label htmlFor="listing-sort" className="text-xs font-medium text-zinc-600 max-sm:sr-only dark:text-zinc-400">
                   Sort
                 </label>
@@ -496,7 +560,13 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
             </dl>
           </Card>
 
-          {shown.length > 0 ? (
+          {layout === 'map' && shown.length > 0 ? (
+            <Card className="p-3 sm:p-4">
+              <Suspense fallback={<div className="skeleton h-[28rem] rounded-md" />}>
+                <ListingsMap items={shown} place={place} homes={homes} />
+              </Suspense>
+            </Card>
+          ) : shown.length > 0 ? (
             <Card className="overflow-hidden">
               <table className="w-full text-sm">
                 <caption className="sr-only">Listings, best first. Open a row for its details.</caption>
@@ -538,6 +608,7 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
                       rank={i + 1}
                       sort={sort}
                       feed={feed}
+                      below={belowMap.get(s.listing.id)}
                       imported={importedIds.has(s.listing.id)}
                       hidden={hiddenSet.has(s.listing.id)}
                       onAnalyze={onAnalyze}

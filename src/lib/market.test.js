@@ -4,6 +4,9 @@ import { DEFAULT_DEAL } from './presets.js';
 import {
   DEFAULT_MARKET,
   LISTING_CITIES,
+  daysListed,
+  priceStory,
+  underMarket,
   feedDoc,
   homePatch,
   listingCity,
@@ -359,5 +362,28 @@ describe('listings across Canada', () => {
     const idx = updateIndex({ cities: { toronto: { date: '2026-10-29', count: 3 } } }, 'halifax', feed);
     expect(idx.cities.halifax).toEqual({ doc: 'halifax', date: '2026-10-30', at: 5, count: 2 });
     expect(idx.cities.toronto.count).toBe(3);
+  });
+});
+
+describe('listing history and value', () => {
+  it('counts days since first seen', () => {
+    expect(daysListed({ firstSeen: '2026-10-20' }, '2026-10-31')).toBe(11);
+    expect(daysListed({ firstSeen: '2026-10-31' }, '2026-10-31')).toBe(0);
+    expect(daysListed({}, '2026-10-31')).toBeNull();
+  });
+
+  it('tells the price story', () => {
+    const s = priceStory({ price: 480000, priceHistory: [{ date: '2026-10-01', price: 500000 }, { date: '2026-10-20', price: 480000 }] });
+    expect(s).toMatchObject({ first: 500000, now: 480000, change: -20000, moves: 1 });
+    expect(priceStory({ price: 300000, firstSeen: '2026-10-30' }).moves).toBe(0);
+  });
+
+  it('flags listings well under the median per door of their kind', () => {
+    const house = (id, price) => ({ id, price, units: 1 });
+    const flags = underMarket([house('a', 400000), house('b', 400000), house('c', 420000), house('d', 300000), { id: 'e', price: 500000, units: 2 }]);
+    expect([...flags.keys()]).toEqual(['d']);
+    expect(flags.get('d')).toBeCloseTo(0.25);
+    // Too few duplexes to compare: none flagged.
+    expect(underMarket([{ id: 'x', price: 100000, units: 2 }, { id: 'y', price: 900000, units: 2 }]).size).toBe(0);
   });
 });

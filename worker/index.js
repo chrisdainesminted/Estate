@@ -251,6 +251,35 @@ export class Directory extends DurableObject {
     this.store.markCharged(ws, month);
   }
 
+  /**
+   * Map points for listing addresses: cached ones straight away, and up to
+   * GEO_PER_CALL new ones looked up on OpenStreetMap's Nominatim, one a
+   * second at most across the whole site, as its usage policy asks.
+   */
+  async geocode(queries, ip) {
+    this.store.limit(ip, 'geo', 120);
+    const { known, missing } = this.store.geoGet(queries);
+    for (const q of missing.slice(0, GEO_PER_CALL)) {
+      const wait = (this.geoAt ?? 0) + 1100 - Date.now();
+      if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+      this.geoAt = Date.now();
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=ca&q=${encodeURIComponent(q)}`, {
+          headers: { 'user-agent': 'Bedrock/1.0 (https://bedrock.signia83.workers.dev/)', 'accept-language': 'en-CA' },
+        });
+        if (!res.ok) break; // leave the rest for later rather than record a miss
+        const hit = (await res.json())[0];
+        const point = hit ? [Number(hit.lat), Number(hit.lon)] : null;
+        this.store.geoPut(q, point);
+        if (point) known[q] = point;
+      } catch {
+        break;
+      }
+    }
+    const pending = this.store.geoGet(queries).missing.length;
+    return { points: known, pending };
+  }
+
   async call(req) {
     try {
       switch (req.op) {
@@ -260,6 +289,8 @@ export class Directory extends DurableObject {
           return this.store.report(req.key, req.ip, req.reason, req.note);
         case 'reported':
           return this.store.reported();
+        case 'geocode':
+          return await this.geocode(req.queries, req.ip);
         case 'review':
           return this.store.review(req.key, req.keep);
         default:
@@ -283,6 +314,7 @@ async function readBody(request) {
 }
 
 const ID = /^[A-Za-z0-9_-]{8,64}$/;
+const GEO_PER_CALL = 4;
 const answer = (res) => (res?.error ? json({ error: res.error }, res.status) : json(res));
 
 async function api(request, env, url) {
@@ -307,6 +339,12 @@ async function api(request, env, url) {
     const body = await readBody(request);
     if (typeof body.key !== 'string' || body.key.length > 140) return json({ error: 'Not found.' }, 404);
     return answer(await directory(env).call({ op: 'report', key: body.key, ip, reason: REPORT_REASONS.includes(body.reason) ? body.reason : 'other', note: body.note }));
+  }
+  // Map points for listing addresses ("228 Archibald Street S, Thunder Bay, ON").
+  if (parts[0] === 'geo' && method === 'POST') {
+    const body = await readBody(request);
+    const queries = [...new Set((Array.isArray(body.queries) ? body.queries : []).filter((q) => typeof q === 'string' && q.length > 3 && q.length <= 160))].slice(0, 80);
+    return answer(await directory(env).call({ op: 'geocode', queries, ip }));
   }
   if (parts[0] === 'config' && method === 'GET') return json({ verification: canEmail(env), review: Boolean(env.ADMIN_KEY), billing: canBill(env) });
   if (parts[0] === 'stripe' && parts[1] === 'webhook' && method === 'POST') return stripeWebhook(request, env);

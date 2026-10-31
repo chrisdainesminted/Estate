@@ -60,3 +60,12 @@ describe('public search', () => {
     expect(d.search({ kind: 'rent' }).total).toBe(29);
   });
 });
+
+describe('map points', () => {
+  it('remembers points and misses, and says which addresses are new', () => {
+    expect(d.geoGet(['a', 'b'])).toEqual({ known: {}, missing: ['a', 'b'] });
+    d.geoPut('a', [48.4, -89.2]);
+    d.geoPut('b', null);
+    expect(d.geoGet(['a', 'b', 'c'])).toEqual({ known: { a: [48.4, -89.2] }, missing: ['c'] });
+  });
+});
