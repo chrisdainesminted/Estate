@@ -3,7 +3,7 @@ import { BellRing, Building2, Calculator, Copy, ExternalLink, FileText, Heart, H
 import PageShell, { h1 } from './PageShell.jsx';
 import AuthForm from '../components/AuthForm.jsx';
 import { useAccount } from '../hooks/useAccount.js';
-import { accountCall, accountUrl, changePassword, signOut } from '../lib/account.js';
+import { accountCall, accountUrl, changePassword, resetPassword, signOut } from '../lib/account.js';
 import { saveWorkspace } from '../lib/landlordApi.js';
 import { money } from '../lib/format.js';
 import { cityByKey } from '../lib/canada.js';
@@ -172,8 +172,76 @@ function Settings({ data, link }) {
   );
 }
 
+/** The emailed reset link lands here (#reset=…&email=…): choose a new password. */
+function readReset() {
+  const q = new URLSearchParams(window.location.hash.slice(1));
+  return q.get('reset') && q.get('email') ? { token: q.get('reset'), email: q.get('email') } : null;
+}
+
+function ResetPassword({ reset, onDone }) {
+  const [pw, setPw] = useState('');
+  const [again, setAgain] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (pw !== again) return setError('The two passwords don’t match.');
+        setBusy(true);
+        setError('');
+        try {
+          await resetPassword(reset.email, reset.token, pw);
+          window.history.replaceState(null, '', '/account/');
+          onDone();
+        } catch (err) {
+          setError(err.message);
+          setBusy(false);
+        }
+      }}
+    >
+      <div>
+        <p className="text-lg font-semibold text-zinc-950 dark:text-white">Choose a new password</p>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">For {reset.email}. You’ll be signed in here; sign in again on your other devices.</p>
+      </div>
+      <div>
+        <label htmlFor="rs-pw" className={label}>
+          New password (8 characters or more)
+        </label>
+        <input id="rs-pw" type="password" required minLength={8} autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} className={field} />
+      </div>
+      <div>
+        <label htmlFor="rs-again" className={label}>
+          The same again
+        </label>
+        <input id="rs-again" type="password" required minLength={8} autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} className={field} />
+      </div>
+      {error && (
+        <p role="alert" className="text-sm text-red-700 dark:text-red-300">
+          {error}
+        </p>
+      )}
+      <button type="submit" disabled={busy} className={`${primary} w-full`}>
+        {busy ? 'Saving…' : 'Save my new password'}
+      </button>
+    </form>
+  );
+}
+
 export default function Account() {
   const { link, data, status, update } = useAccount();
+  const [reset, setReset] = useState(readReset);
+
+  if (reset) {
+    return (
+      <PageShell width="max-w-5xl">
+        <div className="elevated mx-auto max-w-md rounded-2xl p-6">
+          <ResetPassword reset={reset} onDone={() => setReset(null)} />
+        </div>
+      </PageShell>
+    );
+  }
 
   if (status === 'none' || (status === 'error' && !data)) {
     return (

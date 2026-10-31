@@ -199,6 +199,14 @@ export class AccountStore {
     this.setMeta('lastSent', date);
   }
 
+  /** A new key for the account (after a password reset): the old key and backup link stop working. */
+  async rekey() {
+    if (!this.ready) throw new StoreError(404, 'There’s no account here.');
+    const key = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(24)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    this.setMeta('keyHash', await hashKey(key));
+    return key;
+  }
+
   /** Forget everything: the account link stops working. */
   wipe() {
     this.sql.exec('DELETE FROM meta');

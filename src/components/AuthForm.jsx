@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import { signIn, signUp } from '../lib/account.js';
+import { forgotPassword, signIn, signUp } from '../lib/account.js';
 
 const field = 'field w-full px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100';
 const label = 'mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400';
@@ -13,7 +13,58 @@ export default function AuthForm({ start = 'signup', onDone, compact = false }) 
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [sent, setSent] = useState('');
   const signup = mode === 'signup';
+
+  if (mode === 'forgot') {
+    return (
+      <form
+        className="space-y-4"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setBusy(true);
+          setError('');
+          try {
+            await forgotPassword(email);
+            setSent(email);
+          } catch (err) {
+            setError(err.message);
+          }
+          setBusy(false);
+        }}
+      >
+        <div>
+          <p className="font-semibold text-zinc-950 dark:text-white">Reset your password</p>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">We’ll email you a link to choose a new one. It works once and expires in an hour.</p>
+        </div>
+        {sent ? (
+          <p role="status" className="rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-900 ring-1 ring-emerald-600/20 ring-inset dark:text-emerald-100">
+            If there’s an account for {sent}, the link is on its way. Check your inbox (and spam).
+          </p>
+        ) : (
+          <>
+            <div>
+              <label htmlFor="auth-email" className={label}>
+                Email
+              </label>
+              <input id="auth-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={field} />
+            </div>
+            {error && (
+              <p role="alert" className="text-sm text-red-700 dark:text-red-300">
+                {error}
+              </p>
+            )}
+            <button type="submit" disabled={busy} className="w-full rounded-md bg-(--accent) px-4 py-2.5 text-sm font-semibold text-(--accent-ink) transition hover:brightness-110 disabled:opacity-50">
+              {busy ? 'Sending…' : 'Email me a reset link'}
+            </button>
+          </>
+        )}
+        <button type="button" onClick={() => (setMode('signin'), setSent(''), setError(''))} className="text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+          Back to sign in
+        </button>
+      </form>
+    );
+  }
 
   const submit = async (e) => {
     e.preventDefault();
@@ -98,7 +149,9 @@ export default function AuthForm({ start = 'signup', onDone, compact = false }) 
             By creating an account you agree to the <a href="/terms/" className="underline">terms</a> and <a href="/privacy/" className="underline">privacy policy</a>.
           </>
         ) : (
-          'Forgot your password? Your private account link (in your account page on a device you’re signed in on) still opens it.'
+          <button type="button" onClick={() => (setMode('forgot'), setError(''))} className="font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+            Forgot your password?
+          </button>
         )}
       </p>
     </form>

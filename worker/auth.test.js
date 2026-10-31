@@ -41,3 +41,29 @@ describe('sign in with email and password', () => {
     expect((await l.login('c@d.ca', 'good password')).id).toBe('acct654321');
   }, 30000);
 });
+
+describe('password reset', () => {
+  it('resets with the emailed token once, giving the account a new key', async () => {
+    let now = 5_000_000;
+    const l = new LoginStore(memorySql(), () => now);
+    await l.signup('r@s.ca', 'first password', { id: 'acctreset1', key: 'old-key-old-key' });
+    expect(await l.startReset('nobody@s.ca')).toBeNull();
+    const { token } = await l.startReset('R@S.ca');
+    await expect(l.startReset('r@s.ca')).rejects.toThrow(/just sent/);
+    await expect(l.finishReset('r@s.ca', 'wrong-token', 'new password 1', async () => 'x')).rejects.toThrow(/expired/);
+    const opened = await l.finishReset('r@s.ca', token, 'new password 1', async (id) => `new-key-for-${id}`);
+    expect(opened).toEqual({ id: 'acctreset1', key: 'new-key-for-acctreset1' });
+    expect(await l.login('r@s.ca', 'new password 1')).toEqual(opened);
+    await expect(l.login('r@s.ca', 'first password')).rejects.toThrow(/don’t match/);
+    await expect(l.finishReset('r@s.ca', token, 'another one 2', async () => 'y')).rejects.toThrow(/expired/);
+  }, 30000);
+
+  it('expires after an hour', async () => {
+    let now = 5_000_000;
+    const l = new LoginStore(memorySql(), () => now);
+    await l.signup('t@s.ca', 'first password', { id: 'acctreset2', key: 'k-k-k-k-k-k' });
+    const { token } = await l.startReset('t@s.ca');
+    now += 61 * 60000;
+    await expect(l.finishReset('t@s.ca', token, 'new password 1', async () => 'z')).rejects.toThrow(/expired/);
+  }, 20000);
+});

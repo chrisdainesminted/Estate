@@ -122,3 +122,18 @@ export const changePassword = (email, password, next) => authCall('password', { 
 export function signOut() {
   announceAccount(null);
 }
+
+/** Email a password reset link (the answer is the same whether or not the email has an account). */
+export const forgotPassword = (email) => authCall('forgot', { email });
+
+/** Set a new password with the emailed link's token; signs in on this device. */
+export async function resetPassword(email, token, password) {
+  const link = await authCall('reset', { email, token, password });
+  try {
+    sessionStorage.setItem('bedrock-prefer-account', '1');
+  } catch {
+    // Newest wins.
+  }
+  announceAccount({ id: link.id, key: link.key });
+  return link;
+}

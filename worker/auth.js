@@ -47,6 +47,14 @@ export class LoginStore {
     sql.exec(
       'CREATE TABLE IF NOT EXISTS logins (email TEXT PRIMARY KEY, account TEXT, hash TEXT, salt TEXT, keySalt TEXT, iv TEXT, sealed TEXT, fails INTEGER DEFAULT 0, pausedUntil INTEGER DEFAULT 0, created INTEGER)',
     );
+    // Password resets: a one-time token (only its hash is kept) that expires in an hour.
+    for (const col of ['resetHash TEXT', 'resetUntil INTEGER DEFAULT 0', 'resetSentAt INTEGER DEFAULT 0']) {
+      try {
+        sql.exec(`ALTER TABLE logins ADD COLUMN ${col}`);
+      } catch {
+        // Already there.
+      }
+    }
   }
 
   async row(email) {
@@ -110,6 +118,45 @@ export class LoginStore {
     const r = await this.seal(email, next, account);
     this.sql.exec('UPDATE logins SET hash = ?, salt = ?, keySalt = ?, iv = ?, sealed = ? WHERE email = ?', r.hash, r.salt, r.keySalt, r.iv, r.sealed, r.email);
     return { ok: true };
+  }
+
+  /**
+   * Start a reset: a one-time token for this email, or null when there's no
+   * such login (the caller answers the same either way). At most one email
+   * a minute per address.
+   */
+  async startReset(email) {
+    const row = await this.row(email);
+    if (!row) return null;
+    if (row.resetSentAt > this.now() - 60000) throw new StoreError(429, 'We just sent a reset email. Check your inbox, or try again in a minute.');
+    const token = b64(crypto.getRandomValues(new Uint8Array(24))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    this.sql.exec('UPDATE logins SET resetHash = ?, resetUntil = ?, resetSentAt = ? WHERE email = ?', await sha(`reset:${token}`), this.now() + 3600000, this.now(), row.email);
+    return { token };
+  }
+
+  /**
+   * Finish a reset with the emailed token and a new password. The old
+   * password can't unseal the account's key, so `rekey(accountId)` gives
+   * the account a new key, which is sealed with the new password.
+   */
+  async finishReset(email, token, password, rekey) {
+    const row = await this.row(email);
+    const bad = new StoreError(400, 'This reset link has expired or was already used. Ask for a new one.');
+    if (!row || !row.resetHash || row.resetUntil < this.now()) throw bad;
+    if (!sameText(row.resetHash, await sha(`reset:${String(token || '')}`))) throw bad;
+    checkPassword(password);
+    const key = await rekey(row.account);
+    const r = await this.seal(email, password, { id: row.account, key });
+    this.sql.exec(
+      'UPDATE logins SET hash = ?, salt = ?, keySalt = ?, iv = ?, sealed = ?, resetHash = NULL, resetUntil = 0, fails = 0, pausedUntil = 0 WHERE email = ?',
+      r.hash,
+      r.salt,
+      r.keySalt,
+      r.iv,
+      r.sealed,
+      r.email,
+    );
+    return { id: row.account, key };
   }
 
   /** Remove the login for an account (when the account is deleted). */

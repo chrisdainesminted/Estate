@@ -46,6 +46,11 @@ function sameText(a, b) {
 }
 
 async function sendEmail(env, to, subject, text) {
+  // Local development only (EMAIL_DEV=log in .dev.vars): print the email instead of sending it.
+  if (env.EMAIL_DEV === 'log') {
+    console.log(`EMAIL to ${to}: ${subject}\n${text}`);
+    return;
+  }
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
@@ -232,6 +237,7 @@ export class Workspace extends DurableObject {
 export class Directory extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
+    this.env = env;
     this.store = new DirectoryStore(ctx.storage.sql);
     this.logins = new LoginStore(ctx.storage.sql);
   }
@@ -239,11 +245,13 @@ export class Directory extends DurableObject {
   /** Email-and-password sign-in (auth.js). Rate-limited per address. */
   async auth(req) {
     try {
-      this.store.limit(req.ip, `auth-${req.op}`, req.op === 'login' ? 30 : 10);
+      this.store.limit(req.ip, `auth-${req.op}`, req.op === 'login' ? 30 : req.op === 'forgot' ? 5 : 10);
       if (req.op === 'signup') return await this.logins.signup(req.email, req.password, req.account);
       if (req.op === 'login') return await this.logins.login(req.email, req.password);
       if (req.op === 'password') return await this.logins.changePassword(req.email, req.password, req.next);
       if (req.op === 'remove') return (await this.logins.remove(req.email), { ok: true });
+      if (req.op === 'forgot') return (await this.logins.startReset(req.email)) ?? { token: null };
+      if (req.op === 'reset') return await this.logins.finishReset(req.email, req.token, req.password, (id) => this.env.ACCOUNT.get(this.env.ACCOUNT.idFromName(id)).rekey());
       throw new StoreError(404, 'Unknown request.');
     } catch (e) {
       if (e instanceof StoreError) return { error: e.message, status: e.status };
@@ -410,6 +418,11 @@ export class Account extends DurableObject {
     }
   }
 
+  /** After a password reset (called only by the Directory, never from a browser). */
+  async rekey() {
+    return this.store.rekey();
+  }
+
   /** On the daily digest list only with alerts and a confirmed email. */
   async register(id) {
     const r = this.store.read();
@@ -492,6 +505,23 @@ async function api(request, env, url) {
     const email = normalEmail(body.email);
     if (parts[1] === 'login') return answer(await directory(env).auth({ op: 'login', email, password: body.password, ip }));
     if (parts[1] === 'password') return answer(await directory(env).auth({ op: 'password', email, password: body.password, next: body.next, ip }));
+    if (parts[1] === 'forgot') {
+      if (!canEmail(env)) return json({ error: 'Password reset by email isn’t switched on yet. Use the backup link from your account page, or contact us.' }, 501);
+      const res = await directory(env).auth({ op: 'forgot', email, ip });
+      if (res.error) return json({ error: res.error }, res.status);
+      if (res.token) {
+        const link = `${url.origin}/account/#reset=${res.token}&email=${encodeURIComponent(email)}`;
+        await sendEmail(
+          env,
+          email,
+          'Reset your Bedrock password',
+          `Someone (hopefully you) asked to reset the password for your Bedrock account.\n\nChoose a new password here: ${link}\n\nThe link works once and expires in an hour. After the reset, sign in again on your other devices; your old backup link stops working and your account page shows a new one.\n\nIf you didn’t ask for this, ignore this email: your password stays the same.`,
+        );
+      }
+      // The same answer whether or not there's an account with that email.
+      return json({ ok: true });
+    }
+    if (parts[1] === 'reset') return answer(await directory(env).auth({ op: 'reset', email, token: body.token, password: body.password, ip }));
     if (parts[1] === 'signup') {
       // Attach the account this browser already has, if it sends one that opens; otherwise start a new one.
       let account = null;
