@@ -230,10 +230,10 @@ function Card({ h }) {
   const type = PROPERTY_TYPES.find((t) => t.key === h.propertyType)?.label;
   const place = [h.area, h.city ? cityByKey(h.city).name.replace(/^Elsewhere in /, '') : ''].filter(Boolean).join(', ');
   return (
-    <a href={`/listing/#w=${h.ws}&l=${h.id}`} className="group block overflow-hidden rounded-md border border-hairline bg-(--panel) hover:border-(--line-strong) focus-visible:outline-2 focus-visible:outline-(--accent)">
+    <a href={`/listing/#w=${h.ws}&l=${h.id}`} className="tile group block overflow-hidden rounded-xl border border-hairline bg-(--panel) focus-visible:outline-2 focus-visible:outline-(--accent)">
       <div className="aspect-[4/3] bg-zinc-100 dark:bg-white/[0.04]">
         {h.photo ? (
-          <img src={`/api/w/${h.ws}/photos/${h.photo}`} alt="" loading="lazy" className="size-full object-cover" />
+          <img src={`/api/w/${h.ws}/photos/${h.photo}`} alt="" loading="lazy" className="size-full object-cover transition duration-500 group-hover:scale-[1.03]" />
         ) : (
           <div className="flex size-full items-center justify-center text-zinc-400">
             <Home className="size-8" aria-hidden />

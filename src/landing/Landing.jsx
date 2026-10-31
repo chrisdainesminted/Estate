@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, ArrowUpRight, Building2, ClipboardCheck, Home, KeyRound, Landmark, ListChecks, Lock, Menu, Plus, X } from 'lucide-react';
 import Logo from '../components/Logo.jsx';
-import { DEFAULT_PROFILE, RULES, RULES_CHECKED, benefits, buyCheck, homeFor, incomeToQualify } from '../lib/firstHome.js';
+import { DEFAULT_PROFILE, RULES, RULES_CHECKED, benefits, buyCheck, homeFor, incomeToQualify, maxPrice } from '../lib/firstHome.js';
+import { CountUp, Reveal } from './motion.jsx';
 import { stepsFor } from '../lib/suites.js';
 import { cityByKey, guessCity } from '../lib/canada.js';
 import CitySelect from '../components/CitySelect.jsx';
@@ -27,7 +28,7 @@ const eyebrow = 'text-xs font-semibold uppercase tracking-[0.14em] text-emerald-
 const h2 = 'text-balance text-[28px] font-semibold leading-[1.15] tracking-[-0.025em] text-zinc-950 sm:text-4xl dark:text-white';
 const lede = 'mt-4 max-w-2xl text-base leading-relaxed text-zinc-600 sm:text-lg dark:text-zinc-400';
 const primary =
-  'inline-flex items-center justify-center gap-2 rounded-md bg-(--accent) px-5 py-3 text-[15px] font-semibold text-(--accent-ink) transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent)';
+  'inline-flex items-center justify-center gap-2 rounded-md bg-(--accent) px-5 py-3 text-[15px] font-semibold text-(--accent-ink) shadow-[0_10px_30px_-10px_rgb(16_185_129/0.7),inset_0_1px_0_rgb(255_255_255/0.25)] transition hover:-translate-y-px hover:opacity-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent)';
 const secondary =
   'inline-flex items-center justify-center gap-2 rounded-md border border-(--line-strong) px-5 py-3 text-[15px] font-semibold text-zinc-900 transition hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent) dark:text-zinc-100 dark:hover:bg-white/5';
 
@@ -94,7 +95,7 @@ export default function Landing() {
       </a>
       <Nav />
       <main id="main">
-        <Hero />
+        <Hero city={city} onCity={setCity} />
         <Compare city={city} onCity={setCity} />
         <How />
         <Features />
@@ -172,50 +173,148 @@ function Nav() {
   );
 }
 
-function Hero() {
+function Hero({ city, onCity }) {
   return (
-    <section className="border-b border-hairline">
-      <div className={`${shell} pb-16 pt-14 sm:pt-20 lg:pb-24`}>
-        <p className={eyebrow}>For first-time buyers across Canada</p>
-        <h1 className="mt-5 max-w-4xl text-[40px] font-semibold leading-[1.04] tracking-[-0.04em] text-balance text-zinc-950 sm:text-6xl lg:text-[76px] dark:text-white">
-          Own your first home. Let a tenant help pay for it.
-        </h1>
-        <p className="mt-6 max-w-2xl text-lg leading-relaxed text-zinc-600 sm:text-xl dark:text-zinc-400">
-          Bedrock shows what a bank would lend you, the government money you can claim where you live, and how renting out part of a home cuts both the income you need and what it costs you each month.
-        </p>
-        <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-          <a href={open('home')} className={primary}>
-            See what you can buy <ArrowRight className="size-4" aria-hidden />
-          </a>
-          <a href="/homes/" className={secondary}>
-            Find a home to rent or buy
-          </a>
+    <section className="relative isolate border-b border-hairline">
+      <div className="hero-backdrop" aria-hidden />
+      <div className={`${shell} relative pb-16 pt-14 sm:pt-20 lg:pb-24`}>
+        <div className="grid items-center gap-12 lg:grid-cols-[1.15fr_minmax(0,27rem)] lg:gap-16">
+          <div className="rise">
+            <p className="inline-flex items-center gap-2 rounded-full border border-(--line-strong) bg-(--panel)/60 px-3 py-1 text-xs font-medium text-zinc-600 backdrop-blur dark:text-zinc-300">
+              <span className="live-dot" aria-hidden /> For first-time buyers across Canada
+            </p>
+            <h1 className="mt-6 max-w-4xl text-[40px] font-semibold leading-[1.02] tracking-[-0.045em] text-balance text-zinc-950 sm:text-6xl lg:text-[72px] dark:text-white">
+              Own your first home.{' '}
+              <span className="bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 bg-clip-text text-transparent dark:from-emerald-300 dark:via-emerald-400 dark:to-teal-300">
+                Let a tenant help pay for it.
+              </span>
+            </h1>
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-zinc-600 sm:text-xl dark:text-zinc-400">
+              Bedrock shows what a bank would lend you, the government money you can claim where you live, and how renting out part of a home cuts both the income you need and what it costs you each month.
+            </p>
+            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+              <a href={open('home')} className={primary}>
+                See what you can buy <ArrowRight className="size-4" aria-hidden />
+              </a>
+              <a href="/homes/" className={secondary}>
+                Find a home to rent or buy
+              </a>
+            </div>
+            <p className="mt-5 text-sm text-zinc-500 dark:text-zinc-400">Free. No sign-up. Your numbers stay in your browser.</p>
+          </div>
+          <Estimator city={city} onCity={onCity} />
         </div>
-        <p className="mt-5 text-sm text-zinc-500 dark:text-zinc-400">Free. No sign-up. Your numbers stay in your browser.</p>
 
-        <div className="relative mt-14 sm:mt-20">
-          <figure className="overflow-hidden rounded-md border border-(--line-strong) bg-(--panel) max-sm:hidden">
+        <Reveal className="relative mt-16 sm:mt-24">
+          <figure className="shot overflow-hidden rounded-lg bg-(--panel) max-sm:hidden">
             <img
               src="/landing/desktop-listings.webp"
               width="1600"
               height="1000"
-              alt="Bedrock’s Listings tab: Thunder Bay homes for sale ranked by cash flow, each with what it would cost to live in, the lender’s DSCR and the return."
+              alt="Bedrock’s Listings tab: homes for sale ranked by cash flow, each with what it would cost to live in, the lender’s DSCR and the return."
               className="block h-auto w-full"
-              fetchPriority="high"
+              loading="lazy"
             />
           </figure>
-          <figure className="mx-auto max-w-[300px] overflow-hidden rounded-[22px] border border-(--line-strong) bg-(--panel) sm:absolute sm:-bottom-10 sm:right-6 sm:w-[24%] sm:max-w-[250px] lg:-bottom-14 lg:right-10">
+          <figure className="shot mx-auto max-w-[300px] overflow-hidden rounded-[22px] bg-(--panel) sm:absolute sm:-bottom-10 sm:right-6 sm:w-[24%] sm:max-w-[250px] lg:-bottom-14 lg:right-10">
             <img
               src="/landing/phone-home.webp"
               width="780"
               height="1688"
               alt="Bedrock on a phone, the Home tab: you could buy up to $293,000, with what renting out a unit adds."
               className="block h-auto w-full"
+              loading="lazy"
             />
           </figure>
-        </div>
+        </Reveal>
       </div>
     </section>
+  );
+}
+
+const slider =
+  'mt-2 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-(--track) accent-(--accent) focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--accent) [&::-webkit-slider-thumb]:size-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-(--accent) [&::-webkit-slider-thumb]:shadow-[0_0_0_4px_var(--focus-ring)] [&::-moz-range-thumb]:size-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-(--accent)';
+
+/**
+ * The hero's live estimate: drag income and savings, and the same engine
+ * as the app works out the most a bank would let you pay in the picked
+ * city, on your own and with a basement suite rented out.
+ */
+function Estimator({ city, onCity }) {
+  const [income, setIncome] = useState(SAMPLE.income);
+  // Enough saved that income sets the limit, so the suite's effect shows straight away.
+  const [savings, setSavings] = useState(60000);
+  const place = cityByKey(city);
+  const result = useMemo(() => {
+    const profile = { ...SAMPLE, income, savings, city: place.key, entered: true };
+    const common = { profile, ratePct: DEFAULT_MARKET.rate, taxPct: place.taxPct, city: place.key };
+    const alone = maxPrice({ ...common, units: 1 });
+    const suite = maxPrice({ ...common, units: 2, rentPerOtherUnit: suiteRent(place) });
+    return { alone, suite, typical: place.price };
+  }, [income, savings, place]);
+  const top = Math.max(result.suite.price, result.alone.price, 1);
+  const gain = result.suite.price - result.alone.price;
+  const limitText = (r) => (r.limit === 'savings' ? 'Held back by your savings.' : 'Held back by your income.');
+  const bar = (v, accent) => (
+    <div className="mt-2 h-2 overflow-hidden rounded-full bg-(--track)">
+      <div
+        className={`h-full rounded-full transition-[width] duration-500 ease-out ${accent ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : 'bg-zinc-400 dark:bg-zinc-500'}`}
+        style={{ width: `${Math.max((v / top) * 100, 2)}%` }}
+      />
+    </div>
+  );
+  return (
+    <div className="elevated rise relative rounded-xl p-5 sm:p-6" style={{ animationDelay: '80ms' }}>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-zinc-950 dark:text-white">Try it: what could you buy?</p>
+        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Live</span>
+      </div>
+      <div className="mt-4">
+        <CitySelect id="hero-city" label="Where" value={city} onChange={onCity} />
+      </div>
+      <div className="mt-4 grid gap-4">
+        <label className="block">
+          <span className="flex items-baseline justify-between text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            Household income <span className="text-sm font-semibold tabular-nums text-zinc-950 dark:text-white">{money(income)}/yr</span>
+          </span>
+          <input type="range" min="30000" max="300000" step="1000" value={income} onChange={(e) => setIncome(Number(e.target.value))} className={slider} aria-valuetext={`${money(income)} a year`} />
+        </label>
+        <label className="block">
+          <span className="flex items-baseline justify-between text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            Saved for buying <span className="text-sm font-semibold tabular-nums text-zinc-950 dark:text-white">{money(savings)}</span>
+          </span>
+          <input type="range" min="0" max="300000" step="1000" value={savings} onChange={(e) => setSavings(Number(e.target.value))} className={slider} aria-valuetext={money(savings)} />
+        </label>
+      </div>
+
+      <div className="mt-6 space-y-4 border-t border-hairline pt-5" aria-live="polite">
+        <div>
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-sm text-zinc-600 dark:text-zinc-400">On your own</span>
+            <CountUp value={result.alone.price} format={money} className="text-lg font-semibold text-zinc-950 dark:text-white" />
+          </div>
+          {bar(result.alone.price, false)}
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{limitText(result.alone)}</p>
+        </div>
+        <div>
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-sm text-zinc-600 dark:text-zinc-400">With a suite rented out</span>
+            <CountUp value={result.suite.price} format={money} className="text-2xl font-semibold tracking-tight text-emerald-700 dark:text-emerald-400" />
+          </div>
+          {bar(result.suite.price, true)}
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            {gain > 0 ? `${money(gain)} more, because a bank counts the suite’s ${money(suiteRent(place))}/mo rent. ` : ''}
+            {limitText(result.suite)}
+          </p>
+        </div>
+      </div>
+      <p className="mt-5 text-xs text-zinc-500 dark:text-zinc-400">
+        A typical house in {placeName(place)}: {money(result.typical)}. {SAMPLE.debts > 0 ? `Counts ${money(SAMPLE.debts)}/mo of debts and ` : ''}a {DEFAULT_MARKET.rate}% rate with the stress test.
+      </p>
+      <a href={open('home')} className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700 hover:underline dark:text-emerald-400">
+        Get your full answer <ArrowRight className="size-4" aria-hidden />
+      </a>
+    </div>
   );
 }
 
@@ -244,15 +343,15 @@ function Today({ feed, shown, picked, index }) {
   }, [feed, shown, place.rent]);
 
   const stats = [
-    [`${placeName(place)} homes for sale we track`, data ? String(data.count) : '—'],
-    ['New in the latest update', data ? String(data.added) : '—'],
-    ['Typical asking price', data ? money(data.median) : '—'],
-    [`2–4 units that cost less to live in than renting a two-bedroom (${money(place.rent)}/mo)`, data ? String(data.underRent) : '—'],
+    [`${placeName(place)} homes for sale we track`, data?.count, String],
+    ['New in the latest update', data?.added, String],
+    ['Typical asking price', data?.median, money],
+    [`2–4 units that cost less to live in than renting a two-bedroom (${money(place.rent)}/mo)`, data?.underRent, String],
   ];
 
   return (
     <section id="today" aria-labelledby="today-title" className="scroll-mt-16 border-b border-hairline">
-      <div className={`${shell} py-16 sm:py-24`}>
+      <Reveal className={`${shell} py-16 sm:py-24`}>
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <p className={eyebrow}>Daily listings · {covered > 1 ? `${covered} cities so far` : 'cities across Canada'}</p>
@@ -273,10 +372,12 @@ function Today({ feed, shown, picked, index }) {
         </div>
 
         <dl className="mt-10 grid grid-cols-2 border-y border-hairline lg:grid-cols-4">
-          {stats.map(([label, value], i) => (
+          {stats.map(([label, value, format], i) => (
             <div key={label} className={`py-6 pr-4 ${i % 2 ? 'pl-4 sm:pl-6' : ''} ${i >= 2 ? 'max-lg:border-t max-lg:border-hairline' : ''} lg:border-l lg:border-hairline lg:pl-6 lg:first:border-l-0 lg:first:pl-0`}>
               <dt className="text-[13px] leading-snug text-zinc-500 dark:text-zinc-400">{label}</dt>
-              <dd className="mt-2 text-2xl font-semibold tabular-nums tracking-tight text-zinc-950 sm:text-3xl dark:text-white">{value}</dd>
+              <dd className="mt-2 text-2xl font-semibold tabular-nums tracking-tight text-zinc-950 sm:text-3xl dark:text-white">
+                {data ? <CountUp value={value} format={format} /> : '—'}
+              </dd>
             </div>
           ))}
         </dl>
@@ -301,7 +402,7 @@ function Today({ feed, shown, picked, index }) {
             See all {data ? data.count : ''} listings <ArrowRight className="size-4" aria-hidden />
           </a>
         </div>
-      </div>
+      </Reveal>
     </section>
   );
 }
@@ -313,7 +414,7 @@ function Compare({ city, onCity }) {
   const where = placeName(place);
   return (
     <section aria-labelledby="compare-title" className="border-b border-hairline">
-      <div className={`${shell} py-16 sm:py-24`}>
+      <Reveal className={`${shell} py-16 sm:py-24`}>
         <p className={eyebrow}>What a house really takes</p>
         <h2 id="compare-title" className={`${h2} mt-3 max-w-3xl`} aria-live="polite">
           A typical house in {where} costs about {money(place.price)}. Rent out a suite and it costs you {money(solo.live - suite.live)} a month less.
@@ -325,7 +426,7 @@ function Compare({ city, onCity }) {
         <div className="mt-8 max-w-sm">
           <CitySelect id="compare-city" label="Pick a city" value={place.key} onChange={onCity} />
         </div>
-        <div className="mt-8 grid overflow-hidden rounded-md border border-(--line-strong) bg-(--panel) md:grid-cols-2">
+        <div className="elevated mt-8 grid overflow-hidden rounded-xl md:grid-cols-2">
           <Option title="On your own" o={solo} rentToday={place.rent} where={where} />
           <Option title="With a basement suite rented out" o={suite} rentToday={place.rent} where={where} accent className="max-md:border-t md:border-l border-hairline" />
         </div>
@@ -335,7 +436,7 @@ function Compare({ city, onCity }) {
           over 30 years, the land transfer tax in {where} after first-buyer relief, property tax of about {place.taxPct}% of the price, and a suite renting for{' '}
           {money(suite.rentIn)} a month. The same price both ways; a house that already has a legal suite often costs more. Estimates, not financial advice.
         </p>
-      </div>
+      </Reveal>
     </section>
   );
 }
@@ -386,21 +487,24 @@ function How() {
   ];
   return (
     <section id="how" aria-labelledby="how-title" className="scroll-mt-16 border-b border-hairline">
-      <div className={`${shell} py-16 sm:py-24`}>
+      <Reveal className={`${shell} py-16 sm:py-24`}>
         <p className={eyebrow}>How it works</p>
         <h2 id="how-title" className={`${h2} mt-3`}>
           From “can I even?” to a shortlist.
         </h2>
-        <ol className="mt-12 grid gap-px overflow-hidden rounded-md border border-(--line-strong) bg-(--line-strong) md:grid-cols-3">
+        <ol className="mt-12 grid gap-4 md:grid-cols-3">
           {steps.map(([t, b], i) => (
-            <li key={t} className="bg-(--panel) p-6 sm:p-8">
-              <span className="text-sm font-medium tabular-nums text-emerald-700 dark:text-emerald-400">0{i + 1}</span>
+            <li key={t} className="elevated relative overflow-hidden rounded-xl p-6 sm:p-8">
+              <span aria-hidden className="pointer-events-none absolute -right-2 -top-6 text-[120px] font-semibold leading-none tracking-tighter text-zinc-950/[0.04] dark:text-white/[0.04]">
+                {i + 1}
+              </span>
+              <span className="grid size-8 place-items-center rounded-full bg-emerald-500/10 text-sm font-semibold tabular-nums text-emerald-700 ring-1 ring-emerald-500/25 ring-inset dark:text-emerald-400">{i + 1}</span>
               <h3 className="mt-6 text-lg font-semibold text-zinc-950 dark:text-white">{t}</h3>
               <p className="mt-2 text-[15px] leading-relaxed text-zinc-600 dark:text-zinc-400">{b}</p>
             </li>
           ))}
         </ol>
-      </div>
+      </Reveal>
     </section>
   );
 }
@@ -409,46 +513,62 @@ function Features() {
   const items = [
     [Home, 'Home check', 'The most you could pay, held back by your income or your savings, and what it costs you each month next to your rent.', 'home'],
     [Landmark, 'Money you can get', 'FHSA refunds, the land transfer tax refund, the buyers’ tax credit and the RRSP Home Buyers’ Plan, added up for you.', 'home'],
-    [ListChecks, 'Morning listings', 'Homes for sale in cities across Canada, with the cost to live in each and whether a bank would say yes. Thunder Bay daily, the rest about weekly.', 'listings'],
+    [ListChecks, 'Morning listings', 'Homes for sale in 27 cities, with the cost to live in each and whether a bank would say yes. Thunder Bay daily, the rest about weekly.', 'listings'],
     [ClipboardCheck, 'Permit guide', 'Adding a basement suite or a backyard home, step by step: what your province and city allow, what to submit, and whether it pays.', 'home'],
-    [Home, 'List a home, free', 'Put a home up for rent or for sale with photos. People find it in Bedrock’s search, book a time to see it and message you here.', 'landlord'],
-    [KeyRound, 'Landlord tools', 'A page for each rental where people apply and book a viewing from your calendar, rent tracking, repair requests, and expenses sorted for tax time.', 'landlord'],
+    [Plus, 'List a home, free', 'Put a home up for rent or for sale with photos. People find it in Bedrock’s search, book a time to see it and message you here.', 'landlord'],
+    [KeyRound, 'Landlord tools', 'Applications and viewings from your calendar, rent tracking, repair requests, and expenses sorted for tax time.', 'landlord'],
     [Building2, 'Rental math', 'Every cost of a rental, the lender’s DSCR test, a stress test and a 10-year outlook, in plain words.', 'analyze'],
   ];
+  const tile = (Icon, t, b, view, i, extra = '') => (
+    <Reveal key={t} delay={i * 50} className={extra}>
+      <a
+        href={open(view)}
+        className="tile group flex h-full flex-col rounded-xl border border-hairline bg-(--panel) p-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent) sm:p-6"
+      >
+        <span className="flex items-center justify-between">
+          <span className="grid size-9 place-items-center rounded-lg bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/20 ring-inset dark:text-emerald-400">
+            <Icon className="size-[18px]" aria-hidden />
+          </span>
+          <ArrowUpRight className="size-4 text-zinc-400 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-emerald-600 dark:text-zinc-600 dark:group-hover:text-emerald-400" aria-hidden />
+        </span>
+        <span className="mt-5 block font-semibold text-zinc-950 dark:text-white">{t}</span>
+        <span className="mt-1.5 block text-[15px] leading-relaxed text-zinc-600 dark:text-zinc-400">{b}</span>
+      </a>
+    </Reveal>
+  );
   return (
     <section aria-labelledby="features-title" className="border-b border-hairline">
       <div className={`${shell} py-16 sm:py-24`}>
-        <div className="grid items-start gap-12 lg:grid-cols-[1fr_minmax(0,26rem)]">
-          <div>
-            <p className={eyebrow}>What’s inside</p>
-            <h2 id="features-title" className={`${h2} mt-3`}>
-              Everything a broker would check, before you call one.
-            </h2>
-            <ul className="mt-10 divide-y divide-hairline border-y border-hairline">
-              {items.map(([Icon, t, b, view]) => (
-                <li key={t}>
-                  <a href={open(view)} className="group grid grid-cols-[2rem_1fr_auto] gap-x-4 py-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent)">
-                    <Icon className="mt-0.5 size-5 text-emerald-700 dark:text-emerald-400" aria-hidden />
-                    <span>
-                      <span className="block font-semibold text-zinc-950 dark:text-white">{t}</span>
-                      <span className="mt-1 block text-[15px] leading-relaxed text-zinc-600 dark:text-zinc-400">{b}</span>
-                    </span>
-                    <ArrowUpRight className="mt-0.5 size-4 text-zinc-400 transition group-hover:text-emerald-700 dark:text-zinc-600 dark:group-hover:text-emerald-400" aria-hidden />
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <figure className="mx-auto w-full max-w-[22rem] overflow-hidden rounded-[22px] border border-(--line-strong) bg-(--panel) lg:sticky lg:top-24">
-            <img
-              src="/landing/phone-listings.webp"
-              width="780"
-              height="1688"
-              loading="lazy"
-              alt="Bedrock’s Listings tab on a phone, with each home’s cost to live in."
-              className="block h-auto w-full"
-            />
-          </figure>
+        <Reveal className="max-w-2xl">
+          <p className={eyebrow}>What’s inside</p>
+          <h2 id="features-title" className={`${h2} mt-3`}>
+            Everything a broker would check, before you call one.
+          </h2>
+        </Reveal>
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-[auto_auto_auto]">
+          <Reveal className="sm:col-span-2 lg:col-span-2 lg:row-span-2">
+            <a
+              href={open('listings')}
+              className="tile group relative flex h-full flex-col overflow-hidden rounded-xl border border-hairline bg-(--panel) p-5 sm:p-6"
+            >
+              <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700 dark:text-emerald-400">
+                <span className="live-dot" aria-hidden /> Updated every morning
+              </span>
+              <span className="mt-3 block text-xl font-semibold tracking-tight text-zinc-950 dark:text-white">Every listing, run through your numbers.</span>
+              <span className="mt-2 block max-w-md text-[15px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+                Cost to live in, what a bank would say, cash flow per door and the lender’s DSCR, for homes for sale in 27 cities.
+              </span>
+              <img
+                src="/landing/phone-listings.webp"
+                width="780"
+                height="1688"
+                loading="lazy"
+                alt="Bedrock’s Listings tab on a phone, with each home’s cost to live in."
+                className="shot mx-auto mt-6 -mb-40 w-[62%] max-w-[16rem] rounded-[20px] transition duration-500 group-hover:-translate-y-2 sm:-mb-56 lg:mt-auto lg:-mb-64"
+              />
+            </a>
+          </Reveal>
+          {items.map(([Icon, t, b, view], i) => tile(Icon, t, b, view, i, i === 6 ? 'sm:col-span-2 lg:col-span-2' : ''))}
         </div>
       </div>
     </section>
@@ -463,7 +583,7 @@ function Money({ city }) {
   const list = b.list.filter((x) => x.key !== 'refi');
   return (
     <section id="money" aria-labelledby="money-title" className="scroll-mt-16 border-b border-hairline">
-      <div className={`${shell} py-16 sm:py-24`}>
+      <Reveal className={`${shell} py-16 sm:py-24`}>
         <p className={eyebrow}>Money you can get</p>
         <h2 id="money-title" className={`${h2} mt-3 max-w-3xl`}>
           About {money(b.total)} back in the first year, plus {money(RULES.hbp)} you can borrow from yourself.
@@ -493,7 +613,7 @@ function Money({ city }) {
         <a href={open('home')} className={`${secondary} mt-8`}>
           Work out yours
         </a>
-      </div>
+      </Reveal>
     </section>
   );
 }
@@ -502,7 +622,7 @@ function RedTape({ city }) {
   const steps = stepsFor(city);
   return (
     <section aria-labelledby="tape-title" className="border-b border-hairline">
-      <div className={`${shell} py-16 sm:py-24`}>
+      <Reveal className={`${shell} py-16 sm:py-24`}>
         <div className="grid gap-12 lg:grid-cols-[minmax(0,24rem)_1fr]">
           <div>
             <p className={eyebrow}>Cutting the red tape</p>
@@ -530,7 +650,7 @@ function RedTape({ city }) {
             ))}
           </ol>
         </div>
-      </div>
+      </Reveal>
     </section>
   );
 }
