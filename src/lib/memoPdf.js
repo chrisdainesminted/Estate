@@ -221,11 +221,19 @@ export async function buildMemoPdf({ deal, a, rows, sale, refi, offer }) {
   doc.setTextColor(...MUTED);
   doc.text(doc.splitTextToSize(clean(note), W), m, y);
 
-  doc.setProperties({ title: `${clean(deal.name)} - Bedrock deal memo`, creator: 'Bedrock' });
+  doc.setProperties({ title: memoTitle(deal), creator: 'Bedrock' });
   return doc.output('blob');
 }
 
-export function memoFilename(deal) {
-  const slug = deal.name.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'deal';
-  return `${slug}-deal-memo.pdf`;
-}
+/** "230 Brodie Street N - Bedrock deal memo": the PDF's title and, so a re-save from the PDF viewer matches, its file name. */
+const memoTitle = (deal) => {
+  // Characters Windows and macOS won't take in a file name become spaces.
+  const name = clean(deal.name ?? '')
+    .replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/^[\s.]+|[\s.]+$/g, '')
+    .slice(0, 80);
+  return `${name || 'Deal'} - Bedrock deal memo`;
+};
+
+export const memoFilename = (deal) => `${memoTitle(deal)}.pdf`;
