@@ -4,13 +4,13 @@
 // public/favicon.svg and the app icons (scripts/brand-icons.cjs) all draw
 // this geometry.
 export const MARK = {
-  stroke: 6,
+  stroke: 8,
   brackets: [
-    [[27, 3], [3, 3], [3, 27]],
-    [[21, 45], [45, 45], [45, 21]],
+    [[26, 4], [4, 4], [4, 26]],
+    [[22, 44], [44, 44], [44, 22]],
   ],
   square: { x: 15, y: 15, size: 18, r: 4 },
 };
 
-/** A bracket as an SVG path: "M27 3 L3 3 L3 27". */
+/** A bracket as an SVG path: "M26 4 L4 4 L4 26". */
 export const bracketPath = (pts) => pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x} ${y}`).join(' ');

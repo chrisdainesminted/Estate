@@ -6,7 +6,7 @@ const path = require('path');
 
 const PUBLIC = path.join(__dirname, '..', 'public');
 const MARK_SVG = (fill) =>
-  `<path d="M27 3 L3 3 L3 27 M21 45 L45 45 L45 21" fill="none" stroke="${fill}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><rect x="15" y="15" width="18" height="18" rx="4" fill="${fill}"/>`;
+  `<path d="M26 4 L4 4 L4 26 M22 44 L44 44 L44 22" fill="none" stroke="${fill}" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><rect x="15" y="15" width="18" height="18" rx="4" fill="${fill}"/>`;
 const ONYX = '#0b0b0c';
 const GREEN = '#34d399';
 const FONT = '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">';
