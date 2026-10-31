@@ -16,13 +16,15 @@
   "durable_objects": {
     "bindings": [
       { "name": "WORKSPACE", "class_name": "Workspace" },
-      { "name": "DIRECTORY", "class_name": "Directory" }
+      { "name": "DIRECTORY", "class_name": "Directory" },
+      { "name": "ACCOUNT", "class_name": "Account" }
     ]
   },
-  // Daily: charges landlords not yet billed this month (worker/index.js).
+  // Daily: charges landlords not yet billed this month, and emails listing alerts (worker/index.js).
   "triggers": { "crons": ["17 14 * * *"] },
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["Workspace"] },
-    { "tag": "v2", "new_sqlite_classes": ["Directory"] }
+    { "tag": "v2", "new_sqlite_classes": ["Directory"] },
+    { "tag": "v3", "new_sqlite_classes": ["Account"] }
   ]
 }

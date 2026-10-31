@@ -1,6 +1,6 @@
 import { Suspense, lazy, useMemo, useState } from 'react';
-import { AlertTriangle, ArrowRight, Check, ChevronDown, ExternalLink, Eye, EyeOff, Radar, RotateCcw, SlidersHorizontal } from 'lucide-react';
-import { DEFAULT_MARKET, LISTING_CITIES, LISTING_TYPES, SORTS, localMarket, daysListed, droppedInLatestRun, isNew, priceStory, underMarket, lensTargets, listingPageUrl, listingToDeal, rankListings, siteName, typeOf } from '../lib/market.js';
+import { AlertTriangle, ArrowRight, BellPlus, BellRing, Check, ChevronDown, ExternalLink, Eye, EyeOff, Radar, RotateCcw, SlidersHorizontal, X } from 'lucide-react';
+import { DEFAULT_MARKET, LISTING_CITIES, LISTING_TYPES, SORTS, localMarket, alertMatches, alertName, daysListed, droppedInLatestRun, freshMatches, isNew, priceStory, underMarket, lensTargets, listingPageUrl, listingToDeal, rankListings, siteName, typeOf } from '../lib/market.js';
 import { homeFor } from '../lib/firstHome.js';
 import { PROVINCES, cityByKey, provinceName } from '../lib/canada.js';
 import { listingSentence } from '../lib/explain.js';
@@ -117,6 +117,91 @@ function History({ days, story, below }) {
       </span>
       {below > 0 && <span className="font-medium text-emerald-700 dark:text-emerald-400">Priced {Math.round(below * 100)}% under similar homes on this list, per door</span>}
     </div>
+  );
+}
+
+const todayIso = () => new Date().toLocaleDateString('en-CA');
+const dayAfter = (iso) => new Date(Date.parse(`${iso}T12:00:00Z`) + 86400000).toISOString().slice(0, 10);
+
+/** New or cheaper homes that match your saved alerts in this city, since you last looked. */
+function AlertBanners({ alerts, feed, market, profile, onSeen, place }) {
+  const rows = alerts
+    .map((a) => ({ a, fresh: freshMatches(alertMatches(a, feed, { market, profile, homeFor }), a.seen ? dayAfter(a.seen) : a.since) }))
+    .filter((x) => x.fresh.length);
+  if (!rows.length) return null;
+  return rows.map(({ a, fresh }) => (
+    <div key={a.id} className="rise rounded-md bg-emerald-500/10 px-4 py-3 text-sm text-emerald-950 ring-1 ring-emerald-600/20 ring-inset dark:text-emerald-50 dark:ring-emerald-400/20">
+      <div className="flex items-start justify-between gap-3">
+        <p className="flex items-start gap-2 font-semibold">
+          <BellRing className="mt-0.5 size-4 shrink-0" aria-hidden />
+          {fresh.length} new or cheaper: {alertName(a, place.name)}
+        </p>
+        <button type="button" onClick={() => onSeen(a.id)} className="shrink-0 rounded-md px-2 py-0.5 text-xs font-medium hover:bg-emerald-500/15">
+          Mark as seen
+        </button>
+      </div>
+      <ul className="mt-1.5 space-y-0.5 pl-6">
+        {fresh.slice(0, 5).map(({ listing: l, costToLive, perDoor }) => (
+          <li key={l.id}>
+            {l.address}, {money(l.price)}
+            <span className="text-emerald-800/80 dark:text-emerald-200/80">
+              {costToLive != null ? ` · ${money(costToLive)}/mo to live in` : ''} · {money(perDoor, { signed: true })}/door
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  ));
+}
+
+/** Save the search: this city, these property types, and the limits you set. */
+function AlertForm({ city, place, types, onCancel, onSave }) {
+  const [f, setF] = useState({ types, maxPrice: '', maxLive: '', minPerDoor: '' });
+  const n = (v) => (v === '' ? null : Number(v));
+  return (
+    <Card className="p-4 sm:p-5">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSave({ city, types: f.types, maxPrice: n(f.maxPrice), maxLive: n(f.maxLive), minPerDoor: n(f.minPerDoor) });
+        }}
+        className="space-y-4"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-semibold text-zinc-950 dark:text-white">Alert me about new listings in {place.name}</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">New and cheaper matches show here; with an account and email, you also get a daily email.</p>
+          </div>
+          <Button variant="ghost" onClick={onCancel} aria-label="Close">
+            <X className="size-4" aria-hidden />
+          </Button>
+        </div>
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Property types">
+          {LISTING_TYPES.map((t) => {
+            const on = f.types.includes(t.key);
+            return (
+              <button
+                key={t.key}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setF((x) => ({ ...x, types: on && x.types.length > 1 ? x.types.filter((k) => k !== t.key) : on ? x.types : [...x.types, t.key] }))}
+                className={`rounded-md px-3 py-1.5 text-sm ring-1 ring-inset ${on ? 'bg-emerald-500/10 font-semibold text-emerald-800 ring-emerald-600/30 dark:text-emerald-300' : 'text-zinc-600 ring-(--line-strong) dark:text-zinc-400'}`}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <NumberField id="al-price" label="Most you’d pay" prefix="$" value={f.maxPrice === '' ? undefined : f.maxPrice} onChange={(v) => setF((x) => ({ ...x, maxPrice: v || '' }))} step={10000} decimals={0} hint="Leave blank for any" />
+          <NumberField id="al-live" label="Most to live in" prefix="$" suffix="/mo" value={f.maxLive === '' ? undefined : f.maxLive} onChange={(v) => setF((x) => ({ ...x, maxLive: v || '' }))} step={50} decimals={0} hint="Uses your Home numbers" />
+          <NumberField id="al-door" label="Least cash flow" prefix="$" suffix="/door" value={f.minPerDoor === '' ? undefined : f.minPerDoor} onChange={(v) => setF((x) => ({ ...x, minPerDoor: v ?? '' }))} step={25} decimals={0} min={-5000} hint="For investors" />
+        </div>
+        <Button type="submit" variant="primary">
+          <BellPlus className="size-4" aria-hidden /> Save alert
+        </Button>
+      </form>
+    </Card>
   );
 }
 
@@ -366,10 +451,11 @@ function CityPicker({ city, index, onCity }) {
 }
 
 /** The Listings tab: properties for sale in one Canadian city, refreshed by the morning run and ranked by your numbers. */
-export default function ListingsView({ feedState, indexState, city, onCity, market, targets, profile, importedIds, onMarket, onAnalyze, onHide, onUnhide }) {
+export default function ListingsView({ feedState, indexState, city, onCity, market, baseMarket, alerts = [], onAlerts, targets, profile, importedIds, onMarket, onAnalyze, onHide, onUnhide }) {
   const { status, feed } = feedState;
   const [sort, setSort] = useState('perDoor');
   const [layout, setLayout] = useState('list');
+  const [alerting, setAlerting] = useState(false);
   const [onlyMeets, setOnlyMeets] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -427,6 +513,19 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
       </ViewHeader>
 
       <CityPicker city={city} index={indexState?.feed} onCity={onCity} />
+
+      {status === 'ready' && onAlerts && (
+        <AlertBanners alerts={alerts.filter((a) => a.city === city)} feed={feed} market={baseMarket ?? market} profile={profile} onSeen={(id) => onAlerts(alerts.map((a) => (a.id === id ? { ...a, seen: todayIso() } : a)))} place={place} />
+      )}
+      {alerting && onAlerts && (
+        <AlertForm
+          city={city}
+          place={place}
+          types={market.types}
+          onCancel={() => setAlerting(false)}
+          onSave={(a) => (onAlerts([...alerts, { ...a, since: todayIso(), seen: todayIso() }].slice(-10)), setAlerting(false))}
+        />
+      )}
 
       {status === 'checking' && <SkeletonCard className="h-[28rem]" />}
       {status === 'local' && (
@@ -534,6 +633,11 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
                   ))}
                   {profile && <option value={LIVE_SORT.key}>{LIVE_SORT.label}</option>}
                 </select>
+                {onAlerts && (
+                  <Button className="py-1.5" onClick={() => setAlerting((v) => !v)} aria-expanded={alerting}>
+                    <BellPlus className="size-4" aria-hidden /> Alert me
+                  </Button>
+                )}
                 <Button className="py-1.5" onClick={() => setEditing((v) => !v)} aria-expanded={editing} aria-controls="listing-assumptions">
                   <SlidersHorizontal className="size-4" aria-hidden /> Assumptions
                 </Button>

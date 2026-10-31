@@ -30,8 +30,10 @@ import {
   Trash2,
   Undo2,
   Flag,
+  UserRound,
 } from 'lucide-react';
 import { useDeals } from './hooks/useDeals.js';
+import { accountCall } from './lib/account.js';
 import { useTheme } from './hooks/useTheme.js';
 import { useExports } from './hooks/useExports.js';
 import { useMediaQuery, prefersReducedMotion } from './hooks/useMediaQuery.js';
@@ -77,6 +79,7 @@ const CashView = lazy(() => import('./views/CashView.jsx'));
 const HomeView = lazy(() => import('./views/HomeView.jsx'));
 const LandlordView = lazy(() => import('./views/landlord/LandlordView.jsx'));
 const HelpSheet = lazy(() => import('./components/HelpSheet.jsx'));
+const AccountSheet = lazy(() => import('./components/AccountSheet.jsx'));
 const ShareSheet = lazy(() => import('./components/ShareSheet.jsx'));
 
 const NO_ADJ = { rateDelta: 0, downPct: null, rentPct: 0 };
@@ -150,18 +153,20 @@ function build(deal, targets, adjusted = false) {
 
 const SYNC_TEXT = {
   cloud: { icon: Cloud, text: 'Synced to your Claude account', cls: 'text-emerald-700 dark:text-emerald-400' },
+  account: { icon: Cloud, text: 'Synced to your Bedrock account', cls: 'text-emerald-700 dark:text-emerald-400' },
   connecting: { icon: Cloud, text: 'Connecting to your account…', cls: '' },
   error: { icon: CloudOff, text: 'Couldn’t reach your account. Changes are saved in this browser.', cls: 'text-amber-700 dark:text-amber-300' },
   local: { icon: HardDrive, text: 'Saved in this browser', cls: '' },
 };
 
-function SyncStatus({ sync }) {
-  const s = SYNC_TEXT[sync] ?? SYNC_TEXT.local;
+function SyncStatus({ sync, account, onOpen }) {
+  const s = SYNC_TEXT[sync === 'cloud' && account ? 'account' : sync] ?? SYNC_TEXT.local;
   return (
-    <span className={`flex max-w-56 items-center gap-1.5 ${s.cls}`}>
+    <button type="button" onClick={onOpen} className={`flex max-w-56 items-center gap-1.5 text-left hover:underline ${s.cls}`}>
       <s.icon className="size-3.5 shrink-0" aria-hidden />
       {s.text}
-    </span>
+      {sync === 'local' && !HOSTED && <span className="text-emerald-700 dark:text-emerald-400"> · sync your devices</span>}
+    </button>
   );
 }
 
@@ -187,6 +192,8 @@ function useAllTabs() {
 
 // The website's home page: the site root when the app runs on the website at /app/; from
 // anywhere else (the hosted Claude page) the public site, opened in a new tab.
+// The hosted Claude page (not under /app/) syncs to the Claude account; the website uses Bedrock accounts.
+const HOSTED = typeof window !== 'undefined' && !window.location.pathname.startsWith('/app');
 const HOME_PAGE = typeof window !== 'undefined' && window.location.pathname.startsWith('/app') ? '/' : 'https://bedrock.signia83.workers.dev/';
 
 /** A view named in the address (?view=listings), as the homepage's links use; read once, then tidied away. */
@@ -249,6 +256,7 @@ export default function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [fromLink, setFromLink] = useState(false);
   // The deal the Home tab tries living in; the open deal until you pick another.
@@ -386,6 +394,14 @@ export default function App() {
     (deal) => withUndo(`Duplicated “${deal.name}”`, () => lib.duplicateDeal(deal.id)),
     [withUndo, lib],
   );
+
+  // The account's copy of your alerts drives the daily email; keep it in step with the library.
+  const alertsKey = JSON.stringify(lib.settings.alerts.map(({ seen, ...a }) => a)); // eslint-disable-line no-unused-vars
+  useEffect(() => {
+    if (!lib.account || lib.sync !== 'cloud') return undefined;
+    const t = setTimeout(() => accountCall(lib.account, '/alerts', { method: 'PUT', body: { alerts: JSON.parse(alertsKey) } }).catch(() => {}), 1500);
+    return () => clearTimeout(t);
+  }, [lib.account, lib.sync, alertsKey]);
 
   // Listings: open one as a deal (once), or hide it from the list.
   const baseMarket = lib.settings.market;
@@ -657,6 +673,15 @@ export default function App() {
                   <RotateCcw className="size-4" aria-hidden />
                 </ConfirmButton>
               </div>
+              <button
+                type="button"
+                onClick={() => setAccountOpen(true)}
+                className={`${headerIcon} ${lib.account ? 'text-emerald-700 dark:text-emerald-400' : ''}`}
+                aria-label={lib.account ? 'Your account (synced)' : 'Your account: sync your devices'}
+                title={lib.account ? 'Your account' : 'Sync your devices'}
+              >
+                <UserRound className="size-4" aria-hidden />
+              </button>
               <button type="button" onClick={() => setHelpOpen(true)} className={headerIcon} aria-label="How Bedrock works" title="How Bedrock works">
                 <CircleHelp className="size-4" aria-hidden />
               </button>
@@ -715,6 +740,9 @@ export default function App() {
                 city={listCity}
                 onCity={(listingCity) => lib.updateSettings('market', { listingCity })}
                 market={market}
+                baseMarket={baseMarket}
+                alerts={lib.settings.alerts}
+                onAlerts={lib.replaceAlerts}
                 targets={targets}
                 profile={lib.settings.home}
                 importedIds={importedIds}
@@ -831,7 +859,7 @@ export default function App() {
                 <LogoMark className="size-6" />
                 <span className="font-semibold text-zinc-800 dark:text-zinc-200">Bedrock</span>
               </a>
-              <SyncStatus sync={lib.sync} />
+              <SyncStatus sync={lib.sync} account={lib.account} onOpen={() => setAccountOpen(true)} />
             </div>
             <p className="max-w-4xl">
               DSCR = gross monthly rent ÷ PITIA (principal, interest, taxes, insurance, HOA), using the interest-only payment during an IO period. Real net
@@ -856,6 +884,19 @@ export default function App() {
             onQuickCheck={quickCheck}
             moreHidden={isDesktop && !tabsUnlocked}
             onShowAll={showAllTabs}
+          />
+        </Suspense>
+      )}
+      {accountOpen && (
+        <Suspense fallback={null}>
+          <AccountSheet
+            open
+            onClose={() => setAccountOpen(false)}
+            hosted={HOSTED}
+            account={lib.account}
+            onAccount={lib.setAccount}
+            alerts={lib.settings.alerts}
+            onRemoveAlert={(id) => lib.replaceAlerts(lib.settings.alerts.filter((a) => a.id !== id))}
           />
         </Suspense>
       )}

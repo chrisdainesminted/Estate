@@ -119,8 +119,16 @@ const PRIVACY = {
     [
       'The calculators: nothing leaves your device',
       <p>
-        Your income, savings, debts, rent and the deals you save are stored in your own browser, not on our server. Clearing your browser’s data for this site deletes
-        them. If you share a deal by link, its numbers travel in that link; anyone you send it to can see them.
+        Your income, savings, debts, rent and the deals you save are stored in your own browser, not on our server, unless you create an account to sync them. Clearing
+        your browser’s data for this site deletes them. If you share a deal by link, its numbers travel in that link; anyone you send it to can see them.
+      </p>,
+    ],
+    [
+      'If you create an account',
+      <p>
+        An account is optional. It keeps a copy of your numbers, deals, checklist and listing alerts on our server so they sync to your other devices; it opens with a private
+        link, and we keep only a scrambled form of its key. If you add an email for alerts, we confirm it with a code and use it only to send the alerts you asked for. Delete
+        the account from the app at any time and its copy is erased.
       </p>,
     ],
     [

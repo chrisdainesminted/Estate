@@ -19,6 +19,9 @@ import { DurableObject } from 'cloudflare:workers';
 import { COLLECTIONS } from './schema.js';
 import { PHOTO_TYPES, Store, StoreError, hashKey, randomToken } from './store.js';
 import { DirectoryStore, REPORT_REASONS, cleanInbox } from './directory.js';
+import { AccountStore } from './account.js';
+import { alertMatches, alertName, feedDoc, freshMatches } from '../src/lib/market.js';
+import { homeFor, normalizeProfile } from '../src/lib/firstHome.js';
 import { cityByKey } from '../src/lib/canada.js';
 import { monthlyBill } from './pricing.js';
 import { stripeClient, verifyWebhook } from './stripe.js';
@@ -255,6 +258,18 @@ export class Directory extends DurableObject {
     this.store.markCharged(ws, month);
   }
 
+  setAlerting(id, on) {
+    this.store.setAlerting(id, on);
+  }
+
+  dueAlerts(date, limit) {
+    return this.store.dueAlerts(date, limit);
+  }
+
+  markAlerted(id, date) {
+    this.store.markAlerted(id, date);
+  }
+
   /**
    * Map points for listing addresses: cached ones straight away, and up to
    * GEO_PER_CALL new ones looked up on OpenStreetMap's Nominatim, one a
@@ -313,6 +328,104 @@ export class Directory extends DurableObject {
   }
 }
 
+/**
+ * One person's account: their library and listing alerts (see account.js).
+ * Every call but 'init' carries the account key.
+ */
+export class Account extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env);
+    this.env = env;
+    this.store = new AccountStore(ctx.storage.sql);
+  }
+
+  async call(req) {
+    const a = this.store;
+    try {
+      if (req.op === 'init') {
+        a.init(await hashKey(req.key));
+        return { ok: true };
+      }
+      await a.checkKey(req.key);
+      switch (req.op) {
+        case 'read':
+          return a.read();
+        case 'write':
+          return a.write(req.body?.data, req.body?.updatedAt);
+        case 'alerts': {
+          const alerts = a.setAlerts(req.body?.alerts);
+          await this.register(req.id);
+          return { alerts };
+        }
+        case 'emailSend': {
+          if (!canEmail(this.env)) throw new StoreError(501, 'Email isn’t set up on this site yet; alerts show in the app for now.');
+          const { email, code } = await a.startEmail(req.body?.email);
+          await sendEmail(this.env, email, `Your Bedrock code: ${code}`, `Your code is ${code}. Enter it in Bedrock to get listing alerts by email. It expires in 15 minutes.\n\nIf you didn’t ask for this, ignore this email.`);
+          return { ok: true, email };
+        }
+        case 'emailCheck': {
+          const r = await a.finishEmail(req.body?.code);
+          await this.register(req.id);
+          return r;
+        }
+        case 'emailDrop': {
+          const r = a.dropEmail();
+          await this.register(req.id);
+          return r;
+        }
+        case 'wipe':
+          await directory(this.env).setAlerting(req.id, false);
+          return a.wipe();
+        default:
+          throw new StoreError(404, 'Unknown request.');
+      }
+    } catch (e) {
+      if (e instanceof StoreError) return { error: e.message, status: e.status };
+      throw e;
+    }
+  }
+
+  /** On the daily digest list only with alerts and a confirmed email. */
+  async register(id) {
+    const r = this.store.read();
+    await directory(this.env).setAlerting(id, Boolean(r.emailVerified && r.email && r.alerts.length));
+  }
+
+  /** The day's alert email: listings new or cheaper since the last one, for each alert. */
+  async digest(id, today, origin) {
+    const a = this.store;
+    if (!a.ready) return { sent: false };
+    const { data, alerts, email, emailVerified } = a.read();
+    if (!emailVerified || !email || !alerts.length) return { sent: false };
+    const since = a.lastSent() || today;
+    const market = data?.settings?.market;
+    const profile = normalizeProfile(data?.settings?.home);
+    const feeds = new Map();
+    const sections = [];
+    for (const alert of alerts) {
+      if (!feeds.has(alert.city)) {
+        const res = await this.env.ASSETS.fetch(new Request(`${origin}/data/${feedDoc(alert.city)}.json`));
+        feeds.set(alert.city, res.ok ? await res.json().catch(() => null) : null);
+      }
+      const fresh = freshMatches(alertMatches(alert, feeds.get(alert.city), { market, profile, homeFor }), alert.since > since ? alert.since : since);
+      if (fresh.length) sections.push({ alert, fresh });
+    }
+    a.markSent(today);
+    if (!sections.length) return { sent: false };
+    const { cityByKey } = await import('../src/lib/canada.js');
+    const body = sections
+      .map(({ alert, fresh }) =>
+        [
+          `${alertName(alert, cityByKey(alert.city).name)}: ${fresh.length} new or cheaper`,
+          ...fresh.slice(0, 10).map(({ listing: l, costToLive, perDoor }) => `- ${l.address}, $${Math.round(l.price).toLocaleString('en-CA')}${costToLive != null ? `, about $${Math.round(costToLive).toLocaleString('en-CA')}/mo to live in` : ''}, ${perDoor >= 0 ? '+' : '-'}$${Math.abs(Math.round(perDoor)).toLocaleString('en-CA')}/door\n  ${l.url}`),
+        ].join('\n'),
+      )
+      .join('\n\n');
+    await sendEmail(this.env, email, `Bedrock: ${sections.reduce((n, x) => n + x.fresh.length, 0)} homes match your alerts`, `${body}\n\nSee them all in Bedrock: ${origin}/app/?view=listings\n\nTo stop these emails, open Bedrock and turn off email alerts in your account.`);
+    return { sent: true };
+  }
+}
+
 async function readBody(request) {
   const text = await request.text();
   if (text.length > MAX_BODY) throw new StoreError(413, 'That’s too much text.');
@@ -338,6 +451,32 @@ async function api(request, env, url) {
     const res = await env.WORKSPACE.get(env.WORKSPACE.idFromName(id)).call({ op: 'init', key, ws: id });
     if (res.error) return json({ error: res.error }, res.status);
     return json({ id, key }, 201);
+  }
+
+  // Accounts: create one, then everything else with its key.
+  if (parts[0] === 'accounts' && parts.length === 1 && method === 'POST') {
+    const id = randomToken(12);
+    const key = randomToken(24);
+    const res = await env.ACCOUNT.get(env.ACCOUNT.idFromName(id)).call({ op: 'init', key });
+    if (res.error) return json({ error: res.error }, res.status);
+    return json({ id, key }, 201);
+  }
+  if (parts[0] === 'a' && ID.test(parts[1] ?? '')) {
+    const id = parts[1];
+    const key = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+    const sub = parts.slice(2).join('/');
+    const body = method === 'GET' || method === 'DELETE' ? null : await readBody(request);
+    const op =
+      sub === '' && method === 'GET' ? 'read'
+      : sub === '' && method === 'PUT' ? 'write'
+      : sub === '' && method === 'DELETE' ? 'wipe'
+      : sub === 'alerts' && method === 'PUT' ? 'alerts'
+      : sub === 'email' && method === 'POST' ? 'emailSend'
+      : sub === 'email/check' && method === 'POST' ? 'emailCheck'
+      : sub === 'email' && method === 'DELETE' ? 'emailDrop'
+      : null;
+    if (!op) return json({ error: 'Not found.' }, 404);
+    return answer(await env.ACCOUNT.get(env.ACCOUNT.idFromName(id)).call({ op, id, key, body }));
   }
 
   // The public search, and reporting a listing.
@@ -477,9 +616,24 @@ async function chargeMonth(env) {
   }
 }
 
+/** Each day, at most 50 accounts' alert emails (only once email is set up). */
+async function sendAlerts(env) {
+  if (!canEmail(env) || !env.ACCOUNT) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const origin = env.SITE_URL || 'https://bedrock.signia83.workers.dev';
+  for (const id of await directory(env).dueAlerts(today, 50)) {
+    try {
+      await env.ACCOUNT.get(env.ACCOUNT.idFromName(id)).digest(id, today, origin);
+    } catch {
+      // One failed email shouldn't stop the rest; it's tried again tomorrow.
+    }
+    await directory(env).markAlerted(id, today);
+  }
+}
+
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(chargeMonth(env));
+    ctx.waitUntil(Promise.all([chargeMonth(env), sendAlerts(env)]));
   },
 
   async fetch(request, env) {

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DEFAULT_DEAL, MAX_COMPARE, PRESET_DEALS, PRESET_OWNED, makeDeal } from '../lib/presets.js';
 import { capability } from '../lib/runtime.js';
+import { accountLink, accountRef } from '../lib/account.js';
+import { cleanAlert } from '../../worker/account.js';
 import { DEFAULT_TARGETS, DEFAULT_TAX } from '../lib/finance.js';
 import { DEFAULT_PLAN } from '../lib/growth.js';
 import { DEFAULT_MARKET, normalizeMarket } from '../lib/market.js';
@@ -10,7 +12,7 @@ import { DEFAULT_SUITE, normalizeSuite } from '../lib/suites.js';
 // Per-library settings that travel with the deals: offer targets, the growth
 // plan, tax inputs, the assumptions used to underwrite daily listings, your
 // first-home numbers and your progress on adding a suite.
-const DEFAULT_SETTINGS = { targets: DEFAULT_TARGETS, plan: DEFAULT_PLAN, tax: DEFAULT_TAX, market: DEFAULT_MARKET, home: DEFAULT_PROFILE, suite: DEFAULT_SUITE, ready: {}, rvb: {} };
+const DEFAULT_SETTINGS = { targets: DEFAULT_TARGETS, plan: DEFAULT_PLAN, tax: DEFAULT_TAX, market: DEFAULT_MARKET, home: DEFAULT_PROFILE, suite: DEFAULT_SUITE, ready: {}, rvb: {}, alerts: [] };
 
 function normalizeSettings(s) {
   return {
@@ -23,6 +25,8 @@ function normalizeSettings(s) {
     // The "Am I ready?" checklist: step id → true once done.
     ready: Object.fromEntries(Object.entries(s?.ready && typeof s.ready === 'object' ? s.ready : {}).filter(([, v]) => v === true)),
     // Rent vs buy: your own growth and return assumptions, if you changed them.
+    // Saved listing searches: a city, property types and limits.
+    alerts: (Array.isArray(s?.alerts) ? s.alerts : []).slice(0, 10).map((a, i) => (cleanAlert(a, i) ? { ...cleanAlert(a, i), ...(typeof a.seen === 'string' ? { seen: a.seen } : {}) } : null)).filter(Boolean),
     rvb: Object.fromEntries(Object.entries(s?.rvb && typeof s.rvb === 'object' ? s.rvb : {}).filter(([, v]) => Number.isFinite(Number(v))).map(([k, v]) => [k, Number(v)])),
   };
 }
@@ -95,6 +99,8 @@ export function useDeals() {
   const [state, setState] = useState(loadLocal);
   // 'local' (browser only), 'connecting', 'cloud' (synced to account), 'error'
   const [sync, setSync] = useState('local');
+  // A Bedrock account (website only): set when this browser has its private link.
+  const [account, setAccount] = useState(accountLink);
   const stateRef = useRef(state);
   stateRef.current = state;
   const cloud = useRef(null);
@@ -115,13 +121,20 @@ export function useDeals() {
     let unsub = null;
     (async () => {
       const [db, user] = await Promise.all([capability('db'), capability('user')]);
-      if (!db || !user || dead) return;
-      const uid = await user.id();
-      if (!uid || dead) return;
+      if (dead) return;
       let ref;
-      try {
-        ref = db.doc(`data/users/${uid}/bedrock`);
-      } catch {
+      if (db && user) {
+        const uid = await user.id();
+        if (!uid || dead) return;
+        try {
+          ref = db.doc(`data/users/${uid}/bedrock`);
+        } catch {
+          return;
+        }
+      } else if (account) {
+        ref = accountRef(account);
+      } else {
+        setSync('local');
         return;
       }
       setSync('connecting');
@@ -162,8 +175,9 @@ export function useDeals() {
     return () => {
       dead = true;
       unsub?.();
+      cloud.current = null;
     };
-  }, []);
+  }, [account]);
 
   // Push local edits to the account, one write at a time, after typing pauses.
   useEffect(() => {
@@ -281,6 +295,9 @@ export function useDeals() {
     sync,
     settings: state.settings,
     updateSettings,
+    account,
+    setAccount,
+    replaceAlerts: (alerts) => commit((s) => ({ ...s, settings: { ...s.settings, alerts } })),
     updateDeal,
     updateMany,
     addDeal,

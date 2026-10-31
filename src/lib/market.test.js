@@ -4,6 +4,9 @@ import { DEFAULT_DEAL } from './presets.js';
 import {
   DEFAULT_MARKET,
   LISTING_CITIES,
+  alertMatches,
+  alertName,
+  freshMatches,
   daysListed,
   priceStory,
   underMarket,
@@ -385,5 +388,31 @@ describe('listing history and value', () => {
     expect(flags.get('d')).toBeCloseTo(0.25);
     // Too few duplexes to compare: none flagged.
     expect(underMarket([{ id: 'x', price: 100000, units: 2 }, { id: 'y', price: 900000, units: 2 }]).size).toBe(0);
+  });
+});
+
+describe('alerts', () => {
+  const url = (n) => `https://www.realtor.ca/real-estate/${n}/${n}-main-street-hamilton`;
+  const feed = {
+    listings: [
+      { id: 'a', address: '1 Main Street', url: url(1), price: 500000, units: 2, firstSeen: '2026-10-30', priceHistory: [{ date: '2026-10-30', price: 500000 }] },
+      { id: 'b', address: '2 Main Street', url: url(2), price: 900000, units: 1, firstSeen: '2026-10-01', priceHistory: [{ date: '2026-10-01', price: 950000 }, { date: '2026-10-31', price: 900000 }] },
+      { id: 'c', address: '3 Main Street', url: url(3), price: 400000, units: 1, status: 'sold', firstSeen: '2026-10-31' },
+    ],
+  };
+  it('matches by type and price, and finds what is new or cheaper', () => {
+    const all = alertMatches({ city: 'hamilton', types: ['single', 'small'], maxPrice: 950000 }, feed, { market: DEFAULT_MARKET });
+    expect(all.map((x) => x.listing.id)).toEqual(['a', 'b']);
+    expect(alertMatches({ city: 'hamilton', types: ['small'] }, feed, { market: DEFAULT_MARKET }).map((x) => x.listing.id)).toEqual(['a']);
+    expect(freshMatches(all, '2026-10-31').map((x) => x.listing.id)).toEqual(['b']);
+    expect(freshMatches(all, '2026-10-30').map((x) => x.listing.id)).toEqual(['a', 'b']);
+  });
+  it('filters on cost to live when given the Home numbers', () => {
+    const homeFor = () => ({ costToLive: 1500 });
+    expect(alertMatches({ city: 'hamilton', maxLive: 1400 }, feed, { market: DEFAULT_MARKET, profile: {}, homeFor })).toHaveLength(0);
+    expect(alertMatches({ city: 'hamilton', maxLive: 1600 }, feed, { market: DEFAULT_MARKET, profile: {}, homeFor })).toHaveLength(2);
+  });
+  it('names an alert plainly', () => {
+    expect(alertName({ types: ['small'], maxLive: 2000 }, 'Hamilton')).toBe('2–4 units in Hamilton, under $2,000/mo to live in');
   });
 });

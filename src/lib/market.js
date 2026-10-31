@@ -512,3 +512,38 @@ export function underMarket(listings, { cut = 0.15, minGroup = 4 } = {}) {
   }
   return out;
 }
+
+/**
+ * Listings in a feed that fit a saved alert: its city's listings of the
+ * types it wants, at or under its price, its cost to live in (with your
+ * Home numbers) and at or over its cash flow per door.
+ */
+export function alertMatches(alert, feed, { market, profile, homeFor } = {}) {
+  const m = localMarket(market, alert.city);
+  return (feed?.listings ?? [])
+    .filter((l) => (l.status ?? 'active') === 'active' && listingPageUrl(l.url, l.address))
+    .filter((l) => (alert.types ?? LISTING_TYPES.map((t) => t.key)).includes(typeOf(Math.max(Math.round(Number(l.units) || 1), 1))))
+    .filter((l) => !alert.maxPrice || Number(l.price) <= alert.maxPrice)
+    .map((l) => {
+      const s = scoreListing(l, m);
+      const home = homeFor && profile ? homeFor(listingToDeal(l, m, 'own'), { ...profile, city: alert.city }, m.rate) : null;
+      return { listing: l, perDoor: s.perDoor, costToLive: home?.costToLive ?? null };
+    })
+    .filter((x) => !alert.maxLive || (x.costToLive != null && x.costToLive <= alert.maxLive))
+    .filter((x) => alert.minPerDoor == null || x.perDoor >= alert.minPerDoor);
+}
+
+/** Of an alert's matches, the ones new or cheaper on or after `since` (YYYY-MM-DD). */
+export const freshMatches = (matches, since) =>
+  matches.filter(({ listing: l }) => String(l.firstSeen ?? '') >= since || (priceDrop(l) > 0 && String(l.priceHistory?.at(-1)?.date ?? '') >= since));
+
+/** A plain-words name for an alert: "Duplexes to fourplexes in Hamilton under $2,000/mo to live in". */
+export function alertName(alert, cityName) {
+  const kinds = { single: 'houses', small: '2–4 units', large: '5+ units' };
+  const types = (alert.types?.length ?? 3) === 3 ? 'Homes' : alert.types.map((t) => kinds[t]).join(' and ').replace(/^./, (c) => c.toUpperCase());
+  const parts = [`${types} in ${cityName}`];
+  if (alert.maxPrice) parts.push(`up to $${Math.round(alert.maxPrice).toLocaleString('en-CA')}`);
+  if (alert.maxLive) parts.push(`under $${Math.round(alert.maxLive).toLocaleString('en-CA')}/mo to live in`);
+  if (alert.minPerDoor != null) parts.push(`at least $${Math.round(alert.minPerDoor).toLocaleString('en-CA')}/door`);
+  return parts.join(', ');
+}

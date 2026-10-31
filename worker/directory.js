@@ -48,7 +48,25 @@ export class DirectoryStore {
     // Addresses already turned into map points (lat null: looked up, not found), so each is asked about once.
     sql.exec('CREATE TABLE IF NOT EXISTS geo (q TEXT PRIMARY KEY, lat REAL, lng REAL, at INTEGER)');
     // Messages to the site's owner: contact-form notes and requests to talk to a mortgage broker.
+    // Accounts with listing alerts and a confirmed email, for the daily digest.
+    sql.exec('CREATE TABLE IF NOT EXISTS alerting (id TEXT PRIMARY KEY, sent TEXT)');
     sql.exec('CREATE TABLE IF NOT EXISTS inbox (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT, data TEXT, at INTEGER, done INTEGER DEFAULT 0)');
+  }
+
+  // ---- accounts that get alert emails ----
+
+  setAlerting(id, on) {
+    if (on) this.sql.exec('INSERT INTO alerting (id, sent) VALUES (?, ?) ON CONFLICT(id) DO NOTHING', id, '');
+    else this.sql.exec('DELETE FROM alerting WHERE id = ?', id);
+  }
+
+  /** Up to `limit` accounts not yet sent a digest on `date`, oldest first. */
+  dueAlerts(date, limit = 50) {
+    return this.sql.exec('SELECT id FROM alerting WHERE sent < ? ORDER BY sent LIMIT ?', date, limit).toArray().map((r) => r.id);
+  }
+
+  markAlerted(id, date) {
+    this.sql.exec('UPDATE alerting SET sent = ? WHERE id = ?', date, id);
   }
 
   // ---- the owner's inbox ----
