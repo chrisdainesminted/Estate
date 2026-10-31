@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ArrowRight, Check, CheckCircle2, ExternalLink, XCircle } from 'lucide-react';
-import { DEFAULT_PROFILE, RULES, RULES_CHECKED, benefits, buyCheck, liveIn, localFor, maxPrice, monthsToSave } from '../lib/firstHome.js';
+import { RULES, RULES_CHECKED, benefits, buyCheck, liveIn, localFor, maxPrice, monthsToSave } from '../lib/firstHome.js';
 import { SUITE_KINDS, SUITE_RULES_CHECKED, allowedFor, moneyFor, stepsFor, suitePayback } from '../lib/suites.js';
 import { cityByKey, guessCity, provinceName } from '../lib/canada.js';
 import { dealPlace } from '../lib/finance.js';
@@ -318,9 +318,9 @@ function SuiteGuide({ s, onSuite, city }) {
 
 /**
  * First visit: where, and four numbers, before any result, so the first
- * number a person sees is about them, not the example buyer.
+ * number a person sees is about them.
  */
-function Start({ onHome, onExample }) {
+function Start({ onHome }) {
   const [v, setV] = useState({ income: null, savings: null, debts: null, rentNow: null });
   const [city, setCity] = useState(guessCity);
   const [missing, setMissing] = useState([]);
@@ -365,9 +365,6 @@ function Start({ onHome, onExample }) {
             {missing.length > 0 && `Add ${missing.map((k) => label[k]).join(', ').replace(/, ([^,]*)$/, ' and $1')} to see your answer.`}
           </p>
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
-            <Button type="button" variant="ghost" onClick={onExample}>
-              See an example first
-            </Button>
             <Button type="submit" variant="primary">
               See what I can buy <ArrowRight className="size-4" aria-hidden />
             </Button>
@@ -375,21 +372,6 @@ function Start({ onHome, onExample }) {
         </div>
       </form>
     </Card>
-  );
-}
-
-/** While someone browses the example, say so, and offer the questions. */
-function ExampleNote({ onStart }) {
-  return (
-    <div className="panel flex flex-col gap-3 px-4 py-3 text-sm text-zinc-700 shadow-[inset_3px_0_0_var(--accent)] sm:flex-row sm:items-center sm:justify-between dark:text-zinc-300">
-      <p>
-        <span className="font-semibold text-zinc-950 dark:text-white">These are example numbers:</span> buying in {placeName(cityByKey(DEFAULT_PROFILE.city))}, {money(DEFAULT_PROFILE.income)} income, {money(DEFAULT_PROFILE.savings)} saved, paying {money(DEFAULT_PROFILE.rentNow)}{' '}
-        rent.
-      </p>
-      <Button variant="primary" className="shrink-0" onClick={onStart}>
-        Use my numbers
-      </Button>
-    </div>
   );
 }
 
@@ -409,20 +391,19 @@ export default function HomeView({ profile: p, suite, ready = {}, rvb = {}, mark
   const b = useMemo(() => benefits({ profile: p, price: p.targetPrice, units: p.targetUnits }), [p]);
   const solo = maxPrice({ profile: p, units: 1, ratePct, taxPct });
   const duplex = maxPrice({ profile: p, units: 2, ratePct, taxPct, rentPerOtherUnit: rentEach });
-  const [example, setExample] = useState(false);
 
   const header = (
     <ViewHeader title="Your first home">
-      How close you are to owning {p.entered || example ? `in ${placeName(local.city)}` : 'a home anywhere in Canada'}, the money you can get, and how to make a home pay for itself. Estimates, not financial advice: a mortgage broker
+      How close you are to owning {p.entered ? `in ${placeName(local.city)}` : 'a home anywhere in Canada'}, the money you can get, and how to make a home pay for itself. Estimates, not financial advice: a mortgage broker
       confirms the real numbers.
     </ViewHeader>
   );
 
-  if (!p.entered && !example) {
+  if (!p.entered) {
     return (
       <div className="space-y-6">
         {header}
-        <Start onHome={onHome} onExample={() => setExample(true)} />
+        <Start onHome={onHome} />
         <SectionGroup>
           <Section id="home-suite" title="Add a suite or backyard home" meaning="Turn a house you own (or buy) into one that pays you rent: what’s allowed where you are, the permit steps, and whether it pays.">
             <SuiteGuide s={suite} onSuite={onSuite} city={guessCity()} />
@@ -435,7 +416,6 @@ export default function HomeView({ profile: p, suite, ready = {}, rvb = {}, mark
   return (
     <div className="space-y-6">
       {header}
-      {!p.entered && <ExampleNote onStart={() => setExample(false)} />}
 
       <SummaryCard
         id="home-summary"
