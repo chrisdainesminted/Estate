@@ -298,7 +298,7 @@ export function listingToDeal(listing, market, lens) {
     unitType,
     units,
     rentPerUnit: Math.round(rent.total / units),
-    taxesAnnual: Math.round(positive(listing.taxes) ?? (price * m.taxPct) / 100),
+    taxesAnnual: listingTaxes(listing, m),
     insuranceAnnual: Math.max(m.insurancePerUnit * units, INSURANCE_MIN),
     // Owner-paid utilities ride in the monthly fixed costs, as Canadian lenders count heat.
     hoaMonthly: units >= 2 ? m.utilitiesPerUnit * units : 0,
@@ -308,7 +308,7 @@ export function listingToDeal(listing, market, lens) {
     capexPct: m.capexPct,
     address: listing.address,
     listingUrl: listing.url || '',
-    notes: [listing.highlights, rentNote, listing.mls && `MLS® ${listing.mls}.`].filter(Boolean).join(' '),
+    notes: [listing.highlights, rentNote, taxesGuessed(listing) && 'Property tax estimated: the listing doesn’t state it.', listing.mls && `MLS® ${listing.mls}.`].filter(Boolean).join(' '),
     listingId: listing.id,
   };
   return (lens ?? m.lens) === 'own'
@@ -325,6 +325,28 @@ export function priceDrop(listing) {
 
 /** Your targets as a view counts them: your own down payment has no lender's DSCR test to pass. */
 export const lensTargets = (targets, lens) => (lens === 'own' ? { ...targets, useDscr: false } : targets);
+
+/**
+ * Where bigger rental buildings pay a higher property tax rate than houses.
+ * Ontario taxes 7+ units as multi-residential, at about twice the house
+ * rate (a stated Thunder Bay 12-plex bill: 1.95% of price, against 0.97%
+ * for houses); ones built since 2017 can pay the house rate. Saskatchewan
+ * taxes 4+ units on 80% of their value, against 70% for houses.
+ */
+const MULTI_RES = { ON: { minUnits: 7, factor: 2, newSince: 2017 }, SK: { minUnits: 4, factor: 80 / 70 } };
+
+/** True when a listing's taxes are a guess because it doesn't state them. */
+export const taxesGuessed = (listing) => !positive(listing?.taxes);
+
+/** A listing's yearly property tax: as stated, or a guess from its price, city and size. */
+export function listingTaxes(listing, market) {
+  const stated = positive(listing?.taxes);
+  if (stated) return Math.round(stated);
+  const m = normalizeMarket(market);
+  const rule = MULTI_RES[cityByKey(m.city ?? HOME_MARKET).province];
+  const multi = rule && unitsOf(listing) >= rule.minUnits && !(rule.newSince && Number(listing?.yearBuilt) >= rule.newSince);
+  return Math.round(((Number(listing?.price) || 0) * m.taxPct * (multi ? rule.factor : 1)) / 100);
+}
 
 /**
  * One listing run through the engine the way your chosen view counts it:
@@ -346,7 +368,7 @@ export function scoreListing(listing, market, targets = DEFAULT_TARGETS) {
     perDoor: a.netCashFlow / a.units,
     meets: offer.price == null ? a.netCashFlow > 0 : offer.price >= a.price,
     rentSource: listingRent(listing, m).source,
-    taxesEstimated: !positive(listing.taxes),
+    taxesEstimated: taxesGuessed(listing),
     drop: priceDrop(listing),
   };
 }

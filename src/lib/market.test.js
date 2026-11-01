@@ -22,6 +22,7 @@ import {
   lensTargets,
   listingPageUrl,
   listingRent,
+  listingTaxes,
   listingToDeal,
   mergeFeed,
   normalizeMarket,
@@ -162,6 +163,21 @@ describe('listingToDeal', () => {
     expect(d.taxesAnnual).toBe(Math.round(300000 * DEFAULT_MARKET.taxPct / 100));
     expect(d.insuranceAnnual).toBe(INSURANCE_MIN);
     expect(d.hoaMonthly).toBe(0); // tenants pay a house's utilities
+    expect(d.notes).toMatch(/Property tax estimated/);
+  });
+
+  it('guesses a higher tax for big Ontario rental buildings, and always prefers the stated bill', () => {
+    const tb = localMarket(DEFAULT_MARKET, 'thunder-bay');
+    const twelve = { address: '230 Brodie Street N', price: 999999, units: 12, yearBuilt: 1913 };
+    // A real 12-plex like this one pays $19,530 a year; the house rate alone would say $10,000.
+    expect(listingTaxes(twelve, tb)).toBe(Math.round(999999 * tb.taxPct * 2 / 100));
+    expect(listingTaxes({ ...twelve, units: 6 }, tb)).toBe(Math.round(999999 * tb.taxPct / 100));
+    expect(listingTaxes({ ...twelve, yearBuilt: 2021 }, tb)).toBe(Math.round(999999 * tb.taxPct / 100));
+    expect(listingTaxes({ ...twelve, taxes: 19529.58 }, tb)).toBe(19530);
+    expect(listingToDeal({ ...twelve, taxes: 19529.58 }, tb).notes).not.toMatch(/Property tax estimated/);
+    // Outside Ontario and Saskatchewan, size doesn't change the guess.
+    const yyc = localMarket(DEFAULT_MARKET, 'calgary');
+    expect(listingTaxes({ ...twelve }, yyc)).toBe(Math.round(999999 * yyc.taxPct / 100));
   });
 });
 

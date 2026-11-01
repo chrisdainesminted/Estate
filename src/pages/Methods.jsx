@@ -146,7 +146,8 @@ export default function Methods() {
         <div className={prose}>
           <p>
             A second unit’s rent defaults to your city’s average and you can change it. Property tax uses the listing’s figure when it gives one, otherwise your city’s typical
-            share of the price.
+            share of the price. Ontario taxes rental buildings of seven or more units at about twice the house rate (unless built since 2017), and Saskatchewan taxes four or
+            more units on a larger share of their value, so the guess for those is raised to match.
           </p>
         </div>
       </section>

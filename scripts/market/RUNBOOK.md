@@ -81,6 +81,8 @@ The scheduled "Squarely listings" task follows this every morning. It finds prop
 
       Then confirm saved listings: search the address (with the city) of every saved listing whose `lastSeen` is three or more days old, oldest first, up to 15 for Thunder Bay and 8 for other cities. If a result still shows its listing page for sale, include it in `found.json` like any other. If it shows the property sold, include it with status `sold`; if there's no for-sale page for it any more, include it with status `gone`.
 
+      Then fill missing taxes: for listings (saved or found today) with no `taxes`, up to 10 for Thunder Bay and 5 for other cities, buildings with the most units first, then the highest price, search `"<address>" <city> property taxes` and, if that turns up nothing, `site:realtor.ca "<address>" <city>`. When a result states the annual property tax for that address, include the listing in `found.json` with its `url`, `price` and `taxes`. Never guess a tax figure: leave it out when no page states it. A missing tax is estimated from the price, and that guess can be far off for bigger buildings.
+
    c. **Write `$RUN/$CITY/found.json`**: a JSON array with one object for each listing found today in that city, including ones already saved, so their dates and prices update. Fields below.
 
    d. **Merge.** Thunder Bay is searched daily, so a listing not confirmed for 7 days drops off; other cities come round about every two weeks, so give them 16:

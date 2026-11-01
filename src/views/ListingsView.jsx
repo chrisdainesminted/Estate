@@ -388,7 +388,7 @@ function Assumptions({ market, onMarket }) {
           {f('maintPct', { label: 'Maintenance', suffix: '% of rent', max: 50, step: 0.5, decimals: 1 })}
           {f('vacancyPct', { label: 'Vacancy', suffix: '% of rent', max: 50, step: 0.5, decimals: 1 })}
           {f('capexPct', { label: 'CapEx', suffix: '% of rent', max: 50, step: 0.5, decimals: 1 })}
-          <div className="col-span-2">{f('taxPct', { label: 'Property tax if not listed', suffix: '% of price', max: 5, step: 0.05, hint: 'Most listings state their taxes' })}</div>
+          <div className="col-span-2">{f('taxPct', { label: 'Property tax if not listed', suffix: '% of price', max: 5, step: 0.05, hint: 'Doubled for Ontario buildings of 7+ units' })}</div>
         </fieldset>
         <fieldset className="grid grid-cols-2 content-start gap-3">
           <legend className={`${legend} w-full`}>Market rents in {cityByKey(market.city).name}</legend>
