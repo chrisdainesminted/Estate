@@ -7,7 +7,7 @@ import { cityByKey, guessCity } from '../lib/canada.js';
 import CitySelect from '../components/CitySelect.jsx';
 import SiteFooter from '../components/SiteFooter.jsx';
 import AccountLink from '../components/AccountLink.jsx';
-import { DEFAULT_MARKET, INDEX_DOC, feedDoc, listingCity, listingToDeal, localMarket } from '../lib/market.js';
+import { DEFAULT_MARKET, INDEX_DOC, feedDoc, listingCity, listingToDeal, localMarket, unitsOf } from '../lib/market.js';
 import { money } from '../lib/format.js';
 
 /**
@@ -404,7 +404,7 @@ function Today({ feed, shown, picked, index }) {
     const market = localMarket(DEFAULT_MARKET, shown);
     const active = feed.listings.filter((l) => (l.status ?? 'active') === 'active');
     const homes = active
-      .filter((l) => l.units >= 2 && l.units <= 4)
+      .filter((l) => unitsOf(l) >= 2 && unitsOf(l) <= 4)
       .map((l) => ({ l, h: homeFor(listingToDeal(l, market, 'own'), { ...SAMPLE, city: shown }, market.rate) }))
       .filter((x) => x.h)
       .sort((a, b) => a.h.costToLive - b.h.costToLive);
@@ -454,7 +454,7 @@ function Today({ feed, shown, picked, index }) {
                 <span className="text-sm tabular-nums text-zinc-500 dark:text-zinc-400">{i + 1}</span>
                 <span className="min-w-0">
                   <span className="block truncate font-medium text-zinc-950 dark:text-white">{x ? x.l.address : ' '}</span>
-                  <span className="text-sm text-zinc-500 dark:text-zinc-400">{x ? `${['', '', 'Duplex', 'Triplex', 'Fourplex'][x.l.units]} · ${money(x.l.price)}` : ' '}</span>
+                  <span className="text-sm text-zinc-500 dark:text-zinc-400">{x ? `${['', '', 'Duplex', 'Triplex', 'Fourplex'][unitsOf(x.l)]} · ${money(x.l.price)}` : ' '}</span>
                 </span>
                 <span className="hidden text-right text-sm text-zinc-500 dark:text-zinc-400 sm:block">{x ? `${money(x.h.down)} down` : ''}</span>
                 <span className="text-right font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">{x ? `${money(x.h.costToLive)}/mo` : ''}</span>

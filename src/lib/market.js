@@ -68,6 +68,16 @@ export const LISTING_TYPES = [
 
 export const typeOf = (units) => (units >= 5 ? 'large' : units >= 2 ? 'small' : 'single');
 
+/**
+ * How many rental units a listing has: its stated count, but never fewer
+ * than its per-unit bedroom or rent lists show (a saved count can be stale).
+ */
+export function unitsOf(listing) {
+  const stated = Math.round(Number(listing?.units) || 0);
+  const listed = Math.max(Array.isArray(listing?.beds) ? listing.beds.length : 0, Array.isArray(listing?.rents) ? listing.rents.length : 0);
+  return Math.min(Math.max(stated, listed, 1), 500);
+}
+
 /** A home must carry at least this much insurance a year, however few units. */
 export const INSURANCE_MIN = 1500;
 
@@ -214,10 +224,12 @@ export function cleanListing(raw) {
   const address = text(raw.address, 120);
   const price = positive(raw.price);
   if (!address || !price || price < 10000) return null;
-  const units = Math.min(Math.max(Math.round(positive(raw.units) ?? 1), 1), 500);
-  const perUnit = (arr, fn) => (Array.isArray(arr) && arr.length ? arr.slice(0, units).map(fn) : null);
+  // Unknown when the run didn't say, so a re-found listing never loses its saved count.
+  const stated = positive(raw.units);
+  const units = stated ? Math.min(Math.max(Math.round(stated), 1), 500) : null;
+  const perUnit = (arr, fn) => (Array.isArray(arr) && arr.length ? arr.slice(0, units ?? 500).map(fn) : null);
   // A single bedroom count means every unit has that many.
-  const beds = typeof raw.beds === 'number' ? Array(units).fill(raw.beds) : raw.beds;
+  const beds = typeof raw.beds === 'number' ? Array(units ?? 1).fill(raw.beds) : raw.beds;
   const mls = text(raw.mls, 24).toUpperCase().replace(/[^A-Z0-9]/g, '');
   const year = Math.round(Number(raw.yearBuilt));
   return {
@@ -246,7 +258,7 @@ export function cleanListing(raw) {
  */
 export function listingRent(listing, market) {
   const m = normalizeMarket(market);
-  const units = Math.max(Math.round(Number(listing.units) || 1), 1);
+  const units = unitsOf(listing);
   if (positive(listing.grossRent)) return { total: Number(listing.grossRent), source: 'stated' };
   let total = 0;
   let stated = 0;
@@ -270,7 +282,7 @@ export function listingRent(listing, market) {
  */
 export function listingToDeal(listing, market, lens) {
   const m = normalizeMarket(market);
-  const units = Math.max(Math.round(Number(listing.units) || 1), 1);
+  const units = unitsOf(listing);
   const price = Number(listing.price) || 0;
   const rent = listingRent(listing, m);
   const unitType = UNIT_TYPES.find((t) => t.units === units && t.key !== 'multiplex')?.key ?? 'multiplex';
@@ -358,7 +370,7 @@ export function rankListings(listings, market, targets, { types, hidden, showHid
   const order = (SORTS[sort] ?? SORTS.perDoor).compare;
   return (Array.isArray(listings) ? listings : [])
     // Only listings with a page of their own: an older saved feed may hold some without.
-    .filter((l) => (l.status ?? 'active') === 'active' && listingPageUrl(l.url, l.address) && want.has(typeOf(l.units)) && (showHidden || !hide.has(l.id)))
+    .filter((l) => (l.status ?? 'active') === 'active' && listingPageUrl(l.url, l.address) && want.has(typeOf(unitsOf(l))) && (showHidden || !hide.has(l.id)))
     .map((l) => scoreListing(l, m, targets))
     .filter((s) => !onlyMeets || s.meets)
     .sort((x, y) => order(x, y) || y.perDoor - x.perDoor);
@@ -416,10 +428,11 @@ export function mergeFeed(prev, found, { today, now = Date.now(), keepDays = 7, 
         else stats.priceRises += 1;
       }
       const known = Object.fromEntries(Object.entries(f).filter(([, v]) => v != null && v !== '' && !(Array.isArray(v) && v.every((x) => x == null))));
-      merged.set(id, { ...cur, ...known, id, mls: cur.mls ?? f.mls, firstSeen: cur.firstSeen ?? today, lastSeen: today, priceHistory: history.slice(-12) });
+      const next = { ...cur, ...known, id, mls: cur.mls ?? f.mls, firstSeen: cur.firstSeen ?? today, lastSeen: today, priceHistory: history.slice(-12) };
+      merged.set(id, { ...next, units: Math.max(unitsOf(next), unitsOf(cur)) });
       stats.seenAgain += 1;
     } else {
-      merged.set(f.id, { ...f, firstSeen: today, lastSeen: today, priceHistory: [{ date: today, price: f.price }] });
+      merged.set(f.id, { ...f, units: unitsOf(f), firstSeen: today, lastSeen: today, priceHistory: [{ date: today, price: f.price }] });
       byAddress.set(addressKey(f.address), f.id);
       stats.added += 1;
     }
@@ -497,8 +510,8 @@ export function priceStory(listing) {
  */
 export function underMarket(listings, { cut = 0.15, minGroup = 4 } = {}) {
   const active = (listings ?? []).filter((l) => (l.status ?? 'active') === 'active' && Number(l.price) > 0);
-  const kind = (l) => typeOf(Math.max(Math.round(Number(l.units) || 1), 1));
-  const perDoor = (l) => Number(l.price) / Math.max(Math.round(Number(l.units) || 1), 1);
+  const kind = (l) => typeOf(unitsOf(l));
+  const perDoor = (l) => Number(l.price) / unitsOf(l);
   const out = new Map();
   for (const k of LISTING_TYPES.map((t) => t.key)) {
     const group = active.filter((l) => kind(l) === k);
@@ -522,7 +535,7 @@ export function alertMatches(alert, feed, { market, profile, homeFor } = {}) {
   const m = localMarket(market, alert.city);
   return (feed?.listings ?? [])
     .filter((l) => (l.status ?? 'active') === 'active' && listingPageUrl(l.url, l.address))
-    .filter((l) => (alert.types ?? LISTING_TYPES.map((t) => t.key)).includes(typeOf(Math.max(Math.round(Number(l.units) || 1), 1))))
+    .filter((l) => (alert.types ?? LISTING_TYPES.map((t) => t.key)).includes(typeOf(unitsOf(l))))
     .filter((l) => !alert.maxPrice || Number(l.price) <= alert.maxPrice)
     .map((l) => {
       const s = scoreListing(l, m);

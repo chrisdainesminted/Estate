@@ -377,7 +377,7 @@ export class Store {
 
   settingsPublic(withContact) {
     const s = this.get('settings', 'main') ?? {};
-    return { name: s.name || 'The landlord', ...(withContact ? { email: s.email || '', phone: s.phone || '' } : {}) };
+    return { name: s.name || '', ...(withContact ? { email: s.email || '', phone: s.phone || '' } : {}) };
   }
 
   openSlots(listingId) {

@@ -74,7 +74,9 @@ function PlaceSelect({ value, onChange }) {
 }
 
 const readQuery = () => {
+  // The query string, plus any old #kind=… style link.
   const q = new URLSearchParams(location.search);
+  for (const [k, v] of new URLSearchParams(location.hash.slice(1))) if (!q.has(k)) q.set(k, v);
   return { kind: q.get('kind') === 'sale' ? 'sale' : 'rent', place: q.get('place') || '', max: q.get('max') || '', beds: q.get('beds') || '', type: q.get('type') || '', sort: q.get('sort') || 'new', page: Number(q.get('page')) || 1 };
 };
 

@@ -29,6 +29,7 @@ import {
   scoreListing,
   siteName,
   standouts,
+  unitsOf,
 } from './market.js';
 
 const triplex = {
@@ -244,6 +245,24 @@ describe('mergeFeed', () => {
     expect(l.priceHistory.map((h) => h.price)).toEqual([529900, 509900]);
     expect(l.rents).toEqual([1900, null, 1950]);
     expect(l.taxes).toBe(3675);
+  });
+
+  it('keeps a known unit count when a run re-finds the listing without one', () => {
+    // The Nov 1 run re-found every saved home without restating its units and they all fell to 1.
+    const { feed } = mergeFeed(day1, [{ mls: 'X13684758', address: '228 Archibald St S', price: 529900, url: triplex.url }], { today: '2026-10-30', now: 2 });
+    expect(feed.listings.find((x) => x.id === 'X13684758').units).toBe(3);
+    // A count stated again, even a wrong 1, never drops below what the unit lists show.
+    const again = mergeFeed(feed, [{ mls: 'X13684758', address: '228 Archibald St S', price: 529900, units: 1, url: triplex.url }], { today: '2026-10-31', now: 3 }).feed;
+    expect(again.listings.find((x) => x.id === 'X13684758').units).toBe(3);
+  });
+
+  it('reads the unit count from per-unit lists when the stated one is stale', () => {
+    expect(unitsOf({ units: 1, beds: [2, 2, 2] })).toBe(3);
+    expect(unitsOf({ units: 1, rents: [1500, 1500] })).toBe(2);
+    expect(unitsOf({ units: 12 })).toBe(12);
+    expect(unitsOf({})).toBe(1);
+    expect(listingToDeal({ address: '1 Main St', price: 400000, units: 1, beds: [2, 2, 2] }, DEFAULT_MARKET).units).toBe(3);
+    expect(cleanListing({ address: '1 Main St', price: 300000 }).units).toBeNull();
   });
 
   it('matches by address when one site gives an MLS number and another does not', () => {

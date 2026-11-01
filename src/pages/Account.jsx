@@ -378,7 +378,7 @@ export default function Account() {
                 <li key={`${t.ws}:${t.unitId}`} className="flex items-center justify-between gap-3 py-2.5 text-sm">
                   <a href={`/rent/#w=${t.ws}&u=${t.unitId}&t=${t.token}&v=pay`} className="min-w-0">
                     <span className="block truncate font-medium text-zinc-950 hover:underline dark:text-white">{t.label || 'Your rental'}</span>
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400">{t.landlord ? `With ${t.landlord} · ` : ''}pay rent, receipts, repairs</span>
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400">{t.landlord && t.landlord !== 'The landlord' ? `With ${t.landlord} · ` : ''}pay rent, receipts, repairs</span>
                   </a>
                   <button type="button" aria-label="Remove" className="rounded-md p-1.5 text-zinc-400 hover:bg-well hover:text-zinc-700" onClick={() => update('tenancies', (s) => s.filter((x) => !(x.ws === t.ws && x.unitId === t.unitId)))}>
                     <Trash2 className="size-4" aria-hidden />

@@ -77,6 +77,26 @@ function Problem({ children }) {
   );
 }
 
+/** A link that didn't open: say so plainly and offer a way on. */
+function Gone({ title, children }) {
+  return (
+    <div>
+      <h1 className={h1}>{title}</h1>
+      <div className="mt-4">
+        <Problem>{children}</Problem>
+      </div>
+      <p className="mt-4 text-sm">
+        <a href="/homes/" className="font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-400">
+          Browse homes for rent and sale
+        </a>
+      </p>
+    </div>
+  );
+}
+
+/** The landlord's name, or a plain stand-in that fits where it sits in the sentence. */
+const who = (landlord, start = false) => landlord?.name || (start ? 'The landlord' : 'the landlord');
+
 function Field({ id, title, hint, children }) {
   return (
     <div>
@@ -142,8 +162,12 @@ function Apply({ ws, listingId }) {
       .then(setData)
       .catch((e) => setError(e.message));
   }, [ws, listingId]);
+  const shownTitle = data?.listing?.title;
+  useEffect(() => {
+    if (shownTitle) document.title = `${shownTitle} · Squarely`;
+  }, [shownTitle]);
 
-  if (error && !data) return <Problem>{error}</Problem>;
+  if (error && !data) return <Gone title="We couldn’t open this listing">{error}</Gone>;
   if (!data) return <Loading />;
   const { listing: li, slots, landlord } = data;
 
@@ -309,7 +333,7 @@ function Status({ ws, token }) {
     return () => clearInterval(t);
   }, [ws, token]);
 
-  if (error && !st) return <Problem>{error}</Problem>;
+  if (error && !st) return <Gone title="We couldn’t open this application">{error}</Gone>;
   if (!st) return <Loading />;
   const who = st.kind === 'sale' ? 'seller' : 'landlord';
   const base = STATUS[st.status] ?? STATUS.new;
@@ -369,7 +393,7 @@ function Status({ ws, token }) {
 
       {st.note && (
         <div className="border-l-2 border-(--accent) pl-4">
-          <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">From {st.landlord.name}</p>
+          <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">From {who(st.landlord)}</p>
           <p className="mt-1 whitespace-pre-line text-zinc-800 dark:text-zinc-200">{st.note}</p>
         </div>
       )}
@@ -378,7 +402,7 @@ function Status({ ws, token }) {
 
       {(st.status === 'viewing' || st.status === 'approved') && (st.landlord.email || st.landlord.phone) && (
         <p className="text-sm text-zinc-700 dark:text-zinc-300">
-          Reach {st.landlord.name}:{' '}
+          Reach {who(st.landlord)}:{' '}
           {st.landlord.email && (
             <a className="font-medium text-emerald-700 underline dark:text-emerald-400" href={`mailto:${st.landlord.email}`}>
               {st.landlord.email}
@@ -517,7 +541,7 @@ function PayRent({ ws, unitId, token }) {
       .then((d) => (setInfo(d), setForm({ amount: d.status.owing || d.status.rent || '', sentOn: new Date().toLocaleDateString('en-CA'), note: '', website: '' })))
       .catch((e) => setError(e.message));
   }, [base]);
-  if (error && !info) return <Problem>{error}</Problem>;
+  if (error && !info) return <Gone title="We couldn’t open this rental">{error}</Gone>;
   if (!info) return <Loading />;
   if (receipt) return <RentReceipt r={receipt} info={info} onBack={() => setReceipt(null)} />;
   const st = info.status;
@@ -578,13 +602,13 @@ function PayRent({ ws, unitId, token }) {
         </div>
       ) : (
         <p className="rounded-xl border border-hairline p-5 text-sm text-zinc-600 dark:text-zinc-400">
-          {info.landlord.name} hasn’t added e-Transfer details yet. Pay the way you’ve agreed, then let them know below.
+          {who(info.landlord, true)} hasn’t added e-Transfer details yet. Pay the way you’ve agreed, then let them know below.
         </p>
       )}
 
       {st.owing > 0 && form && (
         <form onSubmit={send} className="space-y-4">
-          <h2 className="text-lg font-semibold text-zinc-950 dark:text-white">Sent it? Let {info.landlord.name} know</h2>
+          <h2 className="text-lg font-semibold text-zinc-950 dark:text-white">Sent it? Let {who(info.landlord)} know</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="pay-amt" title="Amount sent">
               <input id="pay-amt" type="number" min="1" step="0.01" className={input} value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} />
@@ -612,7 +636,7 @@ function PayRent({ ws, unitId, token }) {
         <div className="rounded-md bg-amber-500/10 p-4 text-sm text-amber-950 ring-1 ring-amber-600/20 ring-inset dark:text-amber-100">
           {pending.map((c) => (
             <p key={c.id}>
-              You said you sent {money(c.amount)} {c.sentOn ? `on ${dateLabel(c.sentOn)}` : ''}. Waiting for {info.landlord.name} to confirm it arrived.
+              You said you sent {money(c.amount)} {c.sentOn ? `on ${dateLabel(c.sentOn)}` : ''}. Waiting for {who(info.landlord)} to confirm it arrived.
             </p>
           ))}
         </div>
@@ -623,7 +647,7 @@ function PayRent({ ws, unitId, token }) {
           <Receipt className="size-5 text-emerald-700 dark:text-emerald-400" aria-hidden /> Receipts
         </h2>
         {info.receipts.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Receipts appear here once {info.landlord.name} records a payment.</p>
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Receipts appear here once {who(info.landlord)} records a payment.</p>
         ) : (
           <ul className="mt-3 divide-y divide-hairline rounded-md border border-hairline">
             {info.receipts.map((r) => (
@@ -669,7 +693,7 @@ function RentReceipt({ r, info, onBack }) {
             ['How', r.method || '—'],
             ['From', info.tenant || 'The tenant'],
             ['Home', [info.unit, info.address].filter(Boolean).join(', ')],
-            ['Landlord', info.landlord.name],
+            ['Landlord', info.landlord.name || '—'],
             ['Receipt no.', r.id.slice(0, 10).toUpperCase()],
           ].map(([k, val]) => (
             <div key={k} className="flex justify-between gap-6 py-2.5">
@@ -678,7 +702,7 @@ function RentReceipt({ r, info, onBack }) {
             </div>
           ))}
         </dl>
-        <p className="mt-6 text-xs text-zinc-500 dark:text-zinc-400">Recorded by {info.landlord.name} with Squarely. Keep it for your records and your provincial rent credit, where there is one.</p>
+        <p className="mt-6 text-xs text-zinc-500 dark:text-zinc-400">Recorded by {who(info.landlord)} with Squarely. Keep it for your records and your provincial rent credit, where there is one.</p>
       </article>
     </div>
   );
@@ -698,14 +722,14 @@ function Repair({ ws, unitId, token }) {
       .catch((e) => setError(e.message));
   }, [ws, unitId, token]);
 
-  if (error && !info) return <Problem>{error}</Problem>;
+  if (error && !info) return <Gone title="We couldn’t open this rental">{error}</Gone>;
   if (!info) return <Loading />;
   if (sent)
     return (
       <div>
         <h1 className={`${h1} flex items-start gap-2 text-emerald-700 dark:text-emerald-400`}>
           <CheckCircle2 className="mt-1 size-6 shrink-0" aria-hidden />
-          Sent to {info.landlord.name}
+          Sent to {who(info.landlord)}
         </h1>
         <p className="mt-3 text-zinc-600 dark:text-zinc-400">They’ll be in touch to arrange the repair. You can report something else any time with the same link.</p>
         <Button className="mt-6" onClick={() => (setSent(false), setForm((f) => ({ ...f, title: '', details: '' })))}>
@@ -825,7 +849,7 @@ function ListingDetails({ li, landlord, ws }) {
       <Gallery ws={ws} ids={li.photos} title={li.title} />
       <div>
         <p className="flex flex-wrap items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-          {sale ? 'For sale by owner' : 'For rent'} · {landlord.name}
+          {sale ? 'For sale by owner' : 'For rent'}{landlord.name ? ` · ${landlord.name}` : ''}
           {landlord.verified && (
             <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400">
               <BadgeCheck className="size-4" aria-hidden /> Email confirmed
@@ -964,7 +988,7 @@ function Thread({ ws, token, st, onChange }) {
         {st.messages.length === 0 && <li className="text-sm text-zinc-500 dark:text-zinc-400">No messages yet. Ask {who} anything here.</li>}
         {st.messages.map((m, i) => (
           <li key={i} className={`max-w-[85%] rounded-md px-3 py-2 text-sm ${m.from === 'applicant' ? 'ml-auto bg-emerald-50 text-emerald-950 dark:bg-emerald-500/10 dark:text-emerald-50' : 'bg-zinc-100 text-zinc-900 dark:bg-white/[0.06] dark:text-zinc-100'}`}>
-            <p className="sr-only">{m.from === 'applicant' ? 'You' : st.landlord.name}:</p>
+            <p className="sr-only">{m.from === 'applicant' ? 'You' : who(st.landlord, true)}:</p>
             <p className="whitespace-pre-line">{m.body}</p>
             <p className="mt-1 text-[11px] opacity-70">{new Date(m.created).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</p>
           </li>

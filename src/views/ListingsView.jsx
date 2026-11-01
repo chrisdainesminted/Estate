@@ -1,6 +1,6 @@
 import { Suspense, lazy, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRight, BellPlus, BellRing, Check, ChevronDown, ExternalLink, Eye, EyeOff, Radar, RotateCcw, SlidersHorizontal, X } from 'lucide-react';
-import { DEFAULT_MARKET, LISTING_CITIES, LISTING_TYPES, SORTS, localMarket, alertMatches, alertName, daysListed, droppedInLatestRun, freshMatches, isNew, priceStory, underMarket, lensTargets, listingPageUrl, listingToDeal, rankListings, siteName, typeOf } from '../lib/market.js';
+import { DEFAULT_MARKET, LISTING_CITIES, LISTING_TYPES, SORTS, localMarket, alertMatches, alertName, daysListed, droppedInLatestRun, freshMatches, isNew, priceStory, underMarket, lensTargets, listingPageUrl, listingToDeal, rankListings, siteName, typeOf, unitsOf } from '../lib/market.js';
 import { homeFor } from '../lib/firstHome.js';
 import { PROVINCES, cityByKey } from '../lib/canada.js';
 import { listingSentence } from '../lib/explain.js';
@@ -213,7 +213,7 @@ function ListingRow({ s, home, rank, sort, feed, below, imported, hidden, onAnal
   const drop = droppedInLatestRun(l, feed) ? s.drop : 0;
   const room = Number.isFinite(s.offer.price) ? s.offer.price - s.a.price : null;
   const detailsId = `listing-${l.id}-details`;
-  const kind = KIND[l.units] ?? `${l.units} units`;
+  const kind = KIND[unitsOf(l)] ?? `${unitsOf(l)} units`;
   const more = [l.yearBuilt && `Built ${l.yearBuilt}`, l.mls && `MLS® ${l.mls}`].filter(Boolean);
   const days = daysListed(l);
   const story = priceStory(l);
@@ -481,7 +481,7 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
   const visible = ranked.filter((s) => !hiddenSet.has(s.listing.id));
   const shown = onlyMeets ? ranked.filter((s) => s.meets) : ranked;
   const hiddenCount = active.filter((l) => hiddenSet.has(l.id)).length;
-  const countOf = (key) => active.filter((l) => typeOf(l.units) === key && !hiddenSet.has(l.id)).length;
+  const countOf = (key) => active.filter((l) => typeOf(unitsOf(l)) === key && !hiddenSet.has(l.id)).length;
   const run = feed?.lastRun;
   const place = cityByKey(city);
   // Thunder Bay is searched every morning; the other cities take turns, about every two weeks.
