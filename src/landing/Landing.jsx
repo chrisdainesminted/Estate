@@ -167,34 +167,67 @@ const GRADIENT =
   'bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 bg-clip-text text-transparent dark:from-emerald-300 dark:via-emerald-400 dark:to-teal-300';
 
 /**
- * Every phrase sits in the same grid cell, so the space is always the
- * longest one's and the page never jumps. Screen readers hear the first
- * phrase only, and with reduced motion it never changes.
+ * How long each frame of a spin lasts: fast at first, then slowing to a
+ * stop. One frame per phrase plus one, so each spin passes every phrase
+ * and lands on the next in order.
+ */
+const SPIN = Array.from({ length: ROTATE.length + 1 }, (_, k) => (k === ROTATE.length ? 320 : Math.round(45 + 110 * (k / ROTATE.length) ** 2)));
+const HOLD = 2600;
+
+/**
+ * Like a slot-machine reel: the line holds, then spins through the phrases
+ * (blurred while fast) and settles on the next one with a small bounce.
+ * Every phrase also sits invisibly in the same grid cell, so the space is
+ * always the longest one's and the page never jumps. Screen readers hear
+ * the first phrase only, and with reduced motion it never moves.
  */
 function Rotator() {
-  const [i, setI] = useState(0);
+  const [at, setAt] = useState(0); // the phrase showing
+  const [frame, setFrame] = useState({ n: 0, ms: 0 }); // restarts the reel animation each step
   useEffect(() => {
     if (typeof window === 'undefined' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined;
-    const t = setInterval(() => {
-      if (document.visibilityState === 'visible') setI((n) => (n + 1) % ROTATE.length);
-    }, 2800);
-    return () => clearInterval(t);
+    let timer;
+    let stop = false;
+    let cur = 0;
+    const spin = (step) => {
+      if (stop) return;
+      if (step === SPIN.length) {
+        timer = setTimeout(() => spin(0), HOLD);
+        return;
+      }
+      if (step === 0 && document.visibilityState !== 'visible') {
+        timer = setTimeout(() => spin(0), HOLD);
+        return;
+      }
+      cur = (cur + 1) % ROTATE.length;
+      const ms = SPIN[step];
+      setAt(cur);
+      setFrame((f) => ({ n: f.n + 1, ms }));
+      timer = setTimeout(() => spin(step + 1), ms);
+    };
+    timer = setTimeout(() => spin(0), HOLD);
+    return () => {
+      stop = true;
+      clearTimeout(timer);
+    };
   }, []);
-  const was = (i - 1 + ROTATE.length) % ROTATE.length;
+  const landing = frame.ms >= SPIN[SPIN.length - 1];
   return (
-    <span className="grid">
+    <span className="grid overflow-hidden">
       <span className="sr-only">{ROTATE[0]}</span>
-      {ROTATE.map((t, n) => (
-        <span
-          key={t}
-          aria-hidden
-          className={`${GRADIENT} col-start-1 row-start-1 pb-[0.08em] transition-[opacity,transform,filter] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
-            n === i ? 'translate-y-0 opacity-100 blur-none' : n === was ? '-translate-y-4 opacity-0 blur-sm' : 'translate-y-4 opacity-0 blur-sm'
-          }`}
-        >
+      {ROTATE.map((t) => (
+        <span key={t} aria-hidden className="invisible col-start-1 row-start-1 pb-[0.08em]">
           {t}
         </span>
       ))}
+      <span
+        key={frame.n}
+        aria-hidden
+        className={`${GRADIENT} col-start-1 row-start-1 pb-[0.08em] ${frame.n ? (landing ? 'reel-land' : 'reel-spin') : ''}`}
+        style={frame.n ? { animationDuration: `${landing ? 520 : frame.ms}ms` } : undefined}
+      >
+        {ROTATE[at]}
+      </span>
     </span>
   );
 }
