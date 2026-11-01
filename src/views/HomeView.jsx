@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ArrowRight, Check, CheckCircle2, ExternalLink, XCircle } from 'lucide-react';
+import { ArrowRight, Check, CheckCircle2, ChevronDown, ExternalLink, XCircle } from 'lucide-react';
 import { RULES, RULES_CHECKED, benefits, buyCheck, liveIn, localFor, maxPrice, monthsToSave } from '../lib/firstHome.js';
 import { SUITE_KINDS, SUITE_RULES_CHECKED, allowedFor, moneyFor, stepsFor, suitePayback } from '../lib/suites.js';
 import { cityByKey, guessCity, provinceName } from '../lib/canada.js';
@@ -39,6 +39,7 @@ const yesNo = [
 
 /** Your numbers: what a lender and the savings plan need to know. */
 function Profile({ p, onHome }) {
+  const [open, setOpen] = useState(false);
   const f = (key, props) => <NumberField id={`home-${key}`} value={p[key]} onChange={(v) => onHome({ [key]: v, entered: true })} {...props} />;
   const local = localFor(p);
   const reset = (key, words) => (
@@ -46,10 +47,27 @@ function Profile({ p, onHome }) {
       Use {words}
     </button>
   );
+  const recap = [placeName(local.city), `${money(p.income)} income`, `${money(p.savings)} saved`, `paying ${money(p.rentNow)} rent`].join(' · ');
   return (
     <Card>
-      <CardHeader title="Your numbers" subtitle="Saved with your deals. Only you see them." />
-      <div className="grid grid-cols-2 gap-3 p-5 md:grid-cols-4">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls="home-numbers"
+        className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-500"
+      >
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-zinc-950 dark:text-white">Your numbers</span>
+          <span className="mt-0.5 block truncate text-sm text-zinc-600 tabular-nums dark:text-zinc-400">{recap}</span>
+        </span>
+        <span className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-emerald-700 dark:text-emerald-400">
+          {open ? 'Done' : 'Edit'}
+          <ChevronDown className={`size-4 transition ${open ? 'rotate-180' : ''}`} aria-hidden />
+        </span>
+      </button>
+      {open && (
+      <div id="home-numbers" className="grid grid-cols-2 gap-3 border-t border-hairline p-5 md:grid-cols-4">
         <div className="col-span-2">
           <CitySelect id="home-city" value={local.city.key} onChange={(city) => onHome({ city, rentOther: null, taxPct: null, targetPrice: cityByKey(city).price, entered: true })} />
           <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">Sets {provinceName(local.province)}’s land transfer tax and programs, and the local rent and property tax.</p>
@@ -95,6 +113,7 @@ function Profile({ p, onHome }) {
           <Segmented size="sm" label="Buying new-built?" value={p.newBuild ? 'yes' : 'no'} onChange={(v) => onHome({ newBuild: v === 'yes' })} options={yesNo} />
         </div>
       </div>
+      )}
     </Card>
   );
 }
@@ -404,7 +423,7 @@ export default function HomeView({ profile: p, suite, ready = {}, rvb = {}, mark
         {header}
         <Start onHome={onHome} />
         <SectionGroup>
-          <Section id="home-suite" title="Add a suite or backyard home" meaning="Turn a house you own (or buy) into one that pays you rent: what’s allowed where you are, the permit steps, and whether it pays.">
+          <Section id="home-suite" title="Add a suite or backyard home" meaning="What’s allowed where you are, the permits, and whether it pays.">
             <SuiteGuide s={suite} onSuite={onSuite} city={guessCity()} />
           </Section>
         </SectionGroup>
@@ -427,10 +446,9 @@ export default function HomeView({ profile: p, suite, ready = {}, rvb = {}, mark
               <Check className="mt-0.5 size-4 shrink-0" aria-hidden />
               {duplex.price > solo.price ? `${money(duplex.price - solo.price)} more by renting out half a duplex` : 'Renting out a unit is your strongest lever'}
             </p>
-            <p className="mt-1 text-sm leading-relaxed text-zinc-800 dark:text-zinc-200">
-              On your own, a bank would lend on about {money(solo.byIncome)}; with a tenant paying {money(rentEach)} a month, about {money(duplex.byIncome)}. Your savings cover
-              the down payment and closing costs up to {money(duplex.bySavings)}. A typical house in {placeName(local.city)} sells for about {money(local.city.price)}
-              {local.city.priceEstimated ? ' (estimate)' : ''}. And there’s about {money(b.total)} in government money you can claim.
+            <p className="mt-1 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+              On your own, about {money(solo.price)}. A typical house in {placeName(local.city)} is about {money(local.city.price)}
+              {local.city.priceEstimated ? ' (estimate)' : ''}, and there’s about {money(b.total)} in government money you can claim.
             </p>
           </>
         }
@@ -444,34 +462,34 @@ export default function HomeView({ profile: p, suite, ready = {}, rvb = {}, mark
       <Profile p={p} onHome={onHome} />
 
       <SectionGroup>
-        <Section id="home-money" title="Money you can get" value={money(b.total)} valueClass="text-emerald-700 dark:text-emerald-400" meaning="Government programs for first-time buyers: tax refunds, rebates and access to your own RRSP." defaultOpen>
+        <Section id="home-money" title="Money you can get" value={money(b.total)} valueClass="text-emerald-700 dark:text-emerald-400" meaning="Tax refunds, rebates and your own RRSP.">
           <Benefits b={b} />
         </Section>
-        <Section id="home-path" title="When you’ll be ready" meaning="How long until your savings cover the down payment and closing costs on the home you want.">
+        <Section id="home-path" title="When you’ll be ready" meaning="When your savings cover the down payment and closing.">
           <Path p={p} onHome={onHome} ratePct={ratePct} taxPct={taxPct} rentEach={rentEach} />
         </Section>
-        <Section id="home-ready" title="Am I ready?" meaning="Every step from saving to closing day, with the ones your numbers already cover ticked for you.">
+        <Section id="home-ready" title="Am I ready?" meaning="Every step to closing day, ticked off as you go.">
           <ReadyChecklist p={p} ready={ready} onReady={onReady} ratePct={ratePct} taxPct={taxPct} rentEach={rentEach} benefitsTotal={b.total} />
         </Section>
-        <Section id="home-rvb" title="Rent or buy, over 10 years" meaning="What you’d be worth after ten years if you bought the home you’re aiming for, against renting and investing the difference.">
+        <Section id="home-rvb" title="Rent or buy, over 10 years" meaning="Where you’d be in 10 years, buying versus renting.">
           <RentVsBuy p={p} rvb={rvb} onRvb={onRvb} ratePct={ratePct} taxPct={taxPct} rentEach={rentEach} insuranceMonthly={insurance(p.targetUnits)} />
         </Section>
-        <Section id="home-live" title="Live in one of your deals" meaning="Could you buy it, and what would it cost you each month once the other units’ rent comes in?">
+        <Section id="home-live" title="Live in one of your deals" meaning="What one of your deals would cost you to live in.">
           <LiveInDeal p={p} items={items} dealId={liveDealId} onPick={onPickDeal} ratePct={ratePct} onOpen={onOpen} />
         </Section>
-        <Section id="home-suite" title="Add a suite or backyard home" meaning="Turn a house you own (or buy) into one that pays you rent: what’s allowed where you are, the permit steps, and whether it pays.">
+        <Section id="home-suite" title="Add a suite or backyard home" meaning="What’s allowed where you are, the permits, and whether it pays.">
           <SuiteGuide s={suite} onSuite={onSuite} city={local.city.key} />
         </Section>
-        <Section id="home-broker" title="Talk to a mortgage broker" meaning="Get pre-approved: a licensed broker compares lenders for you, free and with no obligation.">
+        <Section id="home-broker" title="Talk to a mortgage broker" meaning="Free pre-approval from a licensed broker.">
           <BrokerForm p={p} maxPrice={duplex.price} />
         </Section>
       </SectionGroup>
 
-      <p className="px-1 text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-        Lending rules checked {checkedOn(RULES_CHECKED)}: 5% down on the first $500,000 and 10% above (10% on 3–4 units), insured below 20% down with a 30-year
-        amortization for first-time buyers, the stress test at {RULES.minQualifyingRate}% or your rate plus 2, and debt limits of 39% and 44% of income. Rent counts: all of
-        a second unit’s, half on three or four units. Uses the {ratePct}% rate and {taxPct}% property tax from your listing assumptions. A lender, a lawyer and the City
-        decide the real answers.
+      <p className="px-1 text-xs text-zinc-500 dark:text-zinc-400">
+        Lending rules checked {checkedOn(RULES_CHECKED)}. A lender, a lawyer and the City decide the real answers.{' '}
+        <a href="/methods/" className="font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+          How we calculate
+        </a>
       </p>
     </div>
   );

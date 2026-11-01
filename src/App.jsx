@@ -848,11 +848,12 @@ export default function App() {
               </a>
               <SyncStatus sync={lib.sync} account={lib.account} onOpen={() => setAccountOpen(true)} />
             </div>
-            <p className="max-w-4xl">
-              DSCR = gross monthly rent ÷ PITIA (principal, interest, taxes, insurance, HOA), using the interest-only payment during an IO period. Real net
-              cash flow also subtracts management, maintenance, vacancy and CapEx reserves. Cash invested = down payment + closing costs + rehab. Profit if
-              sold nets selling costs and the loan payoff. Figures are estimates for personal analysis, not lending, tax or investment advice.
-              <span className="pointer-coarse:hidden"> Press {shortcutLabel} to search.</span>
+            <p className="max-w-4xl sm:ml-auto sm:text-right">
+              Estimates, not lending, tax or investment advice.{' '}
+              <a href={`${HOME_PAGE.replace(/\/$/, '')}/methods/`} {...(HOME_PAGE.startsWith('http') ? { target: '_blank', rel: 'noreferrer' } : {})} className="font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+                How we calculate
+              </a>
+              <span className="pointer-coarse:hidden"> · Press {shortcutLabel} to search</span>
             </p>
           </footer>
         </main>
