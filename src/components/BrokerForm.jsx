@@ -8,9 +8,9 @@ const input = 'field w-full px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100
 const label = 'mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400';
 
 /** Ask to be put in touch with a mortgage broker, with your numbers attached if you want. */
-export default function BrokerForm({ p, maxPrice, guide = false }) {
+export default function BrokerForm({ p, maxPrice, guide = false, note = '' }) {
   const place = cityByKey(p.city);
-  const [f, setF] = useState({ name: '', email: '', phone: '', timeline: '3-6 months', note: '', share: true, consent: false, website: '' });
+  const [f, setF] = useState({ name: '', email: '', phone: '', timeline: '3-6 months', note, share: true, consent: false, website: '' });
   const [state, setState] = useState({ status: 'idle', error: '' });
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
   const send = async (e) => {

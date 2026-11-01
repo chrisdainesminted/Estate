@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowRight, Building2, Calculator, ExternalLink, Handshake, Landmark, MapPin, ShieldCheck, Users } from 'lucide-react';
 import PageShell, { a, h1, h2, lede, prose } from './PageShell.jsx';
 import CitySelect from '../components/CitySelect.jsx';
@@ -51,6 +51,14 @@ const QUESTIONS = [
   'Can I take the mortgage with me if I move?',
   'Are there any fees, and who pays you?',
   'Which lender is the mortgage actually with?',
+];
+
+const DSCR_QUESTIONS = [
+  'What DSCR do you need: how far must the rent cover the mortgage payment, tax, insurance and heat?',
+  'Do you count the current leases, or an appraiser’s estimate of market rent?',
+  'How much do I need to put down, and what’s the rate and term?',
+  'Are there lender or broker fees, and what’s the penalty if I sell or refinance early?',
+  'Do I need to show my own income at all, or only the property’s?',
 ];
 
 const RED_FLAGS = [
@@ -114,6 +122,12 @@ function NearYou({ city, onCity }) {
 
 export default function Lenders() {
   const [city, setCity] = useState(() => guessCity());
+  const forRental = typeof window !== 'undefined' && window.location.hash === '#dscr';
+  // The page draws after the browser looks for #dscr or #near, so jump there once it's on screen.
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (id) document.getElementById(id)?.scrollIntoView();
+  }, []);
   return (
     <PageShell>
       <p className={eyebrow}>Find a lender</p>
@@ -147,6 +161,35 @@ export default function Lenders() {
           Buying a building with five or more units? In Canada that’s a commercial mortgage, with different lenders and rules. Ask for a broker who arranges multi-unit or
           commercial mortgages.
         </span>
+      </p>
+
+      <h2 id="dscr" className={`${h2} scroll-mt-6`}>
+        Buying a rental with a DSCR loan
+      </h2>
+      <div className={prose}>
+        <p>
+          A DSCR loan is approved on the property’s rent rather than your own pay: the lender checks that the rent covers the mortgage payment and the other costs by enough of
+          a cushion (the debt service coverage ratio). That suits investors whose income is hard to prove, or who already own a few rentals.
+        </p>
+        <p>
+          Big banks rarely offer them. They mostly come from alternative and private lenders, and you usually reach those through a mortgage broker. Expect a bigger down
+          payment and a higher rate than a regular mortgage, so get real quotes before you count on one. Squarely’s listings use the down payment and rate you set, not a
+          quote.
+        </p>
+      </div>
+      <p className="mt-4 text-sm font-medium text-zinc-900 dark:text-white">Ask every DSCR lender:</p>
+      <ul className={`${prose} list-disc pl-5`}>
+        {DSCR_QUESTIONS.map((q) => (
+          <li key={q}>{q}</li>
+        ))}
+      </ul>
+      <p className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-sm">
+        <a href="#near" className={a}>
+          Find a broker near you
+        </a>
+        <a href="#intro" className={a}>
+          Ask us to introduce one who arranges rental loans
+        </a>
       </p>
 
       <h2 className={h2}>Step by step</h2>
@@ -207,7 +250,7 @@ export default function Lenders() {
         Or let us introduce you
       </h2>
       <div className="mt-5 overflow-hidden rounded-xl border border-hairline bg-(--panel)">
-        <BrokerForm p={{ city, entered: false }} guide />
+        <BrokerForm p={{ city, entered: false }} guide note={forRental ? 'Looking for a DSCR loan for a rental property.' : ''} />
       </div>
 
       <h2 className={h2}>Watch out for</h2>

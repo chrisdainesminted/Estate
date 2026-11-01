@@ -342,7 +342,15 @@ function ListingRow({ s, home, rank, sort, feed, below, imported, hidden, onAnal
                     {money(s.a.pi)}/mo
                   </Metric>
                 ) : (
-                  <Metric label="Lender DSCR" tip="dscr">
+                  <Metric
+                    label="Lender DSCR"
+                    tip="dscr"
+                    sub={
+                      <a href={sitePage('/lenders/#dscr')} className="font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+                        Find a DSCR lender
+                      </a>
+                    }
+                  >
                     <DscrChip status={s.a.status} dscr={s.a.dscr} size="sm" />
                   </Metric>
                 )}
@@ -435,7 +443,12 @@ function Assumptions({ market, onMarket }) {
       <div className="grid gap-8 p-5 lg:grid-cols-3">
         <fieldset className="grid grid-cols-2 content-start gap-3">
           <legend className={`${legend} w-full`}>Financing</legend>
-          <p className="col-span-2 text-xs font-medium text-zinc-800 dark:text-zinc-200">DSCR loan</p>
+          <p className="col-span-2 flex flex-wrap items-baseline justify-between gap-2 text-xs font-medium text-zinc-800 dark:text-zinc-200">
+            DSCR loan
+            <a href={sitePage('/lenders/#dscr')} className="font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+              Find a DSCR lender
+            </a>
+          </p>
           {f('dscrDownPct', { label: 'Down payment', suffix: '%', max: 100, step: 1, decimals: 1 })}
           {f('dscrRate', { label: 'Interest rate', suffix: '%', max: 30, step: 0.125, decimals: 3, hint: 'Usually above a regular mortgage' })}
           <p className="col-span-2 mt-1 text-xs font-medium text-zinc-800 dark:text-zinc-200">Own money, 20% down</p>
