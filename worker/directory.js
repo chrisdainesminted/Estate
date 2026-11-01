@@ -33,6 +33,31 @@ export function cleanInbox(kind, b) {
   return { name, email, phone, city: clip(b.city, 60), timeline: clip(b.timeline, 40), price: Math.max(Number(b.price) || 0, 0), income: Math.max(Number(b.income) || 0, 0), note: clip(b.note, 1000), consent: true };
 }
 
+const cad = (n) => '$' + Math.round(n).toLocaleString('en-CA');
+
+/** The note to the site's owner about a new request: { subject, text, replyTo }. */
+export function inboxEmail(kind, d, origin = '') {
+  const lines =
+    kind === 'broker'
+      ? [
+          `${d.name} asked to be introduced to a mortgage broker.`,
+          '',
+          `Email: ${d.email}`,
+          d.phone && `Phone: ${d.phone}`,
+          d.city && `Buying in: ${d.city}`,
+          d.timeline && `When: ${d.timeline}`,
+          d.income > 0 && `Income they shared: ${cad(d.income)}`,
+          d.price > 0 && `What Squarely says they could buy: ${cad(d.price)}`,
+          d.note && `Note: ${d.note}`,
+          '',
+          'They agreed to have their details passed to one licensed broker. Reply to this email to reach them.',
+        ]
+      : [`${d.name} sent a message${d.topic ? ` about ${d.topic}` : ''}.`, '', `Email: ${d.email}`, '', d.message];
+  const subject = kind === 'broker' ? `Broker request from ${d.name}${d.city ? ` (${d.city})` : ''}` : `Message from ${d.name}`;
+  const text = [...lines.filter((l) => l !== false && l !== undefined && l !== null), '', origin && `All requests: ${origin}/homes/#admin (sign in with your admin key)`].filter((l, i, a) => l !== '' || a[i - 1] !== '').join('\n').trim();
+  return { subject: `Squarely: ${subject}`, text, replyTo: d.email };
+}
+
 export const REPORT_REASONS = ['scam', 'not-available', 'wrong-info', 'discriminatory', 'other'];
 
 export class DirectoryStore {

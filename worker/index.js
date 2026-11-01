@@ -18,7 +18,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { COLLECTIONS } from './schema.js';
 import { PHOTO_TYPES, Store, StoreError, hashKey, randomToken } from './store.js';
-import { DirectoryStore, REPORT_REASONS, cleanInbox } from './directory.js';
+import { DirectoryStore, REPORT_REASONS, cleanInbox, inboxEmail } from './directory.js';
 import { AccountStore } from './account.js';
 import { LoginStore, normalEmail } from './auth.js';
 import { alertMatches, alertName, feedDoc, freshMatches } from '../src/lib/market.js';
@@ -45,7 +45,7 @@ function sameText(a, b) {
   return diff === 0;
 }
 
-async function sendEmail(env, to, subject, text) {
+async function sendEmail(env, to, subject, text, replyTo) {
   // Local development only (EMAIL_DEV=log in .dev.vars): print the email instead of sending it.
   if (env.EMAIL_DEV === 'log') {
     console.log(`EMAIL to ${to}: ${subject}\n${text}`);
@@ -54,7 +54,7 @@ async function sendEmail(env, to, subject, text) {
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ from: env.EMAIL_FROM, to: [to], subject, text }),
+    body: JSON.stringify({ from: env.EMAIL_FROM, to: [to], subject, text, ...(replyTo ? { reply_to: replyTo } : {}) }),
   });
   if (!res.ok) throw new StoreError(502, 'The email couldn’t be sent. Try again in a minute.');
 }
@@ -577,7 +577,12 @@ async function api(request, env, url) {
     if (body.website) return json({ ok: true }); // the honeypot field people never see
     const data = cleanInbox(parts[0], body);
     if (data.error) return json({ error: data.error }, 400);
-    return answer(await directory(env).call({ op: 'addInbox', kind: parts[0], data, ip }));
+    const saved = await directory(env).call({ op: 'addInbox', kind: parts[0], data, ip });
+    if (!saved?.error && canEmail(env) && env.OWNER_EMAIL) {
+      const note = inboxEmail(parts[0], data, url.origin);
+      await sendEmail(env, env.OWNER_EMAIL, note.subject, note.text, note.replyTo).catch((e) => console.error('owner email failed', e?.message));
+    }
+    return answer(saved);
   }
 
   // Map points for listing addresses ("228 Archibald Street S, Thunder Bay, ON").

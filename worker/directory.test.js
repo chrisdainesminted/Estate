@@ -1,5 +1,5 @@
 import { beforeEach, describe as suite, expect, it } from 'vitest';
-import { DirectoryStore, cleanInbox } from './directory.js';
+import { DirectoryStore, cleanInbox, inboxEmail } from './directory.js';
 
 const sqlite = await import('node:sqlite').catch(() => null);
 const describe = sqlite ? suite : suite.skip;
@@ -96,5 +96,27 @@ describe('form checks', () => {
     expect(cleanInbox('contact', { name: ' A ', email: 'a@b.ca', message: 'Hello there', extra: 'x' })).toEqual({ name: 'A', email: 'a@b.ca', topic: '', message: 'Hello there' });
     expect(cleanInbox('broker', { name: 'A', email: 'a@b.ca' }).error).toMatch(/Tick/);
     expect(cleanInbox('broker', { name: 'A', email: 'a@b.ca', consent: true, price: '400000' })).toMatchObject({ price: 400000, consent: true });
+  });
+});
+
+suite('the owner email for a new request', () => {
+  it('lists what a broker request shared, with a reply-to for the person', () => {
+    const e = inboxEmail('broker', { name: 'Ana Silva', email: 'ana@example.ca', phone: '807-555-0100', city: 'Thunder Bay', timeline: '3-6 months', price: 412000, income: 85000, note: 'Self-employed', consent: true }, 'https://example.dev');
+    expect(e.subject).toBe('Squarely: Broker request from Ana Silva (Thunder Bay)');
+    expect(e.replyTo).toBe('ana@example.ca');
+    expect(e.text).toContain('Phone: 807-555-0100');
+    expect(e.text).toContain('Income they shared: $85,000');
+    expect(e.text).toContain('What Squarely says they could buy: $412,000');
+    expect(e.text).toContain('https://example.dev/homes/#admin');
+  });
+  it('leaves out what a request didn’t include', () => {
+    const e = inboxEmail('broker', { name: 'Bo', email: 'bo@example.ca', phone: '', city: '', timeline: '', price: 0, income: 0, note: '', consent: true });
+    expect(e.text).not.toMatch(/Phone|Income|could buy|Note/);
+    expect(e.subject).toBe('Squarely: Broker request from Bo');
+  });
+  it('passes on a contact message', () => {
+    const e = inboxEmail('contact', { name: 'Cy', email: 'cy@example.ca', topic: 'listing', message: 'This one is sold.' });
+    expect(e.subject).toBe('Squarely: Message from Cy');
+    expect(e.text).toContain('This one is sold.');
   });
 });
