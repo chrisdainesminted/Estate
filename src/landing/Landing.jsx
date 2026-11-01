@@ -154,6 +154,51 @@ function Nav() {
   );
 }
 
+/** The hero's second line: what the site does, one phrase at a time. */
+const ROTATE = [
+  'Let a tenant help pay for it.',
+  'Know your real budget.',
+  'Claim every rebate.',
+  'See the real monthly cost.',
+  'Find a home that fits.',
+  'Add a suite that pays.',
+];
+const GRADIENT =
+  'bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 bg-clip-text text-transparent dark:from-emerald-300 dark:via-emerald-400 dark:to-teal-300';
+
+/**
+ * Every phrase sits in the same grid cell, so the space is always the
+ * longest one's and the page never jumps. Screen readers hear the first
+ * phrase only, and with reduced motion it never changes.
+ */
+function Rotator() {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined;
+    const t = setInterval(() => {
+      if (document.visibilityState === 'visible') setI((n) => (n + 1) % ROTATE.length);
+    }, 2800);
+    return () => clearInterval(t);
+  }, []);
+  const was = (i - 1 + ROTATE.length) % ROTATE.length;
+  return (
+    <span className="grid">
+      <span className="sr-only">{ROTATE[0]}</span>
+      {ROTATE.map((t, n) => (
+        <span
+          key={t}
+          aria-hidden
+          className={`${GRADIENT} col-start-1 row-start-1 pb-[0.08em] transition-[opacity,transform,filter] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+            n === i ? 'translate-y-0 opacity-100 blur-none' : n === was ? '-translate-y-4 opacity-0 blur-sm' : 'translate-y-4 opacity-0 blur-sm'
+          }`}
+        >
+          {t}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function Hero({ city, onCity }) {
   return (
     <section className="relative isolate border-b border-hairline">
@@ -165,10 +210,7 @@ function Hero({ city, onCity }) {
               <span className="live-dot" aria-hidden /> For first-time buyers across Canada
             </p>
             <h1 className="mt-6 max-w-4xl text-[40px] font-extrabold leading-[1.02] tracking-[-0.042em] text-balance text-zinc-950 sm:text-6xl lg:text-[72px] dark:text-white">
-              Own your first home.{' '}
-              <span className="bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 bg-clip-text text-transparent dark:from-emerald-300 dark:via-emerald-400 dark:to-teal-300">
-                Let a tenant help pay for it.
-              </span>
+              Own your first home. <Rotator />
             </h1>
             <p className="mt-6 max-w-md text-lg leading-relaxed text-pretty text-zinc-600 sm:text-xl dark:text-zinc-400">
               See how rental income could help you afford your first home.
