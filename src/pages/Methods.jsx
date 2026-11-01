@@ -145,9 +145,9 @@ export default function Methods() {
         <Formula>cost to live = mortgage payment + property tax + insurance + owner-paid utilities + upkeep and capital reserve − rent from the other units (less vacancy)</Formula>
         <div className={prose}>
           <p>
-            A second unit’s rent defaults to your city’s average and you can change it. Property tax uses the listing’s figure when it gives one, otherwise your city’s typical
-            share of the price. Ontario taxes rental buildings of seven or more units at about twice the house rate (unless built since 2017), and Saskatchewan taxes four or
-            more units on a larger share of their value, so the guess for those is raised to match.
+            A second unit’s rent defaults to your city’s average and you can change it. A listing’s property tax is always its real bill: the figure the listing states, or one
+            you type in from it. Squarely never guesses a listing’s tax, so until the bill is known that listing shows no cash flow, returns or cost to live. Your own planning
+            numbers on Home use your city’s typical tax rate, which you can change.
           </p>
         </div>
       </section>

@@ -130,8 +130,8 @@ export const GLOSSARY = {
     body: 'Canada’s version of depreciation. A rental building (Class 1) is written off at 4% a year on its declining balance; land isn’t. CCA can bring rental income down to zero but can’t create or increase a rental loss, and whatever you don’t claim stays available for later years.',
   },
   listingRents: {
-    term: 'Stated or estimated rents',
-    body: 'Stated rents are the current rents a listing gives. Where it doesn’t give one, Squarely uses your rent table for that many bedrooms. Estimates can be off, so check them before you offer.',
+    term: 'Rents and property tax',
+    body: 'Stated rents are the current rents a listing gives. Where it doesn’t give one, Squarely uses your rent table for that many bedrooms, and says so; check those before you offer. Property tax is never estimated: it’s the bill the listing states, or one you type in from it.',
   },
   allCash: {
     term: 'Bought outright',

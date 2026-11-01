@@ -26,6 +26,8 @@
   Cache-Control: no-cache
 /about/*
   Cache-Control: no-cache
+/lenders/*
+  Cache-Control: no-cache
 /contact/*
   Cache-Control: no-cache
 /methods/*

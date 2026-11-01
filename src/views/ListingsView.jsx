@@ -1,6 +1,6 @@
 import { Suspense, lazy, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRight, BellPlus, BellRing, Check, ChevronDown, ExternalLink, Eye, EyeOff, Radar, RotateCcw, SlidersHorizontal, X } from 'lucide-react';
-import { DEFAULT_MARKET, LISTING_CITIES, LISTING_TYPES, SORTS, localMarket, alertMatches, alertName, daysListed, droppedInLatestRun, freshMatches, isNew, priceStory, underMarket, lensTargets, listingPageUrl, listingToDeal, rankListings, siteName, typeOf, unitsOf } from '../lib/market.js';
+import { DEFAULT_MARKET, LISTING_CITIES, LISTING_TYPES, SORTS, localMarket, alertMatches, alertName, daysListed, droppedInLatestRun, freshMatches, isNew, priceStory, underMarket, lensTargets, listingPageUrl, listingTaxes, listingToDeal, rankListings, siteName, typeOf, unitsOf } from '../lib/market.js';
 import { homeFor } from '../lib/firstHome.js';
 import { PROVINCES, cityByKey } from '../lib/canada.js';
 import { listingSentence } from '../lib/explain.js';
@@ -139,7 +139,7 @@ function AlertBanners({ alerts, feed, market, profile, onSeen, place }) {
           <li key={l.id}>
             {l.address}, {money(l.price)}
             <span className="text-emerald-800/80 dark:text-emerald-200/80">
-              {costToLive != null ? ` · ${money(costToLive)}/mo to live in` : ''} · {money(perDoor, { signed: true })}/door
+              {costToLive != null ? ` · ${money(costToLive)}/mo to live in` : ''} · {perDoor == null ? 'tax not listed yet' : `${money(perDoor, { signed: true })}/door`}
             </span>
           </li>
         ))}
@@ -203,9 +203,48 @@ const COLUMNS = 8;
 // Sorted here rather than in rankListings: it needs your Home numbers.
 const LIVE_SORT = { key: 'live', label: 'Cheapest to live in' };
 
+/** Type in a listing's yearly property tax, from its own page: Squarely never guesses one. */
+function TaxForm({ l, initial, onSave, onCancel }) {
+  const [text, setText] = useState(initial ? String(initial) : '');
+  const value = Math.round(Number(text.replace(/[^0-9.]/g, '')));
+  const id = `tax-${l.id}`;
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (value > 0) onSave(value);
+      }}
+      className="mt-3 flex flex-wrap items-end gap-2"
+    >
+      <div>
+        <label htmlFor={id} className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+          Yearly property tax, from the listing
+        </label>
+        <div className="relative">
+          <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-zinc-500 dark:text-zinc-400" aria-hidden>
+            $
+          </span>
+          <input id={id} inputMode="decimal" autoComplete="off" value={text} onChange={(e) => setText(e.target.value)} className="field w-40 py-1.5 pr-3 pl-6 text-sm text-zinc-900 dark:text-zinc-100" />
+        </div>
+      </div>
+      <Button type="submit" variant="primary" className="px-3 py-1.5" disabled={!(value > 0)}>
+        {initial ? 'Save tax' : 'Add tax'}
+      </Button>
+      {onCancel && (
+        <Button variant="ghost" className="px-2.5 py-1.5" onClick={onCancel}>
+          Cancel
+        </Button>
+      )}
+    </form>
+  );
+}
+
 /** One listing as a table row; opening it adds a row under it with the details and what to do next. */
-function ListingRow({ s, home, rank, sort, feed, below, imported, hidden, onAnalyze, onHide, onUnhide }) {
+function ListingRow({ s, home, rank, sort, feed, below, imported, hidden, onAnalyze, onHide, onUnhide, onTax }) {
   const [open, setOpen] = useState(false);
+  const [editTax, setEditTax] = useState(false);
+  // No real tax bill yet: show no cash flow or returns, since they'd be guesses.
+  const noTax = s.needsTax;
   const l = s.listing;
   const link = listingPageUrl(l.url, l.address);
   const site = siteName(link);
@@ -219,6 +258,7 @@ function ListingRow({ s, home, rank, sort, feed, below, imported, hidden, onAnal
   const story = priceStory(l);
   const tags = [
     s.meets && 'Beats your targets',
+    noTax && 'Tax not listed',
     isNew(l, feed) && 'New',
     drop > 0 && `Down ${money(drop)}`,
     below > 0 && `${Math.round(below * 100)}% under the going rate`,
@@ -266,9 +306,9 @@ function ListingRow({ s, home, rank, sort, feed, below, imported, hidden, onAnal
             <span className="text-zinc-500 dark:text-zinc-400">—</span>
           )}
         </td>
-        <td className={`${cell} font-semibold ${signedClass(s.perDoor)}`}>{money(s.perDoor, { signed: true })}</td>
-        <td className={`${cell} hidden lg:table-cell`}>{s.lens === 'own' ? <span className="text-zinc-700 dark:text-zinc-300">{money(s.a.pi)}/mo</span> : <DscrChip status={s.a.status} dscr={s.a.dscr} size="sm" />}</td>
-        <td className={`${cell} ${sort === 'coc' ? 'font-semibold' : ''} ${signedClass(s.a.coc)}`}>{percent(s.a.coc, 1)}</td>
+        <td className={`${cell} font-semibold ${noTax ? '' : signedClass(s.perDoor)}`}>{noTax ? <span className="text-xs font-normal whitespace-nowrap text-zinc-500 dark:text-zinc-400">No tax bill</span> : money(s.perDoor, { signed: true })}</td>
+        <td className={`${cell} hidden lg:table-cell`}>{noTax ? <span className="text-zinc-500 dark:text-zinc-400">—</span> : s.lens === 'own' ? <span className="text-zinc-700 dark:text-zinc-300">{money(s.a.pi)}/mo</span> : <DscrChip status={s.a.status} dscr={s.a.dscr} size="sm" />}</td>
+        <td className={`${cell} ${sort === 'coc' ? 'font-semibold' : ''} ${noTax ? 'text-zinc-500 dark:text-zinc-400' : signedClass(s.a.coc)}`}>{noTax ? '—' : percent(s.a.coc, 1)}</td>
         <td className="py-3 pr-3 pl-1 align-top sm:pr-4">
           <ChevronDown className={`mt-0.5 size-4 text-zinc-500 transition-transform dark:text-zinc-400 ${open ? 'rotate-180' : ''}`} aria-hidden />
         </td>
@@ -277,10 +317,18 @@ function ListingRow({ s, home, rank, sort, feed, below, imported, hidden, onAnal
         <tr id={detailsId} className="bg-well">
           <td colSpan={COLUMNS} className="px-4 pt-1 pb-4 sm:px-5">
             <div className="sm:pl-6">
-              <p className="max-w-3xl text-sm leading-snug text-zinc-800 dark:text-zinc-200">{listingSentence(s)}</p>
+              <p className="max-w-3xl text-sm leading-snug text-zinc-800 dark:text-zinc-200">
+                {noTax
+                  ? `This listing doesn’t state its property tax, so Squarely shows no cash flow or returns for it yet: they’d be guesses. Find the yearly tax on ${site || 'the listing page'} and add it here, or check back after the next daily search looks it up.`
+                  : listingSentence(s)}
+              </p>
               {l.highlights && <p className="mt-1.5 max-w-3xl text-sm text-zinc-600 dark:text-zinc-400">{l.highlights}</p>}
               <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{[...more, confirmed].filter(Boolean).join(' · ')}</p>
               <History days={days} story={story} below={below} />
+              {noTax ? (
+                <TaxForm l={l} onSave={(v) => onTax(l, v)} />
+              ) : (
+              <>
               <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-6">
                 <Metric label="Cash flow / door" tip="netCashFlow" sub="a month, after every cost">
                   <span className={signedClass(s.perDoor)}>{money(s.perDoor, { signed: true })}</span>
@@ -312,15 +360,35 @@ function ListingRow({ s, home, rank, sort, feed, below, imported, hidden, onAnal
                   {room == null ? '—' : money(s.offer.price)}
                 </Metric>
               </dl>
-              <p className="mt-3 flex items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+              <p className="mt-3 flex flex-wrap items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400">
                 {RENT_TEXT[s.rentSource]}
-                {s.taxesEstimated && ', taxes estimated'}
+                {s.taxSource === 'you' ? ', property tax as you entered it' : ', property tax as listed'}
                 <InfoTip k="listingRents" />
+                {s.taxSource === 'you' && !editTax && (
+                  <button type="button" onClick={() => setEditTax(true)} className="ml-1 font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-400">
+                    Change tax
+                  </button>
+                )}
               </p>
+              {editTax && (
+                <TaxForm
+                  l={l}
+                  initial={s.deal.taxesAnnual}
+                  onSave={(v) => {
+                    onTax(l, v);
+                    setEditTax(false);
+                  }}
+                  onCancel={() => setEditTax(false)}
+                />
+              )}
+              </>
+              )}
               <div className="mt-3 flex flex-wrap items-center gap-2">
+                {!noTax && (
                 <Button variant="primary" className="px-3 py-1.5" onClick={() => onAnalyze(l)}>
                   {imported ? 'Open deal' : s.lens === 'own' ? 'Open in Cash' : 'Analyze'} <ArrowRight className="size-4" aria-hidden />
                 </Button>
+                )}
                 {link && (
                   <a
                     href={link}
@@ -388,7 +456,6 @@ function Assumptions({ market, onMarket }) {
           {f('maintPct', { label: 'Maintenance', suffix: '% of rent', max: 50, step: 0.5, decimals: 1 })}
           {f('vacancyPct', { label: 'Vacancy', suffix: '% of rent', max: 50, step: 0.5, decimals: 1 })}
           {f('capexPct', { label: 'CapEx', suffix: '% of rent', max: 50, step: 0.5, decimals: 1 })}
-          <div className="col-span-2">{f('taxPct', { label: 'Property tax if not listed', suffix: '% of price', max: 5, step: 0.05, hint: 'Doubled for Ontario buildings of 7+ units' })}</div>
         </fieldset>
         <fieldset className="grid grid-cols-2 content-start gap-3">
           <legend className={`${legend} w-full`}>Market rents in {cityByKey(market.city).name}</legend>
@@ -464,7 +531,7 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
     () =>
       new Map(
         active.map((l) => {
-          const h = profile ? homeFor(listingToDeal(l, market, 'own'), profile, market.rate) : null;
+          const h = profile && listingTaxes(l, market) != null ? homeFor(listingToDeal(l, market, 'own'), profile, market.rate) : null;
           return [l.id, h && { ...h, known: profile.entered !== false }];
         }),
       ),
@@ -492,6 +559,9 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
     .filter(Boolean)
     .join(' · ');
   const th = 'px-2 py-2.5 text-right font-medium whitespace-nowrap';
+
+  // A tax bill typed in from a listing's page; it only ever stands in until the listing's own figure is known.
+  const setTax = (l, value) => onMarket({ taxes: { ...market.taxes, [l.id]: value } });
 
   const toggleType = (key) => {
     const on = market.types.includes(key);
@@ -693,6 +763,7 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
                       onAnalyze={onAnalyze}
                       onHide={onHide}
                       onUnhide={onUnhide}
+                      onTax={setTax}
                     />
                   ))}
                 </tbody>
@@ -714,7 +785,12 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
           <p className="px-1 text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
             Found by searching public listing sites, so some listings will be missing. Each one links to its own listing page and was confirmed for sale by a
             search in the last week; listings that can’t be confirmed drop off. Search results can lag a few days, and this isn’t from REALTOR.ca or the MLS®
-            system directly. Rents marked estimated come from your rent table. Confirm everything with the listing agent before you make an offer.
+            system directly. Rents marked estimated come from your rent table; property tax is always the real bill. Confirm everything with the listing agent before you make an offer.
+          </p>
+          <p className="px-1 text-sm">
+            <a href="/lenders/" className="inline-flex items-center gap-1 font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+              Ready to make an offer? Find a lender <ArrowRight className="size-4" aria-hidden />
+            </a>
           </p>
         </>
       )}

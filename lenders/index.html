@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Find a mortgage lender · Squarely</title>
+    <meta name="description" content="New to mortgages? Who lends in Canada, what to bring, what to ask, how to check a broker’s licence in your province, and how to find one near you." />
+    <meta name="theme-color" content="#0b0b0c" />
+    
+    <link rel="icon" href="/favicon.ico?v=3" sizes="48x48" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=3" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <script>
+      // After an update, a page this browser kept can ask for script files
+      // that no longer exist. Reload once to pick up the new version.
+      (function () {
+        var key = 'sq-reloaded';
+        function heal() {
+          try {
+            if (sessionStorage.getItem(key)) return;
+            sessionStorage.setItem(key, '1');
+          } catch (e) {
+            return;
+          }
+          location.reload();
+        }
+        window.addEventListener(
+          'error',
+          function (e) {
+            var t = e.target;
+            if (t && (t.tagName === 'SCRIPT' || t.tagName === 'LINK') && /\/assets\//.test(t.src || t.href || '')) heal();
+          },
+          true,
+        );
+        window.addEventListener('vite:preloadError', function (e) {
+          e.preventDefault();
+          heal();
+        });
+        window.addEventListener('load', function () {
+          setTimeout(function () {
+            try {
+              sessionStorage.removeItem(key);
+            } catch (e) {}
+          }, 10000);
+        });
+      })();
+    </script>
+    <script>
+      // Same theme as the app: onyx unless the person picked light there.
+      (function () {
+        var saved = null;
+        try {
+          saved = localStorage.getItem('dscr-theme');
+        } catch (e) {}
+        document.documentElement.classList.toggle('dark', saved !== 'light');
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/pages/lenders.jsx"></script>
+  </body>
+</html>

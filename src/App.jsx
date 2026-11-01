@@ -40,7 +40,7 @@ import { useMarket, useMarketIndex } from './hooks/useMarket.js';
 import { OWN_DOWN_PCT, analyzeDeal, applyAdjustments, isNeutralAdjustment, maxOffer, ownMoney, projectDeal, refiAnalysis, saleAnalysis } from './lib/finance.js';
 import { money, percent, ratio } from './lib/format.js';
 import { DEFAULT_DEAL, MAX_COMPARE, switchRules } from './lib/presets.js';
-import { LISTING_CITIES, homePatch, listingCity, listingToDeal, localMarket, normalizeMarket, rankListings } from './lib/market.js';
+import { LISTING_CITIES, homePatch, listingCity, listingTaxes, listingToDeal, localMarket, normalizeMarket, rankListings } from './lib/market.js';
 import { quickDeal } from './lib/quick.js';
 import { readShared, sameDeal } from './lib/share.js';
 import { whatIfSummary } from './lib/explain.js';
@@ -436,7 +436,13 @@ export default function App() {
     (listing) => {
       const tab = normalizeMarket(market).lens === 'own' ? 'cash' : 'analyze';
       const existing = deals.find((d) => d.listingId === listing.id);
-      if (existing) lib.setActive(existing.id);
+      if (existing) {
+        // Saved before Squarely stopped guessing taxes: once the real bill is known, it replaces an untouched guess.
+        const real = listingTaxes(listing, market);
+        const guess = Math.round(((Number(existing.price) || 0) * normalizeMarket(market).taxPct) / 100);
+        if (real != null && real !== existing.taxesAnnual && [guess, guess * 2].includes(existing.taxesAnnual)) lib.updateDeal(existing.id, { taxesAnnual: real });
+        lib.setActive(existing.id);
+      }
       else withUndo(`Added “${listing.address}” to your deals`, () => lib.insertDeal(listingToDeal(listing, market)));
       setView(tab);
       window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
@@ -452,7 +458,7 @@ export default function App() {
     [lib, market.hidden],
   );
   const topListings = useMemo(
-    () => (marketFeed.status === 'ready' ? rankListings(marketFeed.feed?.listings, market, targets).slice(0, 8) : []),
+    () => (marketFeed.status === 'ready' ? rankListings(marketFeed.feed?.listings, market, targets).filter((s) => !s.needsTax).slice(0, 8) : []),
     [marketFeed, market, targets],
   );
 
@@ -850,6 +856,10 @@ export default function App() {
             </div>
             <p className="max-w-4xl sm:ml-auto sm:text-right">
               Estimates, not lending, tax or investment advice.{' '}
+              <a href={`${HOME_PAGE.replace(/\/$/, '')}/lenders/`} {...(HOME_PAGE.startsWith('http') ? { target: '_blank', rel: 'noreferrer' } : {})} className="font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+                Find a lender
+              </a>
+              {' · '}
               <a href={`${HOME_PAGE.replace(/\/$/, '')}/methods/`} {...(HOME_PAGE.startsWith('http') ? { target: '_blank', rel: 'noreferrer' } : {})} className="font-medium text-emerald-700 hover:underline dark:text-emerald-400">
                 How we calculate
               </a>

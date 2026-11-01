@@ -6,6 +6,7 @@ const COLUMNS = [
     'Buy',
     [
       ['See what you can buy', '/app/?view=home'],
+      ['Find a lender', '/lenders/'],
       ['Homes for sale', '/homes/?kind=sale'],
       ['Morning listings', '/app/?view=listings'],
       ['Rental calculator', '/app/?view=analyze'],

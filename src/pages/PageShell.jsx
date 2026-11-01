@@ -4,7 +4,7 @@ import AccountLink from '../components/AccountLink.jsx';
 
 const NAV = [
   ['Find a home', '/homes/'],
-  ['How we calculate', '/methods/'],
+  ['Find a lender', '/lenders/'],
   ['About', '/about/'],
   ['Contact', '/contact/'],
 ];
@@ -25,7 +25,7 @@ export default function PageShell({ width = 'max-w-3xl', children }) {
                 key={href}
                 href={href}
                 aria-current={here.startsWith(href) ? 'page' : undefined}
-                className={`whitespace-nowrap rounded-md px-2.5 py-2 font-medium hover:bg-well ${here.startsWith(href) ? 'text-zinc-950 dark:text-white' : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'} ${href === '/homes/' ? 'max-sm:hidden' : ''}`}
+                className={`whitespace-nowrap rounded-md px-2.5 py-2 font-medium hover:bg-well ${here.startsWith(href) ? 'text-zinc-950 dark:text-white' : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'} ${['/homes/', '/about/'].includes(href) ? 'max-sm:hidden' : ''}`}
               >
                 {label}
               </a>

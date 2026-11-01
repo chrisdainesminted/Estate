@@ -57,9 +57,11 @@ export function runScore(argv) {
     address: s.listing.address,
     price: s.a.price,
     units: s.a.units,
-    cashFlowPerDoor: Math.round(s.perDoor),
-    dscr: Math.round(s.a.dscr * 100) / 100,
-    cashOnCash: Math.round(s.a.coc * 1000) / 10,
+    // No tax bill, no numbers: they'd be made up.
+    cashFlowPerDoor: s.needsTax ? null : Math.round(s.perDoor),
+    dscr: s.needsTax ? null : Math.round(s.a.dscr * 100) / 100,
+    cashOnCash: s.needsTax ? null : Math.round(s.a.coc * 1000) / 10,
+    taxes: s.needsTax ? 'not listed' : s.taxSource,
     rents: s.rentSource,
     url: s.listing.url,
     new: isNew(s.listing, feed),
@@ -77,8 +79,9 @@ export function runScore(argv) {
     console.log(`Assumptions: ${loan}, over ${market.amortYears} years. Targets: ${on || 'none'}.\n`);
     ranked.forEach((s, i) => {
       const flagsText = [isNew(s.listing, feed) && 'NEW', droppedInLatestRun(s.listing, feed) && `DROP ${plainMoney(s.drop)}`, s.meets && 'meets targets'].filter(Boolean).join(' · ');
+      const numbers = s.needsTax ? 'no tax bill yet, no numbers'.padEnd(36) : `${plainMoney(s.perDoor, { signed: true }).padStart(7)}/door  DSCR ${s.a.dscr.toFixed(2)}  CoC ${percent(s.a.coc, 1).padStart(6)}`;
       console.log(
-        `${String(i + 1).padStart(2)}. ${plainMoney(s.perDoor, { signed: true }).padStart(7)}/door  DSCR ${s.a.dscr.toFixed(2)}  CoC ${percent(s.a.coc, 1).padStart(6)}  ${plainMoney(s.a.price).padStart(10)}  ${s.a.units}u  rents ${s.rentSource.padEnd(9)} ${s.listing.address}${flagsText ? `  [${flagsText}]` : ''}`,
+        `${String(i + 1).padStart(2)}. ${numbers}  ${plainMoney(s.a.price).padStart(10)}  ${s.a.units}u  rents ${s.rentSource.padEnd(9)} ${s.listing.address}${flagsText ? `  [${flagsText}]` : ''}`,
       );
     });
     console.log(`\nSTANDOUTS (beat every target, new or cheaper today): ${best.length}`);

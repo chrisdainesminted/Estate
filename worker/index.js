@@ -455,7 +455,7 @@ export class Account extends DurableObject {
       .map(({ alert, fresh }) =>
         [
           `${alertName(alert, cityByKey(alert.city).name)}: ${fresh.length} new or cheaper`,
-          ...fresh.slice(0, 10).map(({ listing: l, costToLive, perDoor }) => `- ${l.address}, $${Math.round(l.price).toLocaleString('en-CA')}${costToLive != null ? `, about $${Math.round(costToLive).toLocaleString('en-CA')}/mo to live in` : ''}, ${perDoor >= 0 ? '+' : '-'}$${Math.abs(Math.round(perDoor)).toLocaleString('en-CA')}/door\n  ${l.url}`),
+          ...fresh.slice(0, 10).map(({ listing: l, costToLive, perDoor }) => `- ${l.address}, $${Math.round(l.price).toLocaleString('en-CA')}${costToLive != null ? `, about ${Math.round(costToLive).toLocaleString('en-CA')}/mo to live in` : ''}${perDoor == null ? ', tax not listed yet' : `, ${perDoor >= 0 ? '+' : '-'}${Math.abs(Math.round(perDoor)).toLocaleString('en-CA')}/door`}\n  ${l.url}`),
         ].join('\n'),
       )
       .join('\n\n');

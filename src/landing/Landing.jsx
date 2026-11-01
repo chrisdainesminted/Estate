@@ -7,7 +7,7 @@ import { cityByKey, guessCity } from '../lib/canada.js';
 import CitySelect from '../components/CitySelect.jsx';
 import SiteFooter from '../components/SiteFooter.jsx';
 import AccountLink from '../components/AccountLink.jsx';
-import { DEFAULT_MARKET, INDEX_DOC, feedDoc, listingCity, listingToDeal, localMarket, unitsOf } from '../lib/market.js';
+import { DEFAULT_MARKET, INDEX_DOC, feedDoc, listingCity, listingTaxes, listingToDeal, localMarket, unitsOf } from '../lib/market.js';
 import { money } from '../lib/format.js';
 
 /**
@@ -93,6 +93,7 @@ export default function Landing() {
 
 const NAV = [
   ['Find a home', '/homes/'],
+  ['Find a lender', '/lenders/'],
   ['Your account', '/account/'],
   ['List a home', '/app/?view=landlord'],
   ['How it works', '#how'],
@@ -404,7 +405,8 @@ function Today({ feed, shown, picked, index }) {
     const market = localMarket(DEFAULT_MARKET, shown);
     const active = feed.listings.filter((l) => (l.status ?? 'active') === 'active');
     const homes = active
-      .filter((l) => unitsOf(l) >= 2 && unitsOf(l) <= 4)
+      // Only homes with a real tax bill: a cost to live built on a guess isn't shown.
+      .filter((l) => unitsOf(l) >= 2 && unitsOf(l) <= 4 && listingTaxes(l, market) != null)
       .map((l) => ({ l, h: homeFor(listingToDeal(l, market, 'own'), { ...SAMPLE, city: shown }, market.rate) }))
       .filter((x) => x.h)
       .sort((a, b) => a.h.costToLive - b.h.costToLive);
@@ -569,6 +571,16 @@ const FAQ = [
   [
     'What does it cost?',
     'Nothing for renters, buyers or the calculators, and listing a home is free. Landlords who track rent pay 2% of each tenanted unit’s rent, at most $30 a unit, and the first unit is free.',
+  ],
+  [
+    'I’ve never talked to a lender. Where do I start?',
+    <>
+      Start with our{' '}
+      <a href="/lenders/" className="font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-400">
+        guide to finding a lender
+      </a>
+      : who lends, what to bring, what to ask, and how to check a broker’s licence in your province. Or ask us to introduce you to a licensed mortgage broker, free.
+    </>,
   ],
   [
     'Is this financial advice?',

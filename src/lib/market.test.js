@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allCash, analyzeDeal, maxOffer } from './finance.js';
+import { DEFAULT_TARGETS, allCash, analyzeDeal, maxOffer } from './finance.js';
 import { DEFAULT_DEAL } from './presets.js';
 import {
   DEFAULT_MARKET,
@@ -158,26 +158,42 @@ describe('listingToDeal', () => {
     for (const k of ['price', 'units', 'rentPerUnit', 'taxesAnnual', 'insuranceAnnual', 'hoaMonthly', 'closingPct', 'termYears']) expect(own[k]).toBe(dscr[k]);
   });
 
-  it('estimates missing taxes from the price and keeps a floor under insurance', () => {
+  it('never guesses a missing tax, and keeps a floor under insurance', () => {
     const d = listingToDeal({ address: '1 Main St', price: 300000, units: 1 }, DEFAULT_MARKET);
-    expect(d.taxesAnnual).toBe(Math.round(300000 * DEFAULT_MARKET.taxPct / 100));
+    expect(d.taxesAnnual).toBe(0);
     expect(d.insuranceAnnual).toBe(INSURANCE_MIN);
     expect(d.hoaMonthly).toBe(0); // tenants pay a house's utilities
-    expect(d.notes).toMatch(/Property tax estimated/);
   });
 
-  it('guesses a higher tax for big Ontario rental buildings, and always prefers the stated bill', () => {
+  it('uses the stated tax bill, or one you typed in, and nothing else', () => {
     const tb = localMarket(DEFAULT_MARKET, 'thunder-bay');
-    const twelve = { address: '230 Brodie Street N', price: 999999, units: 12, yearBuilt: 1913 };
-    // A real 12-plex like this one pays $19,530 a year; the house rate alone would say $10,000.
-    expect(listingTaxes(twelve, tb)).toBe(Math.round(999999 * tb.taxPct * 2 / 100));
-    expect(listingTaxes({ ...twelve, units: 6 }, tb)).toBe(Math.round(999999 * tb.taxPct / 100));
-    expect(listingTaxes({ ...twelve, yearBuilt: 2021 }, tb)).toBe(Math.round(999999 * tb.taxPct / 100));
+    const twelve = { id: 'addr-230-brodie-st-n', address: '230 Brodie Street N', price: 999999, units: 12 };
+    expect(listingTaxes(twelve, tb)).toBeNull();
     expect(listingTaxes({ ...twelve, taxes: 19529.58 }, tb)).toBe(19530);
-    expect(listingToDeal({ ...twelve, taxes: 19529.58 }, tb).notes).not.toMatch(/Property tax estimated/);
-    // Outside Ontario and Saskatchewan, size doesn't change the guess.
-    const yyc = localMarket(DEFAULT_MARKET, 'calgary');
-    expect(listingTaxes({ ...twelve }, yyc)).toBe(Math.round(999999 * yyc.taxPct / 100));
+    const typed = { ...tb, taxes: { [twelve.id]: 19530 } };
+    expect(listingTaxes(twelve, typed)).toBe(19530);
+    expect(listingToDeal(twelve, typed).notes).toMatch(/as you entered it/);
+    // The listing's own figure wins over a typed one.
+    expect(listingTaxes({ ...twelve, taxes: 20000 }, typed)).toBe(20000);
+    // Junk typed values are dropped.
+    expect(normalizeMarket({ taxes: { a: -5, b: 'x', c: 4100.4 } }).taxes).toEqual({ c: 4100 });
+  });
+});
+
+describe('listings without a real tax bill', () => {
+  const listing = { id: 'no-tax', address: '9 Unknown St', price: 300000, units: 3, rents: [1500, 1500, 1500], url: 'https://www.realtor.ca/real-estate/1/9-unknown-street-thunder-bay' };
+  it('never beat a target and rank after the ones with numbers', () => {
+    const s = scoreListing(listing, DEFAULT_MARKET, { ...DEFAULT_TARGETS, useDscr: false, useCoc: false, useCashFlow: false });
+    expect(s.needsTax).toBe(true);
+    expect(s.meets).toBe(false);
+    const withTax = { ...listing, id: 'has-tax', address: '8 Known St', taxes: 9000, url: 'https://www.realtor.ca/real-estate/2/8-known-street-thunder-bay' };
+    const ranked = rankListings([listing, withTax], DEFAULT_MARKET, DEFAULT_TARGETS, { types: ['single', 'small', 'large'] });
+    expect(ranked.map((x) => x.listing.id)).toEqual(['has-tax', 'no-tax']);
+  });
+  it('match an alert on price but never on cash flow', () => {
+    const feed = { listings: [listing] };
+    expect(alertMatches({ city: 'thunder-bay', maxPrice: 400000 }, feed, { market: DEFAULT_MARKET })).toHaveLength(1);
+    expect(alertMatches({ city: 'thunder-bay', minPerDoor: -100000 }, feed, { market: DEFAULT_MARKET })).toHaveLength(0);
   });
 });
 
@@ -444,8 +460,11 @@ describe('alerts', () => {
   });
   it('filters on cost to live when given the Home numbers', () => {
     const homeFor = () => ({ costToLive: 1500 });
-    expect(alertMatches({ city: 'hamilton', maxLive: 1400 }, feed, { market: DEFAULT_MARKET, profile: {}, homeFor })).toHaveLength(0);
-    expect(alertMatches({ city: 'hamilton', maxLive: 1600 }, feed, { market: DEFAULT_MARKET, profile: {}, homeFor })).toHaveLength(2);
+    const taxed = { listings: feed.listings.map((l) => ({ ...l, taxes: 5000 })) };
+    expect(alertMatches({ city: 'hamilton', maxLive: 1400 }, taxed, { market: DEFAULT_MARKET, profile: {}, homeFor })).toHaveLength(0);
+    expect(alertMatches({ city: 'hamilton', maxLive: 1600 }, taxed, { market: DEFAULT_MARKET, profile: {}, homeFor })).toHaveLength(2);
+    // Without a real tax bill there's no cost to live to match on.
+    expect(alertMatches({ city: 'hamilton', maxLive: 1600 }, feed, { market: DEFAULT_MARKET, profile: {}, homeFor })).toHaveLength(0);
   });
   it('names an alert plainly', () => {
     expect(alertName({ types: ['small'], maxLive: 2000 }, 'Hamilton')).toBe('2–4 units in Hamilton, under $2,000/mo to live in');

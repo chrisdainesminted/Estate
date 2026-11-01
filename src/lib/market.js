@@ -100,7 +100,8 @@ export const DEFAULT_MARKET = {
   closingPct: 1, // legal, title, inspection; land transfer tax is added on top
   insurancePerUnit: 800, // $ a year per unit, at least INSURANCE_MIN
   utilitiesPerUnit: 50, // $ a month per unit the owner pays (water, shared heat) in 2+ unit buildings
-  taxPct: 1, // property tax as % of price, only when a listing doesn't say: Thunder Bay listings that state their bill run a median 0.94% (0.97% for houses)
+  taxPct: 1, // typical property tax as % of price, for the quick check only: listings use their real bill or none
+  taxes: {}, // yearly tax bills you typed in for listings that don't state one, by listing id
   mgmtPct: 8,
   maintPct: 6,
   vacancyPct: 4,
@@ -120,6 +121,7 @@ export function normalizeMarket(m) {
     lens: m?.lens === 'own' ? 'own' : 'dscr',
     types: Array.isArray(m?.types) ? m.types.filter((t) => LISTING_TYPES.some((x) => x.key === t)) : DEFAULT_MARKET.types,
     hidden: Array.isArray(m?.hidden) ? m.hidden.filter((x) => typeof x === 'string') : [],
+    taxes: Object.fromEntries(Object.entries(m?.taxes && typeof m.taxes === 'object' ? m.taxes : {}).filter(([id, v]) => id.length <= 200 && Number(v) > 0 && Number(v) < 1e7).map(([id, v]) => [id, Math.round(Number(v))])),
   };
 }
 
@@ -298,7 +300,7 @@ export function listingToDeal(listing, market, lens) {
     unitType,
     units,
     rentPerUnit: Math.round(rent.total / units),
-    taxesAnnual: listingTaxes(listing, m),
+    taxesAnnual: listingTaxes(listing, m) ?? 0,
     insuranceAnnual: Math.max(m.insurancePerUnit * units, INSURANCE_MIN),
     // Owner-paid utilities ride in the monthly fixed costs, as Canadian lenders count heat.
     hoaMonthly: units >= 2 ? m.utilitiesPerUnit * units : 0,
@@ -308,7 +310,7 @@ export function listingToDeal(listing, market, lens) {
     capexPct: m.capexPct,
     address: listing.address,
     listingUrl: listing.url || '',
-    notes: [listing.highlights, rentNote, taxesGuessed(listing) && 'Property tax estimated: the listing doesn’t state it.', listing.mls && `MLS® ${listing.mls}.`].filter(Boolean).join(' '),
+    notes: [listing.highlights, rentNote, taxSource(listing, m) === 'you' && 'Property tax as you entered it.', listing.mls && `MLS® ${listing.mls}.`].filter(Boolean).join(' '),
     listingId: listing.id,
   };
   return (lens ?? m.lens) === 'own'
@@ -327,25 +329,20 @@ export function priceDrop(listing) {
 export const lensTargets = (targets, lens) => (lens === 'own' ? { ...targets, useDscr: false } : targets);
 
 /**
- * Where bigger rental buildings pay a higher property tax rate than houses.
- * Ontario taxes 7+ units as multi-residential, at about twice the house
- * rate (a stated Thunder Bay 12-plex bill: 1.95% of price, against 0.97%
- * for houses); ones built since 2017 can pay the house rate. Saskatchewan
- * taxes 4+ units on 80% of their value, against 70% for houses.
+ * A listing's yearly property tax, only ever a real figure: the bill the
+ * listing states, or the one you typed in from it. Null when neither is
+ * known: Squarely never guesses a home's tax.
  */
-const MULTI_RES = { ON: { minUnits: 7, factor: 2, newSince: 2017 }, SK: { minUnits: 4, factor: 80 / 70 } };
-
-/** True when a listing's taxes are a guess because it doesn't state them. */
-export const taxesGuessed = (listing) => !positive(listing?.taxes);
-
-/** A listing's yearly property tax: as stated, or a guess from its price, city and size. */
 export function listingTaxes(listing, market) {
   const stated = positive(listing?.taxes);
   if (stated) return Math.round(stated);
-  const m = normalizeMarket(market);
-  const rule = MULTI_RES[cityByKey(m.city ?? HOME_MARKET).province];
-  const multi = rule && unitsOf(listing) >= rule.minUnits && !(rule.newSince && Number(listing?.yearBuilt) >= rule.newSince);
-  return Math.round(((Number(listing?.price) || 0) * m.taxPct * (multi ? rule.factor : 1)) / 100);
+  return normalizeMarket(market).taxes[listing?.id] ?? null;
+}
+
+/** Where a listing's tax figure came from: 'listing', 'you', or null when it isn't known. */
+export function taxSource(listing, market) {
+  if (positive(listing?.taxes)) return 'listing';
+  return normalizeMarket(market).taxes[listing?.id] ? 'you' : null;
 }
 
 /**
@@ -357,6 +354,8 @@ export function scoreListing(listing, market, targets = DEFAULT_TARGETS) {
   const m = normalizeMarket(market);
   const deal = listingToDeal(listing, m);
   const a = analyzeDeal(deal);
+  // Without a real tax bill the numbers would be made up, so it can't beat a target.
+  const needsTax = listingTaxes(listing, m) == null;
   const offer = maxOffer(deal, lensTargets(targets, m.lens));
   return {
     listing,
@@ -366,9 +365,10 @@ export function scoreListing(listing, market, targets = DEFAULT_TARGETS) {
     cash: analyzeDeal(allCash(deal)),
     offer,
     perDoor: a.netCashFlow / a.units,
-    meets: offer.price == null ? a.netCashFlow > 0 : offer.price >= a.price,
+    meets: !needsTax && (offer.price == null ? a.netCashFlow > 0 : offer.price >= a.price),
     rentSource: listingRent(listing, m).source,
-    taxesEstimated: taxesGuessed(listing),
+    needsTax,
+    taxSource: taxSource(listing, m),
     drop: priceDrop(listing),
   };
 }
@@ -395,7 +395,8 @@ export function rankListings(listings, market, targets, { types, hidden, showHid
     .filter((l) => (l.status ?? 'active') === 'active' && listingPageUrl(l.url, l.address) && want.has(typeOf(unitsOf(l))) && (showHidden || !hide.has(l.id)))
     .map((l) => scoreListing(l, m, targets))
     .filter((s) => !onlyMeets || s.meets)
-    .sort((x, y) => order(x, y) || y.perDoor - x.perDoor);
+    // Listings with a real tax bill first: the rest have no numbers to rank by yet.
+    .sort((x, y) => x.needsTax - y.needsTax || order(x, y) || y.perDoor - x.perDoor);
 }
 
 /** New in the latest run, or cut in price by it. */
@@ -561,11 +562,12 @@ export function alertMatches(alert, feed, { market, profile, homeFor } = {}) {
     .filter((l) => !alert.maxPrice || Number(l.price) <= alert.maxPrice)
     .map((l) => {
       const s = scoreListing(l, m);
+      if (s.needsTax) return { listing: l, perDoor: null, costToLive: null, needsTax: true };
       const home = homeFor && profile ? homeFor(listingToDeal(l, m, 'own'), { ...profile, city: alert.city }, m.rate) : null;
       return { listing: l, perDoor: s.perDoor, costToLive: home?.costToLive ?? null };
     })
     .filter((x) => !alert.maxLive || (x.costToLive != null && x.costToLive <= alert.maxLive))
-    .filter((x) => alert.minPerDoor == null || x.perDoor >= alert.minPerDoor);
+    .filter((x) => alert.minPerDoor == null || (x.perDoor != null && x.perDoor >= alert.minPerDoor));
 }
 
 /** Of an alert's matches, the ones new or cheaper on or after `since` (YYYY-MM-DD). */

@@ -884,9 +884,14 @@ function ListingDetails({ li, landlord, ws }) {
             With the least down ({money(down)}), the mortgage would be about <span className="font-semibold text-zinc-950 dark:text-white">{money(plan.payment)} a month</span> at {DEFAULT_MARKET.rate}% over {plan.amortYears} years
             {plan.insured ? ', with mortgage insurance' : ''}.
           </p>
-          <a href="/app/?view=home" className="mt-2 inline-flex items-center gap-1 font-medium text-emerald-700 hover:underline dark:text-emerald-400">
-            See what you could buy <ArrowRight className="size-4" aria-hidden />
-          </a>
+          <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+            <a href="/app/?view=home" className="inline-flex items-center gap-1 font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+              See what you could buy <ArrowRight className="size-4" aria-hidden />
+            </a>
+            <a href="/lenders/" className="inline-flex items-center gap-1 font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+              Find a lender <ArrowRight className="size-4" aria-hidden />
+            </a>
+          </p>
         </div>
       )}
     </div>
