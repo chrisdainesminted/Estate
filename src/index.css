@@ -190,45 +190,24 @@ body::before {
 
 /* ---------- Motion ---------- */
 
-/* The hero's spinning line (Landing.jsx Rotator): fast blurred frames, then a settle. */
-@keyframes reel-spin {
-  from {
-    transform: translateY(70%);
-    filter: blur(3px);
-    opacity: 0.55;
-  }
-  to {
-    transform: translateY(0);
-    filter: blur(2px);
-    opacity: 0.85;
-  }
-}
-@keyframes reel-land {
+/* The hero's wheel (Landing.jsx Rotator): blurred while it whips past, sharp when it stops. */
+@keyframes wheel-blur {
   0% {
-    transform: translateY(60%);
-    filter: blur(2px);
-    opacity: 0.7;
-  }
-  60% {
-    transform: translateY(-6%);
     filter: blur(0);
-    opacity: 1;
+  }
+  12% {
+    filter: blur(2.5px);
+  }
+  70% {
+    filter: blur(1px);
   }
   100% {
-    transform: translateY(0);
     filter: blur(0);
-    opacity: 1;
   }
 }
-.reel-spin {
-  animation-name: reel-spin;
+.wheel-spin {
+  animation-name: wheel-blur;
   animation-timing-function: linear;
-  animation-fill-mode: both;
-}
-.reel-land {
-  animation-name: reel-land;
-  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-  animation-fill-mode: both;
 }
 
 @keyframes rise {

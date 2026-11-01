@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, ArrowUpRight, ClipboardCheck, Home, KeyRound, Landmark, Menu, Plus, X } from 'lucide-react';
 import Logo from '../components/Logo.jsx';
 import { DEFAULT_PROFILE, RULES_CHECKED, homeFor, maxPrice } from '../lib/firstHome.js';
@@ -166,69 +166,88 @@ const ROTATE = [
 const GRADIENT =
   'bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 bg-clip-text text-transparent dark:from-emerald-300 dark:via-emerald-400 dark:to-teal-300';
 
-/**
- * How long each frame of a spin lasts: about one screen refresh at first,
- * slowing at the end. Two passes through the phrases plus one frame, so
- * each spin lands on the next phrase in order.
- */
-const SPIN_FRAMES = ROTATE.length * 2;
-const SPIN = Array.from({ length: SPIN_FRAMES + 1 }, (_, k) => (k === SPIN_FRAMES ? 130 : Math.round(16 + 26 * (k / SPIN_FRAMES) ** 3)));
-const HOLD = 2600;
+const HOLD = 2600; // ms each phrase stays before the next spin
+const SPIN_MS = 750;
+const COPIES = 4; // the strip repeats the phrases so a spin can pass them all twice
 
 /**
- * Like a slot-machine reel: the line holds, then spins through the phrases
- * (blurred while fast) and settles on the next one with a small bounce.
- * Every phrase also sits invisibly in the same grid cell, so the space is
- * always the longest one's and the page never jumps. Screen readers hear
- * the first phrase only, and with reduced motion it never moves.
+ * A wheel: every phrase sits on one vertical strip behind a window one
+ * phrase tall. Each spin whips the strip past every phrase twice and stops
+ * dead on the next one, then quietly jumps back to the same phrase on an
+ * earlier copy so the strip never runs out. All phrases also sit invisibly
+ * in one grid cell, which sets the window to the longest phrase's size, so
+ * the page never jumps. Screen readers hear the first phrase only, and with
+ * reduced motion the wheel never turns.
  */
 function Rotator() {
-  const [at, setAt] = useState(0); // the phrase showing
-  const [frame, setFrame] = useState({ n: 0, ms: 0 }); // restarts the reel animation each step
+  const n = ROTATE.length;
+  const sizer = useRef(null);
+  const [h, setH] = useState(0);
+  const [pos, setPos] = useState(n); // index on the strip, starting on the second copy
+  const [spinning, setSpinning] = useState(false);
+  const [tick, setTick] = useState(0); // retries a spin skipped while the tab was hidden
+
   useEffect(() => {
-    if (typeof window === 'undefined' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined;
-    let timer;
-    let stop = false;
-    let cur = 0;
-    const spin = (step) => {
-      if (stop) return;
-      if (step === SPIN.length) {
-        timer = setTimeout(() => spin(0), HOLD);
-        return;
-      }
-      if (step === 0 && document.visibilityState !== 'visible') {
-        timer = setTimeout(() => spin(0), HOLD);
-        return;
-      }
-      cur = (cur + 1) % ROTATE.length;
-      const ms = SPIN[step];
-      setAt(cur);
-      setFrame((f) => ({ n: f.n + 1, ms }));
-      timer = setTimeout(() => spin(step + 1), ms);
-    };
-    timer = setTimeout(() => spin(0), HOLD);
-    return () => {
-      stop = true;
-      clearTimeout(timer);
-    };
+    const el = sizer.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(() => setH(el.getBoundingClientRect().height));
+    ro.observe(el);
+    return () => ro.disconnect();
   }, []);
-  const landing = frame.ms >= SPIN[SPIN.length - 1];
+
+  useEffect(() => {
+    if (!h || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined;
+    if (spinning) {
+      // Land even if the browser never reports the end of the spin.
+      const t = setTimeout(() => landed(), SPIN_MS + 150);
+      return () => clearTimeout(t);
+    }
+    const t = setTimeout(() => {
+      if (document.visibilityState !== 'visible') return setTick((k) => k + 1);
+      setSpinning(true);
+      setPos((p) => n * (COPIES - 1) + (((p % n) + 1) % n));
+    }, HOLD);
+    return () => clearTimeout(t);
+  }, [h, pos, n, spinning, tick]);
+
+  function landed() {
+    setSpinning(false);
+    setPos((p) => n + (p % n));
+  }
+
   return (
-    <span className="grid overflow-hidden">
+    <span className="relative grid">
       <span className="sr-only">{ROTATE[0]}</span>
-      {ROTATE.map((t) => (
-        <span key={t} aria-hidden className="invisible col-start-1 row-start-1 pb-[0.08em]">
-          {t}
-        </span>
-      ))}
-      <span
-        key={frame.n}
-        aria-hidden
-        className={`${GRADIENT} col-start-1 row-start-1 pb-[0.08em] ${frame.n ? (landing ? 'reel-land' : 'reel-spin') : ''}`}
-        style={frame.n ? { animationDuration: `${landing ? 260 : frame.ms}ms` } : undefined}
-      >
-        {ROTATE[at]}
+      <span ref={sizer} aria-hidden className="invisible col-start-1 row-start-1 grid">
+        {ROTATE.map((t) => (
+          <span key={t} className="col-start-1 row-start-1 pb-[0.08em]">
+            {t}
+          </span>
+        ))}
       </span>
+      {h > 0 ? (
+        <span aria-hidden className="absolute inset-0 overflow-hidden">
+          <span
+            className={`block will-change-transform ${spinning ? 'wheel-spin' : ''}`}
+            style={{
+              transform: `translate3d(0, ${-pos * h}px, 0)`,
+              transition: spinning ? `transform ${SPIN_MS}ms cubic-bezier(0.16, 0.84, 0.3, 1)` : 'none',
+              animationDuration: `${SPIN_MS}ms`,
+            }}
+            onTransitionEnd={(e) => e.target === e.currentTarget && landed()}
+          >
+            {Array.from({ length: n * COPIES }, (_, k) => (
+              <span key={k} className={`${GRADIENT} block pb-[0.08em]`} style={{ height: h }}>
+                {ROTATE[k % n]}
+              </span>
+            ))}
+          </span>
+        </span>
+      ) : (
+        <span aria-hidden className={`${GRADIENT} col-start-1 row-start-1 pb-[0.08em]`}>
+          {ROTATE[0]}
+        </span>
+      )}
     </span>
   );
 }
