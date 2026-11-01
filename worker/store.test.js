@@ -41,6 +41,10 @@ describe('workspace', () => {
 
   it('keeps records to their schema', () => {
     expect(clean('listings', { title: '  2-bed  ', rent: 1800, evil: 'x', active: 'yes' })).toEqual({ title: '2-bed', rent: 1800 });
+    // Co-owners: a short list of names and shares, nothing else.
+    expect(clean('settings', { owners: [{ name: ' Ana ', share: 50, extra: 1 }, { name: 'Ben', share: 'fifty' }, 'junk'] })).toEqual({ owners: [{ name: 'Ana', share: 50 }, { name: 'Ben' }] });
+    expect(clean('settings', { owners: Array.from({ length: 20 }, (_, i) => ({ name: `O${i}`, share: 5 })) }).owners).toHaveLength(10);
+    expect(clean('expenses', { amount: 900, paidBy: 'Ben' })).toEqual({ amount: 900, paidBy: 'Ben' });
     const u = s.create('units', { label: 'Upper', rent: 1700, repairToken: 'mine' });
     expect(u.repairToken).not.toBe('mine');
     expect(u.repairToken.length).toBeGreaterThan(10);

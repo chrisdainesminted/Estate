@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applicationReplies, increaseNotice, leaseSheet, nextIncrease, receiptMessage, rentReference, rentReminder, rentStatus, yearCsv, yearSummary } from './landlord.js';
+import { applicationReplies, increaseNotice, leaseSheet, nextIncrease, ownerSplit, ownersOf, receiptMessage, rentReference, rentReminder, rentStatus, sharesTotal, splitCents, yearCsv, yearSummary } from './landlord.js';
 import { TENANCY, rulesFor } from './tenancyRules.js';
 import { PROVINCES } from './canada.js';
 
@@ -102,5 +102,72 @@ describe('e-Transfer, increases and leases', () => {
     expect(l.form).toMatch(/Standard Lease/);
     expect(l.text).toMatch(/Rent: \$2,000 a month, due on day 1/);
     expect(l.text).toMatch(/Interac e-Transfer to rent@x.ca/);
+  });
+});
+
+describe('co-owners', () => {
+  const pays = [
+    { unitId: 'u1', month: '2026-01', amount: 1500 },
+    { unitId: 'u1', month: '2026-02', amount: 1500 },
+  ];
+  const exp = [
+    { date: '2026-03-01', category: 'propertyTax', amount: 3200 },
+    { date: '2026-04-10', category: 'repairs', amount: 100.01 },
+    { date: '2026-05-01', category: 'interest', amount: 900, paidBy: 'Ben' }, // Ben's own loan for his share
+  ];
+  const owners = ownersOf({ owners: [{ name: 'Ana', share: 50 }, { name: 'Ben', share: 50 }] });
+
+  it('needs two or more named owners with a share', () => {
+    expect(ownersOf({})).toEqual([]);
+    expect(ownersOf({ owners: [{ name: 'Ana', share: 100 }] })).toEqual([]);
+    expect(ownersOf({ owners: [{ name: 'Ana', share: 60 }, { name: '', share: 40 }] })).toEqual([]);
+    expect(owners.map((o) => o.name)).toEqual(['Ana', 'Ben']);
+    expect(sharesTotal([{ share: 33.33 }, { share: 33.33 }, { share: 33.34 }])).toBe(100);
+  });
+
+  it('splits to the cent, with the parts adding back to the whole', () => {
+    expect(splitCents(100.01, [50, 50])).toEqual([50.01, 50]);
+    expect(splitCents(100, [33.33, 33.33, 33.34]).reduce((a, b) => a + b, 0)).toBeCloseTo(100, 10);
+    expect(splitCents(-200, [60, 40])).toEqual([-120, -80]);
+    expect(splitCents(10, [0, 0])).toEqual([0, 0]);
+  });
+
+  it('keeps an expense one owner paid alone out of the shared lines', () => {
+    const s = yearSummary(pays, exp, 2026, owners);
+    expect(s.total).toBeCloseTo(3300.01);
+    expect(s.personal.Ben.total).toBe(900);
+    expect(s.personal.Ana.total).toBe(0);
+    // Without co-owners set, it's an ordinary shared expense.
+    expect(yearSummary(pays, exp, 2026).total).toBeCloseTo(4200.01);
+  });
+
+  it('gives each owner their share of 9369, less what only they paid', () => {
+    const s = yearSummary(pays, exp, 2026, owners);
+    const [ana, ben] = ownerSplit(s, owners);
+    expect(ana.gross).toBe(1500);
+    expect(ana.total + ben.total).toBeCloseTo(s.total, 10);
+    expect(ana.net + ben.net).toBeCloseTo(s.net, 10);
+    expect(ana.after).toBe(ana.net);
+    expect(ben.after).toBeCloseTo(ben.net - 900, 10);
+    expect(ben.personalLines.map((l) => l.line)).toEqual(['8710']);
+  });
+
+  it('adds each owner to the spreadsheet and marks who paid', () => {
+    const s = yearSummary(pays, exp, 2026, owners);
+    const csv = yearCsv(s, pays, exp, [], owners);
+    expect(csv).toContain('Each co-owner');
+    expect(csv).toContain('Ben,50%');
+    expect(csv).toMatch(/2026-05-01,8710,900\.00,,Ben/);
+  });
+});
+
+describe('a co-owner’s share of line 9369', () => {
+  it('is the whole property’s net times their share, to the cent', () => {
+    const owners = [{ name: 'A', share: 50 }, { name: 'B', share: 50 }];
+    const s = yearSummary([{ month: '2026-01', amount: 27500 }], [{ date: '2026-02-10', category: 'insurance', amount: 1820.55 }, { date: '2026-06-12', category: 'repairs', amount: 640.25 }, { date: '2026-03-01', category: 'propertyTax', amount: 4950 }], 2026, owners);
+    const [a, b] = ownerSplit(s, owners);
+    expect(a.net).toBe(10044.6);
+    expect(b.net).toBe(10044.6);
+    expect(a.gross - a.total).toBeCloseTo(a.net, 10);
   });
 });

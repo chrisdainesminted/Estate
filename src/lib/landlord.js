@@ -43,13 +43,80 @@ export function rentReference(unit, month) {
   return `${tag || 'RENT'}-${month}`;
 }
 
-/** The year's rental income and expenses, by T776 line, from payments and logged expenses. */
-export function yearSummary(payments, expenses, year) {
+const cents = (v) => Math.round(num(v) * 100) / 100;
+
+/**
+ * The co-owners and their shares, from the landlord's settings. Empty for a
+ * sole owner: it takes two or more named owners with a share each.
+ */
+export function ownersOf(settings) {
+  const list = (Array.isArray(settings?.owners) ? settings.owners : []).map((o) => ({ name: String(o?.name ?? '').trim(), share: num(o?.share) })).filter((o) => o.name && o.share > 0);
+  return list.length > 1 ? list : [];
+}
+
+/** The owners' shares added up, to two decimals: it must be 100 for the split to be complete. */
+export const sharesTotal = (owners) => Math.round(owners.reduce((sum, o) => sum + num(o.share), 0) * 100) / 100;
+
+/**
+ * An amount split by percentages, to the cent. When the percentages add to
+ * 100 the parts add back to the whole exactly: the leftover cents go to the
+ * largest fractions. A loss splits the same way, negative.
+ */
+export function splitCents(amount, pcts) {
+  const sign = num(amount) < 0 ? -1 : 1;
+  const whole = Math.round(Math.abs(num(amount)) * 100);
+  const raw = pcts.map((p) => (whole * num(p)) / 100);
+  if (Math.abs(pcts.reduce((sum, p) => sum + num(p), 0) - 100) > 1e-9) return raw.map((r) => (sign * Math.round(r)) / 100);
+  const parts = raw.map(Math.floor);
+  let left = whole - parts.reduce((sum, p) => sum + p, 0);
+  const order = raw.map((r, i) => [r - Math.floor(r), i]).sort((a, b) => b[0] - a[0] || a[1] - b[1]);
+  for (let k = 0; left > 0; k += 1, left -= 1) parts[order[k % order.length][1]] += 1;
+  return parts.map((p) => (sign * p) / 100 || 0);
+}
+
+/**
+ * The year's rental income and expenses, by T776 line, from payments and
+ * logged expenses. With co-owners, an expense one of them paid alone
+ * (`paidBy`) is left out of the shared lines and listed under `personal`:
+ * only that owner claims it, below their share of line 9369.
+ */
+export function yearSummary(payments, expenses, year, owners = []) {
   const y = String(year);
-  const gross = payments.filter((p) => String(p.month || '').startsWith(y)).reduce((s, p) => s + num(p.amount), 0);
-  const lines = T776.map((c) => ({ ...c, amount: expenses.filter((e) => e.category === c.key && String(e.date || '').startsWith(y)).reduce((s, e) => s + num(e.amount), 0) }));
-  const total = lines.reduce((s, l) => s + l.amount, 0);
-  return { year: y, gross, lines, total, net: gross - total };
+  const names = new Set(owners.map((o) => o.name));
+  const inYear = expenses.filter((e) => String(e.date || '').startsWith(y));
+  const own = (e) => names.has(e.paidBy);
+  const gross = payments.filter((p) => String(p.month || '').startsWith(y)).reduce((sum, p) => sum + num(p.amount), 0);
+  const lines = T776.map((c) => ({ ...c, amount: inYear.filter((e) => e.category === c.key && !own(e)).reduce((sum, e) => sum + num(e.amount), 0) }));
+  const total = lines.reduce((sum, l) => sum + l.amount, 0);
+  const personal = Object.fromEntries(
+    owners.map((o) => {
+      const mine = inYear.filter((e) => e.paidBy === o.name);
+      const byLine = T776.map((c) => ({ ...c, amount: mine.filter((e) => e.category === c.key).reduce((sum, e) => sum + num(e.amount), 0) })).filter((l) => l.amount);
+      return [o.name, { total: mine.reduce((sum, e) => sum + num(e.amount), 0), lines: byLine }];
+    }),
+  );
+  return { year: y, gross, lines, total, net: gross - total, personal };
+}
+
+/**
+ * Each co-owner's part of the year, for their own T776: their share of the
+ * rent and of every shared expense line, their share of line 9369, then
+ * less the expenses only they paid. Parts add back to the whole when the
+ * shares total 100%.
+ */
+export function ownerSplit(summary, owners) {
+  const pcts = owners.map((o) => o.share);
+  const gross = splitCents(summary.gross, pcts);
+  // The share of line 9369 is the whole property's net times the share, as the form works it out;
+  // each line's share is for reference, and can differ from it by a cent of rounding.
+  const net = splitCents(summary.net, pcts);
+  const parts = summary.lines.map((l) => splitCents(l.amount, pcts));
+  return owners.map((o, i) => {
+    const lines = summary.lines.map((l, j) => ({ key: l.key, line: l.line, label: l.label, amount: parts[j][i] }));
+    const total = cents(gross[i] - net[i]);
+    const personal = summary.personal?.[o.name] ?? { total: 0, lines: [] };
+    return { name: o.name, share: o.share, gross: gross[i], lines, total, net: net[i], personal: cents(personal.total), personalLines: personal.lines, after: cents(net[i] - personal.total) };
+  });
 }
 
 const csvCell = (v) => {
@@ -59,7 +126,7 @@ const csvCell = (v) => {
 export const toCsv = (rows) => `${rows.map((r) => r.map(csvCell).join(',')).join('\n')}\n`;
 
 /** The year's records as a CSV an accountant can open. */
-export function yearCsv(summary, payments, expenses, units) {
+export function yearCsv(summary, payments, expenses, units, owners = []) {
   const unitName = (id) => units.find((u) => u.id === id)?.label || '';
   const y = summary.year;
   return toCsv([
@@ -68,14 +135,15 @@ export function yearCsv(summary, payments, expenses, units) {
     ['8141', 'Gross rents', summary.gross.toFixed(2), ''],
     ...summary.lines.filter((l) => l.amount).map((l) => [l.line, l.label, l.amount.toFixed(2), '']),
     ['9369', 'Net income (loss) before capital cost allowance', summary.net.toFixed(2), ''],
+    ...(owners.length ? [[], ['Each co-owner', 'Share', 'Their share of 9369', 'Less expenses they paid alone', 'Net to report'], ...ownerSplit(summary, owners).map((o) => [o.name, `${o.share}%`, o.net.toFixed(2), o.personal.toFixed(2), o.after.toFixed(2)])] : []),
     [],
     ['Rent received', '', '', ''],
     ['Month', 'Unit', 'Amount', 'Paid on'],
     ...payments.filter((p) => String(p.month).startsWith(y)).map((p) => [p.month, unitName(p.unitId), num(p.amount).toFixed(2), p.paidOn || '']),
     [],
     ['Expenses', '', '', ''],
-    ['Date', 'T776 line', 'Amount', 'Vendor / note'],
-    ...expenses.filter((e) => String(e.date).startsWith(y)).map((e) => [e.date, T776.find((c) => c.key === e.category)?.line || '', num(e.amount).toFixed(2), [e.vendor, e.note, unitName(e.unitId)].filter(Boolean).join(' · ')]),
+    ['Date', 'T776 line', 'Amount', 'Vendor / note', ...(owners.length ? ['Paid by'] : [])],
+    ...expenses.filter((e) => String(e.date).startsWith(y)).map((e) => [e.date, T776.find((c) => c.key === e.category)?.line || '', num(e.amount).toFixed(2), [e.vendor, e.note, unitName(e.unitId)].filter(Boolean).join(' · '), ...(owners.length ? [owners.some((o) => o.name === e.paidBy) ? e.paidBy : 'Shared'] : [])]),
   ]);
 }
 

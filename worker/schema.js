@@ -39,6 +39,7 @@ const oneOf = (...values) => ({ type: 'enum', values });
 const date = { type: 'date' }; // YYYY-MM-DD
 const month = { type: 'month' }; // YYYY-MM
 const when = { type: 'datetime' }; // ISO 8601 with time
+const list = (max, item) => ({ type: 'list', max, item }); // up to max records, each kept to its own fields
 
 export const SCHEMAS = {
   settings: {
@@ -51,6 +52,9 @@ export const SCHEMAS = {
     etransferEmail: text(120),
     etransferNote: text(300),
     autodeposit: bool,
+    // Who owns the rentals and what share each holds, so each co-owner's
+    // T776 gets their part of the income and expenses. Empty: one owner.
+    owners: list(10, { name: text(80), share: num }),
   },
   listings: {
     kind: oneOf('rent', 'sale'),
@@ -163,6 +167,7 @@ export const SCHEMAS = {
     unitId: text(40),
     vendor: text(120),
     note: text(300),
+    paidBy: text(80), // a co-owner's name when only they paid it and only they claim it; empty when it's shared
   },
 };
 
@@ -187,6 +192,13 @@ function cleanValue(rule, v) {
       return typeof v === 'string' && MONTH.test(v) ? v : undefined;
     case 'datetime':
       return typeof v === 'string' && v.length <= 40 && !Number.isNaN(Date.parse(v)) ? new Date(v).toISOString() : undefined;
+    case 'list':
+      return Array.isArray(v)
+        ? v
+            .filter((x) => x && typeof x === 'object')
+            .slice(0, rule.max)
+            .map((x) => Object.fromEntries(Object.entries(rule.item).flatMap(([k, r]) => (k in x && cleanValue(r, x[k]) !== undefined ? [[k, cleanValue(r, x[k])]] : []))))
+        : undefined;
     default:
       return undefined;
   }
