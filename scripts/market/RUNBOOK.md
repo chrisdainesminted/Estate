@@ -1,6 +1,6 @@
 # Daily listings run, across Canada
 
-The scheduled "Squarely listings" task follows this every morning. It finds properties for sale in Thunder Bay (every day) and in a few more Canadian cities taken in turn (so each gets searched about once a week), saves each city's list to the Squarely page's database, and reports any that beat the owner's targets. The page's Listings tab does the full analysis live from what this run saves, using the owner's current assumptions moved to each city.
+The scheduled "Squarely listings" task follows this every morning. It finds properties for sale in Thunder Bay (every day) and in two more Canadian cities taken in turn (so each gets searched about every two weeks), saves each city's list to the Squarely page's database, and reports any that beat the owner's targets. The page's Listings tab does the full analysis live from what this run saves, using the owner's current assumptions moved to each city.
 
 - Squarely page: https://claude.ai/artifact/5KH4ZZHoZ8CvCKF5CXutGJ
 - Saved feeds: collection `data/users/me`, one document per city, named by the `plan` command (Thunder Bay's is `thunderbay`, Calgary's `calgary`, St. John's `stjohns`, and so on)
@@ -31,39 +31,62 @@ The scheduled "Squarely listings" task follows this every morning. It finds prop
 2. **Plan today.**
    - ArtifactData `get` with the page URL, collection `data/users/me`, doc_id `markets`, out_dir `$RUN/index`. Note its `version`. If there's no such document, this is the first run across Canada; use `-` for `$INDEX`. Otherwise `$INDEX` is the saved file (`find "$RUN/index" -name '*.json'`).
    - ArtifactData `get` with doc_id `bedrock`, out_dir `$RUN/settings`. If it's missing, defaults apply. Call the saved file `$SETTINGS`.
-   - `node "$TOOL" plan "$INDEX" --count 4` prints today's cities, one per line: the city key, its document name, the name to search with, and its typical house price. Thunder Bay is always first.
+   - `node "$TOOL" plan "$INDEX" --count 3` prints today's cities, one per line: the city key, its document name, the name to search with, and its typical house price. Thunder Bay is always first.
 
 3. **For each of today's cities**, in order (`$CITY` is its key, `$DOC` its document name, `$NAME` the name to search with, such as `Calgary, AB`):
 
    a. **Read what's saved.** ArtifactData `get` with collection `data/users/me`, doc_id `$DOC`, out_dir `$RUN/$CITY/prev`. Note its `version`. If there's no such document, this city's first run: use `-` for `$PREV`.
 
-   b. **Search** with WebSearch in `standard` mode; if a query returns fewer than three listings, run it once more in `extended` mode.
-      - Thunder Bay, all ten:
+   b. **Search** with WebSearch in `standard` mode. Run **every** query on the list, even when earlier ones turned up plenty: each one reaches listings the others miss. If a query returns fewer than three listings, run it once more in `extended` mode. A single result page often names several properties; record each one that has its own listing link.
+      - Thunder Bay, all twenty-four:
         1. Thunder Bay ON duplex for sale
         2. Thunder Bay ON triplex for sale
         3. Thunder Bay ON fourplex OR 4-plex for sale
         4. Thunder Bay ON apartment building OR multi-residential for sale
         5. Thunder Bay ON income property for sale
-        6. Thunder Bay ON house for sale under $300,000
-        7. Thunder Bay ON house for sale $300,000 to $500,000
-        8. Thunder Bay ON house with basement apartment OR secondary suite for sale
-        9. Thunder Bay ON new listing this week house for sale
-        10. Thunder Bay ON price reduced house for sale
-      - Every other city, these five (`$NAME` as printed; `$PRICE` is its typical house price, rounded):
-        1. `$NAME` duplex OR triplex OR fourplex for sale
-        2. `$NAME` income property OR multi-residential for sale
-        3. `$NAME` house for sale under `$PRICE`
+        6. Thunder Bay ON house with basement apartment OR secondary suite OR in-law suite for sale
+        7. Thunder Bay ON house for sale under $250,000
+        8. Thunder Bay ON house for sale $250,000 to $350,000
+        9. Thunder Bay ON house for sale $350,000 to $450,000
+        10. Thunder Bay ON house for sale $450,000 to $600,000
+        11. Thunder Bay ON house for sale over $600,000
+        12. Thunder Bay ON bungalow for sale
+        13. Thunder Bay ON condo OR townhouse for sale
+        14. Port Arthur Thunder Bay house for sale
+        15. Fort William OR Westfort Thunder Bay house for sale
+        16. Current River OR Northwood Thunder Bay house for sale
+        17. Intercity OR County Park OR Vickers Heights Thunder Bay house for sale
+        18. Shuniah OR Neebing OR Oliver Paipoonge house for sale
+        19. Thunder Bay ON new listing this week house for sale
+        20. Thunder Bay ON price reduced house for sale
+        21. site:realtor.ca Thunder Bay house for sale
+        22. site:rew.ca Thunder Bay house for sale
+        23. site:zolo.ca OR site:royallepage.ca Thunder Bay house for sale
+        24. site:onepercentrealty.com OR site:remax.ca Thunder Bay house for sale
+      - Every other city, all fourteen (`$NAME` as printed; `$PRICE` is its typical house price, rounded; `$LOW` is 60% of it and `$HIGH` 140%):
+        1. `$NAME` duplex for sale
+        2. `$NAME` triplex OR fourplex for sale
+        3. `$NAME` income property OR multi-residential for sale
         4. `$NAME` house with basement suite OR secondary suite OR in-law suite for sale
-        5. `$NAME` new listing house for sale
+        5. `$NAME` house for sale under `$LOW`
+        6. `$NAME` house for sale `$LOW` to `$PRICE`
+        7. `$NAME` house for sale `$PRICE` to `$HIGH`
+        8. `$NAME` bungalow for sale
+        9. `$NAME` townhouse OR condo for sale
+        10. `$NAME` new listing house for sale
+        11. `$NAME` price reduced house for sale
+        12. site:realtor.ca `$NAME` house for sale
+        13. site:rew.ca `$NAME` house for sale
+        14. site:zolo.ca OR site:royallepage.ca `$NAME` house for sale
 
-      Then confirm saved listings: search the address (with the city) of every saved listing whose `lastSeen` is three or more days old, oldest first, up to 12 for Thunder Bay and 6 for other cities. If a result still shows its listing page for sale, include it in `found.json` like any other. If it shows the property sold, include it with status `sold`; if there's no for-sale page for it any more, include it with status `gone`.
+      Then confirm saved listings: search the address (with the city) of every saved listing whose `lastSeen` is three or more days old, oldest first, up to 15 for Thunder Bay and 8 for other cities. If a result still shows its listing page for sale, include it in `found.json` like any other. If it shows the property sold, include it with status `sold`; if there's no for-sale page for it any more, include it with status `gone`.
 
    c. **Write `$RUN/$CITY/found.json`**: a JSON array with one object for each listing found today in that city, including ones already saved, so their dates and prices update. Fields below.
 
-   d. **Merge.** Thunder Bay is searched daily, so a listing not confirmed for 7 days drops off; other cities come round about weekly, so give them 10:
+   d. **Merge.** Thunder Bay is searched daily, so a listing not confirmed for 7 days drops off; other cities come round about every two weeks, so give them 16:
 
       ```bash
-      node "$TOOL" merge "$PREV" "$RUN/$CITY/found.json" --city "$CITY" --today "$TODAY" --keep-days <7 for thunder-bay, 10 otherwise> --note "<one line, e.g. 5 searches, 1 thin>" > "$RUN/$CITY/next.json"
+      node "$TOOL" merge "$PREV" "$RUN/$CITY/found.json" --city "$CITY" --today "$TODAY" --keep-days <7 for thunder-bay, 16 otherwise> --note "<one line, e.g. 24 searches, 2 thin>" > "$RUN/$CITY/next.json"
       ```
 
    e. **Save.** ArtifactData `set` with collection `data/users/me`, doc_id `$DOC`, file_path `$RUN/$CITY/next.json`, and `if_version` set to the version from step a (leave it out only on that city's first run). If the save fails because the version changed, re-read it (step a), then redo steps d and e once.

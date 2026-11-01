@@ -174,7 +174,7 @@ export default function Methods() {
         <h2 className={h2}>Listings</h2>
         <div className={prose}>
           <p>
-            Every morning a run searches public listing sites (Thunder Bay daily, and {LISTING_CITIES.length - 1} more cities in turn, so each about weekly). Only listings with
+            Every morning a run searches public listing sites (Thunder Bay daily, and {LISTING_CITIES.length - 1} more cities in turn, so each about every two weeks). Only listings with
             their own page are kept; sold, conditional and expired ones are dropped, and a listing not seen again for a week or so leaves the list.
           </p>
           <p>
