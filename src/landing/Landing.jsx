@@ -167,11 +167,12 @@ const GRADIENT =
   'bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 bg-clip-text text-transparent dark:from-emerald-300 dark:via-emerald-400 dark:to-teal-300';
 
 /**
- * How long each frame of a spin lasts: fast at first, then slowing to a
- * stop. One frame per phrase plus one, so each spin passes every phrase
- * and lands on the next in order.
+ * How long each frame of a spin lasts: about one screen refresh at first,
+ * slowing at the end. Two passes through the phrases plus one frame, so
+ * each spin lands on the next phrase in order.
  */
-const SPIN = Array.from({ length: ROTATE.length + 1 }, (_, k) => (k === ROTATE.length ? 200 : Math.round(28 + 60 * (k / ROTATE.length) ** 2)));
+const SPIN_FRAMES = ROTATE.length * 2;
+const SPIN = Array.from({ length: SPIN_FRAMES + 1 }, (_, k) => (k === SPIN_FRAMES ? 130 : Math.round(16 + 26 * (k / SPIN_FRAMES) ** 3)));
 const HOLD = 2600;
 
 /**
@@ -224,7 +225,7 @@ function Rotator() {
         key={frame.n}
         aria-hidden
         className={`${GRADIENT} col-start-1 row-start-1 pb-[0.08em] ${frame.n ? (landing ? 'reel-land' : 'reel-spin') : ''}`}
-        style={frame.n ? { animationDuration: `${landing ? 340 : frame.ms}ms` } : undefined}
+        style={frame.n ? { animationDuration: `${landing ? 260 : frame.ms}ms` } : undefined}
       >
         {ROTATE[at]}
       </span>
