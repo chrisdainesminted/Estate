@@ -171,7 +171,7 @@ const GRADIENT =
  * stop. One frame per phrase plus one, so each spin passes every phrase
  * and lands on the next in order.
  */
-const SPIN = Array.from({ length: ROTATE.length + 1 }, (_, k) => (k === ROTATE.length ? 320 : Math.round(45 + 110 * (k / ROTATE.length) ** 2)));
+const SPIN = Array.from({ length: ROTATE.length + 1 }, (_, k) => (k === ROTATE.length ? 200 : Math.round(28 + 60 * (k / ROTATE.length) ** 2)));
 const HOLD = 2600;
 
 /**
@@ -224,7 +224,7 @@ function Rotator() {
         key={frame.n}
         aria-hidden
         className={`${GRADIENT} col-start-1 row-start-1 pb-[0.08em] ${frame.n ? (landing ? 'reel-land' : 'reel-spin') : ''}`}
-        style={frame.n ? { animationDuration: `${landing ? 520 : frame.ms}ms` } : undefined}
+        style={frame.n ? { animationDuration: `${landing ? 340 : frame.ms}ms` } : undefined}
       >
         {ROTATE[at]}
       </span>
