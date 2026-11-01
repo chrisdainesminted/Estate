@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from './ui.jsx';
 import { cityByKey, provinceName } from '../lib/canada.js';
 import { money } from '../lib/format.js';
+import { sitePage } from '../lib/site.js';
 
 const input = 'field w-full px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100';
 const label = 'mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400';
@@ -39,7 +40,7 @@ export default function BrokerForm({ p, maxPrice, guide = false }) {
         A mortgage broker compares many lenders at once, gets you pre-approved, and is usually paid by the lender, not you. Ask, and we’ll introduce you to a licensed broker in{' '}
         {provinceName(place.province)}.{' '}
         {!guide && (
-          <a href="/lenders/" className="font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-400">
+          <a href={sitePage('/lenders/')} className="font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-400">
             New to this? Read how to find a lender.
           </a>
         )}
@@ -91,7 +92,7 @@ export default function BrokerForm({ p, maxPrice, guide = false }) {
         <input type="checkbox" required checked={f.consent} onChange={set('consent')} className="mt-1 accent-emerald-600" />
         <span>
           Pass my details to one licensed mortgage broker so they can contact me. Squarely may be paid a referral fee by the broker; it never changes your rate or costs you
-          anything. <a href="/privacy/" className="underline underline-offset-2">Privacy</a>
+          anything. <a href={sitePage('/privacy/')} className="underline underline-offset-2">Privacy</a>
         </span>
       </label>
       {state.error && (

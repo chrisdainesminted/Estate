@@ -5,6 +5,7 @@ import { homeFor } from '../lib/firstHome.js';
 import { PROVINCES, cityByKey } from '../lib/canada.js';
 import { listingSentence } from '../lib/explain.js';
 import { money, percent } from '../lib/format.js';
+import { sitePage } from '../lib/site.js';
 import { Button, Card, CardHeader, DscrChip, NumberField, Segmented, SelectField, SkeletonCard, ViewHeader, signedClass } from '../components/ui.jsx';
 import { InfoTip } from '../components/motion.jsx';
 
@@ -788,7 +789,7 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
             system directly. Rents marked estimated come from your rent table; property tax is always the real bill. Confirm everything with the listing agent before you make an offer.
           </p>
           <p className="px-1 text-sm">
-            <a href="/lenders/" className="inline-flex items-center gap-1 font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+            <a href={sitePage('/lenders/')} className="inline-flex items-center gap-1 font-medium text-emerald-700 hover:underline dark:text-emerald-400">
               Ready to make an offer? Find a lender <ArrowRight className="size-4" aria-hidden />
             </a>
           </p>

@@ -10,6 +10,7 @@ import { Button, Card, CardHeader, LedgerHeading, LedgerLine, NumberField, Segme
 import { Section, SectionGroup } from '../components/Section.jsx';
 import CitySelect from '../components/CitySelect.jsx';
 import { BrokerForm, ReadyChecklist, RentVsBuy } from './HomeExtras.jsx';
+import { sitePage } from '../lib/site.js';
 
 const checkedOn = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' });
 const monthFrom = (months) => new Date(new Date().getFullYear(), new Date().getMonth() + months, 1).toLocaleDateString('en-CA', { month: 'long', year: 'numeric' });
@@ -487,7 +488,7 @@ export default function HomeView({ profile: p, suite, ready = {}, rvb = {}, mark
 
       <p className="px-1 text-xs text-zinc-500 dark:text-zinc-400">
         Lending rules checked {checkedOn(RULES_CHECKED)}. A lender, a lawyer and the City decide the real answers.{' '}
-        <a href="/methods/" className="font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+        <a href={sitePage('/methods/')} className="font-medium text-emerald-700 hover:underline dark:text-emerald-400">
           How we calculate
         </a>
       </p>

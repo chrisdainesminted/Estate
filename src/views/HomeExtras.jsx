@@ -6,6 +6,7 @@ import { buyCheck } from '../lib/firstHome.js';
 import { cityByKey, provinceName } from '../lib/canada.js';
 import { RENT_VS_BUY_DEFAULTS, rentVsBuy } from '../lib/rentVsBuy.js';
 import { money } from '../lib/format.js';
+import { sitePage } from '../lib/site.js';
 
 const link = 'inline-flex items-center gap-1 font-medium text-emerald-700 hover:underline dark:text-emerald-400';
 const Ext = ({ href, children }) => (
@@ -78,7 +79,7 @@ export function ReadyChecklist({ p, ready, onReady, ratePct, taxPct, rentEach, b
             talk to one
           </a>
           , or read{' '}
-          <a href="/lenders/" className={link}>
+          <a href={sitePage('/lenders/')} className={link}>
             how to find a lender
           </a>
           .
