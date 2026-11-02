@@ -120,3 +120,9 @@ suite('the owner email for a new request', () => {
     expect(e.text).toContain('This one is sold.');
   });
 });
+
+suite('owner email subject', () => {
+  it('has no line breaks', () => {
+    expect(inboxEmail('contact', { name: 'A\r\nBcc: x@y.z', email: 'a@b.ca', message: 'hello there' }).subject).not.toMatch(/[\r\n]/);
+  });
+});

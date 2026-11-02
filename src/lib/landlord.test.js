@@ -212,3 +212,11 @@ describe('capital cost allowance', () => {
     expect(c.owners[1]).toMatchObject({ max: 5760, claim: 2000, net: 0, limited: true }); // 10,000 share less 8,000 paid alone
   });
 });
+
+describe('spreadsheet safety', () => {
+  it('never lets a cell start a formula, but keeps negative numbers', () => {
+    const csv = yearCsv(yearSummary([], [{ date: '2026-01-05', category: 'repairs', amount: 10, vendor: '=HYPERLINK("http://x")' }], 2026), [], [{ date: '2026-01-05', category: 'repairs', amount: 10, vendor: '=HYPERLINK("http://x")' }], []);
+    expect(csv).toContain(`"'=HYPERLINK(""http://x"")"`);
+    expect(csv).toContain('-10.00');
+  });
+});

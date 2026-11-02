@@ -120,7 +120,9 @@ export function ownerSplit(summary, owners) {
 }
 
 const csvCell = (v) => {
-  const s = String(v ?? '');
+  // Text starting with = + @ (or - before a non-number) would run as a formula in a spreadsheet: make it plain text.
+  let s = String(v ?? '');
+  if (/^[=+@\t\r]|^-(?![\d.])/.test(s)) s = `'${s}`;
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 export const toCsv = (rows) => `${rows.map((r) => r.map(csvCell).join(',')).join('\n')}\n`;

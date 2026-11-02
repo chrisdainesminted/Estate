@@ -639,11 +639,12 @@ async function api(request, env, url) {
   if (rest[0] === 'photos' && rest.length === 2 && method === 'GET') {
     const res = await ws.call({ op: 'photo', ws: wsId, photoId: rest[1] });
     if (res?.error) return json({ error: res.error }, res.status);
-    return new Response(res.data, { headers: { 'content-type': res.mime, 'cache-control': 'public, max-age=31536000, immutable' } });
+    return new Response(res.data, { headers: { 'content-type': res.mime, 'cache-control': 'public, max-age=31536000, immutable', 'x-content-type-options': 'nosniff' } });
   }
   if (rest[0] === 'listings' && rest[2] === 'photos' && rest.length === 3 && method === 'POST') {
     const mime = (request.headers.get('content-type') || '').split(';')[0].trim();
     if (!PHOTO_TYPES.includes(mime)) return json({ error: 'Photos must be JPEG, PNG or WebP.' }, 415);
+    if (Number(request.headers.get('content-length') || 0) > MAX_PHOTO) return json({ error: 'That photo is too large.' }, 413);
     const bytes = await request.arrayBuffer();
     if (bytes.byteLength > MAX_PHOTO) return json({ error: 'That photo is too large.' }, 413);
     return answer(await ws.call({ op: 'addPhoto', ws: wsId, key, listingId: rest[1], mime, bytes }));
@@ -653,11 +654,12 @@ async function api(request, env, url) {
   if (rest[0] === 'receipts' && rest.length === 2 && method === 'GET') {
     const res = await ws.call({ op: 'receipt', ws: wsId, key, receiptId: rest[1] });
     if (res?.error) return json({ error: res.error }, res.status);
-    return new Response(res.data, { headers: { 'content-type': res.mime, 'cache-control': 'private, max-age=86400' } });
+    return new Response(res.data, { headers: { 'content-type': res.mime, 'cache-control': 'private, max-age=86400', 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'none'" } });
   }
   if (rest[0] === 'expenses' && rest[2] === 'receipt' && rest.length === 3 && method === 'POST') {
     const mime = (request.headers.get('content-type') || '').split(';')[0].trim();
     if (!PHOTO_TYPES.includes(mime)) return json({ error: 'Receipts must be a JPEG, PNG or WebP photo.' }, 415);
+    if (Number(request.headers.get('content-length') || 0) > MAX_PHOTO) return json({ error: 'That photo is too large.' }, 413);
     const bytes = await request.arrayBuffer();
     if (bytes.byteLength > MAX_PHOTO) return json({ error: 'That photo is too large.' }, 413);
     return answer(await ws.call({ op: 'addReceipt', ws: wsId, key, expenseId: rest[1], mime, bytes }));

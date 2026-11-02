@@ -55,7 +55,7 @@ export function inboxEmail(kind, d, origin = '') {
       : [`${d.name} sent a message${d.topic ? ` about ${d.topic}` : ''}.`, '', `Email: ${d.email}`, '', d.message];
   const subject = kind === 'broker' ? `Broker request from ${d.name}${d.city ? ` (${d.city})` : ''}` : `Message from ${d.name}`;
   const text = [...lines.filter((l) => l !== false && l !== undefined && l !== null), '', origin && `All requests: ${origin}/homes/#admin (sign in with your admin key)`].filter((l, i, a) => l !== '' || a[i - 1] !== '').join('\n').trim();
-  return { subject: `Squarely: ${subject}`, text, replyTo: d.email };
+  return { subject: `Squarely: ${subject}`.replace(/[\r\n\t]+/g, ' ').slice(0, 200), text, replyTo: d.email };
 }
 
 export const REPORT_REASONS = ['scam', 'not-available', 'wrong-info', 'discriminatory', 'other'];
