@@ -9,6 +9,7 @@ import { Empty, Input, Select } from './shared.jsx';
 import Owners from './Owners.jsx';
 import Assets from './Assets.jsx';
 import ShareBooks from './ShareBooks.jsx';
+import BankImport from './BankImport.jsx';
 
 /** Opens a receipt photo in a new tab (it's private, so it's fetched with the link's key first). */
 async function openReceipt(api, receiptId) {
@@ -72,6 +73,7 @@ export default function Expenses({ data, api, readOnly = false }) {
   const [receiptFile, setReceiptFile] = useState(null);
   const receiptInput = useRef(null);
   const [packFor, setPackFor] = useState('');
+  const [remind, setRemind] = useState(Boolean(data.settings?.taxReminder));
   // Co-owners each file their own T776 with their share; an expense one of them paid alone is theirs only.
   const owners = ownersOf(data.settings);
   const isOwner = (name) => owners.some((o) => o.name === name);
@@ -181,6 +183,7 @@ export default function Expenses({ data, api, readOnly = false }) {
             </p>
           </Card>
         )}
+        {!readOnly && <BankImport expenses={data.expenses} api={api} />}
         <Card>
           <CardHeader title={`Expenses in ${year}`} subtitle={list.length ? `${withReceipts} of ${list.length} with a receipt photo` : undefined} />
           {readOnly && error && (
@@ -319,6 +322,24 @@ export default function Expenses({ data, api, readOnly = false }) {
               <Download className="size-4" aria-hidden /> Download {year} as a spreadsheet (CSV)
             </Button>
             {withReceipts > 0 && <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">The tax pack ends with the {withReceipts} receipt photo{withReceipts === 1 ? '' : 's'} for {year}.</p>}
+            {!readOnly && (
+              <label className="mt-4 flex items-start gap-2 border-t border-hairline pt-4 text-sm text-zinc-700 dark:text-zinc-300">
+                <input
+                  type="checkbox"
+                  checked={remind}
+                  onChange={(e) => {
+                    const on = e.target.checked;
+                    setRemind(on);
+                    api.save('settings', 'main', { taxReminder: on }).catch((err) => (setRemind(!on), setError(err.message)));
+                  }}
+                  className="mt-1 accent-emerald-600"
+                />
+                <span>
+                  Email me each February when last year’s tax pack is ready, with any expenses still missing a receipt.
+                  {!data.settings?.email && <span className="block text-xs text-zinc-500 dark:text-zinc-400">Add your email under Settings first.</span>}
+                </span>
+              </label>
+            )}
           </div>
         </Card>
       </div>

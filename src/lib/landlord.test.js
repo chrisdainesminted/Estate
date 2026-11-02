@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assetCca, ccaYear, firstYearFactor, applicationReplies, increaseNotice, leaseSheet, nextIncrease, ownerSplit, ownersOf, receiptMessage, rentReference, rentReminder, rentStatus, sharesTotal, splitCents, yearCsv, yearSummary } from './landlord.js';
+import { taxReminder, assetCca, ccaYear, firstYearFactor, applicationReplies, increaseNotice, leaseSheet, nextIncrease, ownerSplit, ownersOf, receiptMessage, rentReference, rentReminder, rentStatus, sharesTotal, splitCents, yearCsv, yearSummary } from './landlord.js';
 import { TENANCY, rulesFor } from './tenancyRules.js';
 import { PROVINCES } from './canada.js';
 
@@ -218,5 +218,27 @@ describe('spreadsheet safety', () => {
     const csv = yearCsv(yearSummary([], [{ date: '2026-01-05', category: 'repairs', amount: 10, vendor: '=HYPERLINK("http://x")' }], 2026), [], [{ date: '2026-01-05', category: 'repairs', amount: 10, vendor: '=HYPERLINK("http://x")' }], []);
     expect(csv).toContain(`"'=HYPERLINK(""http://x"")"`);
     expect(csv).toContain('-10.00');
+  });
+});
+
+describe('the February tax reminder', () => {
+  it('sums up the year and lists what needs attention', () => {
+    const r = taxReminder({
+      settings: {},
+      payments: [{ month: '2026-01', amount: 2000 }],
+      expenses: [
+        { date: '2026-03-01', amount: 500, category: 'repairs', vendor: 'Plumber' },
+        { date: '2026-04-01', amount: 100, category: 'repairs', receiptId: 'r' },
+      ],
+      assets: [{ ccaClass: '8', cost: 1000, available: '2026-01-10' }],
+      year: 2026,
+      origin: 'https://x.dev',
+    });
+    expect(r.subject).toBe('Squarely: your 2026 rental tax pack is ready');
+    expect(r.text).toContain('Net income before CCA (line 9369): $1,400.00');
+    expect(r.text).toContain('Capital cost allowance (line 9936): up to $200.00');
+    expect(r.text).toContain('1 expense from 2026 still has no receipt photo');
+    expect(r.text).toContain('Plumber');
+    expect(r.text).toContain('https://x.dev/app/?view=landlord');
   });
 });

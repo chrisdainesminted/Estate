@@ -388,3 +388,34 @@ export function ccaYear(assets, year, summary, owners = []) {
   });
   return { rows, max, claim: cents(split.reduce((sum, o) => sum + o.claim, 0)), limited: split.some((o) => o.limited), net: null, owners: split };
 }
+
+/**
+ * February's email to a landlord who asked for it: last year's rental
+ * income at a glance, the expenses still missing a receipt photo, and the
+ * CCA balances worth checking against last year's return.
+ */
+export function taxReminder({ settings, payments, expenses, assets = [], year, origin = '' }) {
+  const owners = ownersOf(settings);
+  const summary = yearSummary(payments, expenses, year, owners);
+  const cca = ccaYear(assets, year, summary, owners);
+  const missing = expenses.filter((e) => String(e.date || '').startsWith(String(year)) && !e.receiptId);
+  const cad = (n) => `$${(Math.round(n * 100) / 100).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const lines = [
+    `Your ${year} rental tax pack is ready in Squarely.`,
+    '',
+    `Gross rents: ${cad(summary.gross)}`,
+    `Expenses: ${cad(summary.total)}`,
+    `Net income before CCA (line 9369): ${cad(summary.net)}`,
+  ];
+  if (cca.max > 0) lines.push(owners.length ? `Capital cost allowance: up to ${cad(cca.max)} across the owners, each on their share` : `Capital cost allowance (line 9936): up to ${cad(cca.claim)}`);
+  if (owners.length) lines.push('', 'Each owner’s share is on their own page of the tax pack:', ...ownerSplit(summary, owners).map((o) => `- ${o.name} (${o.share}%): ${cad(o.after)} before CCA`));
+  lines.push('');
+  if (missing.length) {
+    lines.push(`${missing.length} expense${missing.length === 1 ? '' : 's'} from ${year} still ${missing.length === 1 ? 'has' : 'have'} no receipt photo:`, ...missing.slice(0, 10).map((e) => `- ${e.date} ${cad(Number(e.amount) || 0)} ${[e.vendor, e.note].filter(Boolean).join(' · ')}`.trim()));
+    if (missing.length > 10) lines.push(`- and ${missing.length - 10} more`);
+    lines.push('');
+  } else if (expenses.some((e) => String(e.date || '').startsWith(String(year)))) lines.push(`Every ${year} expense has a receipt photo.`, '');
+  if (cca.rows.length) lines.push(`Check the undepreciated capital cost of each building or improvement against your ${year - 1} return; if you claimed less than the most allowed, enter the balance so ${year}'s CCA is right.`, '');
+  lines.push(`Open Expenses & taxes to download the tax pack: ${origin}/app/?view=landlord`, '', 'To stop these emails, untick the February reminder in Expenses & taxes.');
+  return { subject: `Squarely: your ${year} rental tax pack is ready`, text: lines.join('\n') };
+}

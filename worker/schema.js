@@ -70,6 +70,7 @@ export const SCHEMAS = {
     // Who owns the rentals and what share each holds, so each co-owner's
     // T776 gets their part of the income and expenses. Empty: one owner.
     owners: list(10, { name: text(80), share: num }),
+    taxReminder: bool, // an email each February when last year's tax pack is ready
   },
   listings: {
     kind: oneOf('rent', 'sale'),

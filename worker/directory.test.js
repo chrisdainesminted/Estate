@@ -126,3 +126,16 @@ suite('owner email subject', () => {
     expect(inboxEmail('contact', { name: 'A\r\nBcc: x@y.z', email: 'a@b.ca', message: 'hello there' }).subject).not.toMatch(/[\r\n]/);
   });
 });
+
+describe('the February reminder list', () => {
+  it('sends once a tax year to workspaces that asked', () => {
+    const d = new DirectoryStore(memorySql());
+    d.setReminder('ws1', true);
+    d.setReminder('ws2', true);
+    d.setReminder('ws2', false);
+    expect(d.dueReminders(2026)).toEqual(['ws1']);
+    d.markReminded('ws1', 2026);
+    expect(d.dueReminders(2026)).toEqual([]);
+    expect(d.dueReminders(2027)).toEqual(['ws1']);
+  });
+});

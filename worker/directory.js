@@ -70,6 +70,7 @@ export class DirectoryStore {
     sql.exec('CREATE TABLE IF NOT EXISTS reports (key TEXT, ip TEXT, reason TEXT, note TEXT, at INTEGER, PRIMARY KEY (key, ip))');
     sql.exec('CREATE TABLE IF NOT EXISTS hits (bucket TEXT PRIMARY KEY, n INTEGER)');
     sql.exec('CREATE TABLE IF NOT EXISTS billed (ws TEXT PRIMARY KEY, charged TEXT)');
+    sql.exec('CREATE TABLE IF NOT EXISTS reminders (ws TEXT PRIMARY KEY, sent TEXT)');
     // Addresses already turned into map points (lat null: looked up, not found), so each is asked about once.
     sql.exec('CREATE TABLE IF NOT EXISTS geo (q TEXT PRIMARY KEY, lat REAL, lng REAL, at INTEGER)');
     // Messages to the site's owner: contact-form notes and requests to talk to a mortgage broker.
@@ -135,6 +136,20 @@ export class DirectoryStore {
   }
 
   // ---- landlords with a card on file, for the monthly charge ----
+
+  /** Workspaces that want February's tax-season email; `sent` is the last tax year it went out for. */
+  setReminder(ws, on) {
+    if (on) this.sql.exec("INSERT INTO reminders (ws, sent) VALUES (?, '') ON CONFLICT(ws) DO NOTHING", ws);
+    else this.sql.exec('DELETE FROM reminders WHERE ws = ?', ws);
+  }
+
+  dueReminders(year, limit = 50) {
+    return this.sql.exec('SELECT ws FROM reminders WHERE sent < ? ORDER BY sent LIMIT ?', String(year), limit).toArray().map((r) => r.ws);
+  }
+
+  markReminded(ws, year) {
+    this.sql.exec('UPDATE reminders SET sent = ? WHERE ws = ?', String(year), ws);
+  }
 
   addBilled(ws) {
     this.sql.exec('INSERT INTO billed (ws, charged) VALUES (?, ?) ON CONFLICT(ws) DO NOTHING', ws, '');

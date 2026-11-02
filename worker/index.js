@@ -19,6 +19,7 @@ import { DurableObject } from 'cloudflare:workers';
 import { COLLECTIONS } from './schema.js';
 import { PHOTO_TYPES, Store, StoreError, hashKey, randomToken } from './store.js';
 import { DirectoryStore, REPORT_REASONS, cleanInbox, inboxEmail } from './directory.js';
+import { taxReminder } from '../src/lib/landlord.js';
 import { AccountStore } from './account.js';
 import { LoginStore, normalEmail } from './auth.js';
 import { alertMatches, alertName, feedDoc, freshMatches } from '../src/lib/market.js';
@@ -89,6 +90,12 @@ export class Workspace extends DurableObject {
         const pi = r.data?.error?.payment_intent ?? r.data;
         const status = r.ok && pi?.status === 'succeeded' ? 'paid' : pi?.status === 'processing' ? 'processing' : 'failed';
         return s.recordInvoice({ month: req.month, cents: bill.cents, status, stripeId: pi?.id || '', error: r.ok ? '' : r.data?.error?.message || 'The charge didn’t go through.' });
+      }
+      case 'taxReminder': {
+        const settings = s.get('settings', 'main') ?? {};
+        if (!settings.taxReminder || !settings.email || (canEmail(this.env) && !settings.emailVerified)) return { skipped: true };
+        const note = taxReminder({ settings, payments: s.list('payments'), expenses: s.list('expenses'), assets: s.list('assets'), year: req.year, origin: req.origin });
+        return { to: settings.email, ...note };
       }
       case 'invoiceUpdate': {
         const inv = s.invoiceByStripe(req.stripeId);
@@ -192,6 +199,7 @@ export class Workspace extends DurableObject {
           const item = s.update(req.collection, req.id, req.body);
           if (req.collection === 'listings') await this.publish(req.ws, req.id);
           if (req.collection === 'settings') await this.publish(req.ws);
+          if (req.collection === 'settings' && req.body && 'taxReminder' in req.body) await directory(this.env).setReminder(req.ws, Boolean(item.taxReminder));
           return item;
         }
         case 'remove': {
@@ -283,6 +291,18 @@ export class Directory extends DurableObject {
 
   remove(key) {
     this.store.remove(key);
+  }
+
+  setReminder(ws, on) {
+    this.store.setReminder(ws, on);
+  }
+
+  dueReminders(year, limit) {
+    return this.store.dueReminders(year, limit);
+  }
+
+  markReminded(ws, year) {
+    this.store.markReminded(ws, year);
   }
 
   addBilled(ws) {
@@ -741,6 +761,23 @@ async function chargeMonth(env) {
   }
 }
 
+/** Each day in February, up to 50 landlords who asked get last year's tax-season email. */
+async function sendTaxReminders(env) {
+  const now = new Date();
+  if (!canEmail(env) || now.getUTCMonth() !== 1) return;
+  const year = now.getUTCFullYear() - 1;
+  const origin = env.SITE_URL || 'https://bedrock.signia83.workers.dev';
+  for (const wsId of await directory(env).dueReminders(year, 50)) {
+    try {
+      const r = await env.WORKSPACE.get(env.WORKSPACE.idFromName(wsId)).internal({ op: 'taxReminder', year, origin });
+      if (r?.to) await sendEmail(env, r.to, r.subject, r.text);
+    } catch {
+      // Tried again tomorrow only if it wasn't marked: mark it so one bad workspace can't hold up the rest.
+    }
+    await directory(env).markReminded(wsId, year);
+  }
+}
+
 /** Each day, at most 50 accounts' alert emails (only once email is set up). */
 async function sendAlerts(env) {
   if (!canEmail(env) || !env.ACCOUNT) return;
@@ -758,7 +795,7 @@ async function sendAlerts(env) {
 
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(Promise.all([chargeMonth(env), sendAlerts(env)]));
+    ctx.waitUntil(Promise.all([chargeMonth(env), sendAlerts(env), sendTaxReminders(env)]));
   },
 
   async fetch(request, env) {

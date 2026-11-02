@@ -21,6 +21,7 @@ Optional settings in Cloudflare (Workers → bedrock → Settings → Variables 
 - `ADMIN_KEY`: turns on the review page for reported listings.
 - `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`: turn on landlord billing (see Pricing below). In Stripe, add a webhook endpoint for `https://<site>/api/stripe/webhook` with the events `checkout.session.completed`, `payment_intent.succeeded` and `payment_intent.payment_failed`.
 - `RESEND_API_KEY` and `EMAIL_FROM` (an address on a domain verified in Resend): turns on email: password reset links, listing-alert digests, and email confirmation; once set, a listing shows in public search only after its owner confirms their email with a code. Until then listings publish straight away.
+- `SITE_URL` (optional): the address used in email links, if not the workers.dev one.
 - `OWNER_EMAIL`: where broker-introduction requests and contact-form messages are emailed (needs the two email settings above). Each email's reply-to is the person who wrote, and every request is also kept at `/homes/#admin`.
   For local development, add `EMAIL_DEV=log` to `.dev.vars` (with any values for the two above) and emails are printed to the wrangler log instead of sent.
 
