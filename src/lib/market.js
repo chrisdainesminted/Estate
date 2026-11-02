@@ -42,20 +42,25 @@ export function localMarket(market, cityKey = HOME_MARKET) {
   const home = cityByKey(HOME_MARKET);
   const rentRatio = city.rent / home.rent;
   const taxRatio = city.taxPct / home.taxPct;
+  // Where CMHC's survey has the city, each bedroom count moves by its own ratio, so untouched rents are CMHC's own.
+  const surveyed = CITY_RENTS[city.key];
+  const rentRatios = Object.fromEntries(Object.keys(m.rents).map((b) => [b, surveyed ? surveyed.rents[b] / DEFAULT_MARKET.rents[b] : rentRatio]));
   return {
     ...m,
     city: city.key,
     rentRatio,
+    rentRatios,
+    rentsSource: surveyed ? 'cmhc' : 'scaled',
     taxRatio,
-    rents: Object.fromEntries(Object.entries(m.rents).map(([b, r]) => [b, Math.round(r * rentRatio)])),
+    rents: Object.fromEntries(Object.entries(m.rents).map(([b, r]) => [b, Math.round(r * rentRatios[b])])),
     taxPct: Math.round(m.taxPct * taxRatio * 1000) / 1000,
   };
 }
 
 /** A change made to the local assumptions, put back in Thunder Bay terms for saving. */
 export function homePatch(patch, local) {
-  const { city, rentRatio, taxRatio, ...out } = patch; // eslint-disable-line no-unused-vars
-  if (patch.rents && local?.rentRatio) out.rents = Object.fromEntries(Object.entries(patch.rents).map(([b, r]) => [b, Number(r) / local.rentRatio]));
+  const { city, rentRatio, rentRatios, rentsSource, taxRatio, ...out } = patch; // eslint-disable-line no-unused-vars
+  if (patch.rents && local?.rentRatio) out.rents = Object.fromEntries(Object.entries(patch.rents).map(([b, r]) => [b, Number(r) / (local.rentRatios?.[b] ?? local.rentRatio)]));
   if (patch.taxPct != null && local?.taxRatio) out.taxPct = Number(patch.taxPct) / local.taxRatio;
   return out;
 }
@@ -95,11 +100,27 @@ export const MARKET_SOURCES = {
   rate: { what: 'Canada-wide average 5-year fixed uninsured (conventional) mortgage rate, September 25, 2026', source: 'nesto', url: 'https://www.nesto.ca/mortgage-rates/fixed/5-year/' },
   dscrRate: { what: 'Low end of B-lender DSCR loan rates (7.49% to 8.49%), August 21, 2026, from one broker’s published rates', source: 'LendCity', url: 'https://lendcity.ca/rates/' },
   rents: {
-    what: 'Average rents in Thunder Bay by bedrooms, October 2025 survey (its 3+ bedroom figure is used for 4+). The average includes long-time tenants, so a new lease often rents for more.',
+    what: 'Average rents by bedrooms in each city with daily listings, October 2025 survey (its 3+ bedroom figure is used for 4+). The average includes long-time tenants, so a new lease often rents for more.',
     source: 'CMHC Rental Market Survey',
     url: 'https://www03.cmhc-schl.gc.ca/hmip-pimh/en/TableMapChart/Table?TableId=2.2.11&GeographyId=2240&GeographyTypeId=3&DisplayAs=Table',
   },
 };
+/**
+ * CMHC's average rents by bedrooms, October 2025 Rental Market Survey, for
+ * each city with daily listings (3+ bedrooms used for 4+). Thunder Bay's
+ * are DEFAULT_MARKET.rents; other cities fall back to scaling by their
+ * typical rent.
+ */
+const cmhc = (b0, b1, b2, b3) => ({ 0: b0, 1: b1, 2: b2, 3: b3, 4: b3 });
+const PORTAL = 'https://www03.cmhc-schl.gc.ca/hmip-pimh/en/TableMapChart/TableMatchingCriteria?GeographyType=MetropolitanMajorArea&CategoryLevel1=Primary+Rental+Market&CategoryLevel2=Average+Rent+%28%24%29&ColumnField=2&RowField=TIMESERIES&GeographyId=';
+export const CITY_RENTS = {
+  'thunder-bay': { rents: cmhc(976, 1173, 1493, 1794), url: 'https://www03.cmhc-schl.gc.ca/hmip-pimh/en/TableMapChart/Table?TableId=2.2.11&GeographyId=2240&GeographyTypeId=3&DisplayAs=Table' },
+  calgary: { rents: cmhc(1438, 1581, 1908, 2118), url: `${PORTAL}0140` },
+  kelowna: { rents: cmhc(1394, 1597, 2098, 2713), url: `${PORTAL}0670` },
+  vancouver: { rents: cmhc(1667, 1807, 2364, 2820), url: `${PORTAL}2410` },
+  victoria: { rents: cmhc(1349, 1625, 2120, 2886), url: 'https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/market-reports/rental-market-reports-major-centres' },
+};
+
 // The starting figures before they were sourced: saved settings still holding them move to the sourced ones.
 const OLD_DEFAULTS = { rate: 4.9, dscrRate: 6, rents: { 0: 1050, 1: 1350, 2: 1700, 3: 2000, 4: 2300 } };
 const DEFAULTS_VERSION = 2;

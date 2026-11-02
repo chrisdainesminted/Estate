@@ -482,3 +482,15 @@ describe('sourced starting figures', () => {
     expect(normalizeMarket({ ...old, rate: 4.9 }).rate).toBe(4.9);
   });
 });
+
+describe('CMHC rents by city', () => {
+  it('uses each surveyed city’s own rents, and keeps a person’s change in proportion', () => {
+    const yyc = localMarket(DEFAULT_MARKET, 'calgary');
+    expect(yyc.rents[1]).toBe(1581);
+    expect(yyc.rents[3]).toBe(2118);
+    expect(yyc.rentsSource).toBe('cmhc');
+    const saved = homePatch({ rents: { ...yyc.rents, 2: 2000 } }, yyc);
+    expect(localMarket({ ...DEFAULT_MARKET, rents: { ...DEFAULT_MARKET.rents, ...saved.rents } }, 'calgary').rents[2]).toBe(2000);
+    expect(localMarket(DEFAULT_MARKET, 'toronto').rentsSource).toBe('scaled');
+  });
+});
