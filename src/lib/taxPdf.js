@@ -3,7 +3,7 @@
 // month, and every expense, ready for the landlord or their accountant.
 // jsPDF loads only when someone asks for the pack.
 
-import { T776, ownerSplit, yearSummary } from './landlord.js';
+import { T776, ccaYear, ownerSplit, yearSummary } from './landlord.js';
 import { money } from './format.js';
 
 const PAGE = { w: 612, h: 792, m: 48 };
@@ -14,7 +14,7 @@ const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const clean = (s) => String(s ?? '').replace(/⁠/g, '').replace(/−/g, '-').replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
 const cad = (v) => clean(money(v, { cents: true }));
 
-export async function buildTaxPdf({ year, payments, expenses, units, settings, owners = [], forOwner = '' }) {
+export async function buildTaxPdf({ year, payments, expenses, units, settings, owners = [], forOwner = '', assets = [], receipt = null }) {
   const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const { m } = PAGE;
@@ -43,6 +43,7 @@ export async function buildTaxPdf({ year, payments, expenses, units, settings, o
   const split = owners.length ? ownerSplit(s, owners) : [];
   const mine = split.find((o) => o.name === forOwner);
   const paidAlone = (e) => owners.some((o) => o.name === e.paidBy);
+  const cca = ccaYear(assets, year, s, owners);
 
   text('Squarely · Rental income and expenses', m, y, { size: 9, bold: true, color: ACCENT });
   text(`Prepared ${new Date().toLocaleDateString('en-CA')}`, m + W, y, { size: 8.5, color: MUTED, align: 'right' });
@@ -89,14 +90,41 @@ export async function buildTaxPdf({ year, payments, expenses, units, settings, o
     y += 6;
     line('9949', 'Total expenses', s.total, true);
     line('9369', 'Net income (loss) before adjustments', s.net, true);
+    if (!owners.length) {
+      line('9936', 'Capital cost allowance', -cca.claim);
+      line('9946', 'Net income (loss)', cca.net, true);
+    }
     y += 4;
     if (split.some((o) => o.personal)) small('Expenses one owner paid alone are not in these totals: each is on that owner\'s page.');
     small(
       owners.length
-        ? 'Each owner claims their own capital cost allowance (depreciation on their share of the building and big improvements), and leaves out any personal-use share of expenses. Keep receipts for six years.'
-        : 'Capital cost allowance (depreciation on the building and big improvements) and the personal-use share of any expenses are not included: work these out with the T776 guide or your accountant. Keep receipts for six years.',
+        ? 'Each owner claims capital cost allowance on their own share (on their page) and leaves out any personal-use share of expenses. Keep receipts for six years.'
+        : `Capital cost allowance is the most allowed${cca.limited ? ', stopped where it would create a rental loss' : ''}. You can claim less or none, and the loss limit counts all your rental properties together. Leave out any personal-use share of expenses. Keep receipts for six years.`,
     );
     y += 14;
+    if (cca.rows.length) {
+      room(60);
+      text('Capital cost allowance schedule', m, y, { size: 10, bold: true });
+      y += 14;
+      text('Asset', m, y, { size: 8, color: MUTED });
+      text('Class', m + 200, y, { size: 8, color: MUTED });
+      text('UCC at start', m + 300, y, { size: 8, color: MUTED, align: 'right' });
+      text('Most CCA', m + 400, y, { size: 8, color: MUTED, align: 'right' });
+      text('UCC at end', m + W, y, { size: 8, color: MUTED, align: 'right' });
+      y += 12;
+      cca.rows.forEach((a) => {
+        room(13);
+        text(doc.splitTextToSize(clean(a.label), 190)[0] || '', m, y, { size: 8.5 });
+        text(`${a.ccaClass} (${Math.round(a.rate * 1000) / 10}%)`, m + 200, y, { size: 8.5 });
+        text(cad(a.uccStart), m + 300, y, { size: 8.5, align: 'right' });
+        text(cad(a.max), m + 400, y, { size: 8.5, align: 'right' });
+        text(cad(a.uccEnd), m + W, y, { size: 8.5, align: 'right' });
+        y += 12;
+      });
+      y += 4;
+      small('Figures are for the whole property and assume the most was claimed in earlier years unless a later starting balance was entered. Co-owners each claim on their share.');
+      y += 14;
+    }
   };
 
   // One co-owner's part: Part 1's ownership details, their share of line 9369, less what only they paid.
@@ -123,6 +151,12 @@ export async function buildTaxPdf({ year, payments, expenses, units, settings, o
     rule(y - 8);
     y += 6;
     line('', 'Your net income (loss) before capital cost allowance', o.after, true);
+    const mineCca = cca.owners.find((x) => x.name === o.name);
+    if (mineCca && cca.max > 0) {
+      line('9936', `Capital cost allowance on your ${o.share}% share`, -mineCca.claim);
+      line('9946', 'Your net income (loss)', mineCca.net, true);
+      if (mineCca.limited) small(`CCA stops at ${cad(mineCca.claim)} of your ${cad(mineCca.max)}: it can't create or increase a rental loss.`);
+    }
     y += 6;
     small('Your share of each line, if your tax software asks for it:');
     y += 2;
@@ -210,6 +244,31 @@ export async function buildTaxPdf({ year, payments, expenses, units, settings, o
       text(cad(e.amount), m + W, y, { size: 8.5, align: 'right' });
       y += 12;
     });
+
+  // The year's receipt photos, one to a page, for the accountant or the CRA.
+  const withReceipts = receipt ? expenses.filter((e) => e.receiptId && String(e.date).startsWith(yr)).sort((a, b) => (a.date < b.date ? -1 : 1)) : [];
+  for (const e of withReceipts) {
+    try {
+      const blob = await receipt(e.receiptId);
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      let bin = '';
+      for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      const format = blob.type === 'image/png' ? 'PNG' : blob.type === 'image/webp' ? 'WEBP' : 'JPEG';
+      const dataUrl = `data:${blob.type || 'image/jpeg'};base64,${btoa(bin)}`;
+      const props = doc.getImageProperties(dataUrl);
+      doc.addPage();
+      y = m;
+      text(`Receipt · ${e.date} · ${cad(e.amount)}`, m, y, { size: 10, bold: true });
+      y += 14;
+      text([T776.find((c) => c.key === e.category)?.label, e.vendor, e.note].filter(Boolean).join(' · '), m, y, { size: 8.5, color: MUTED });
+      y += 14;
+      const maxH = PAGE.h - m - y;
+      const scale = Math.min(W / props.width, maxH / props.height, 1.5);
+      doc.addImage(dataUrl, format, m, y, props.width * scale, props.height * scale);
+    } catch {
+      // A receipt that can't be read is left out; the expense is still listed above.
+    }
+  }
 
   doc.setProperties({ title: `Rental income and expenses ${yr} - Squarely`, creator: 'Squarely' });
   return doc.output('blob');

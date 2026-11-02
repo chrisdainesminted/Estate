@@ -18,6 +18,21 @@ export const T776 = [
   { key: 'other', line: '9270', label: 'Other expenses' },
 ];
 
+/**
+ * Capital cost allowance classes a small landlord meets, with their yearly
+ * rates (Schedule II of the Income Tax Regulations, as the CRA's T4036
+ * guide lists them).
+ */
+export const CCA_CLASSES = [
+  { key: '1', rate: 0.04, label: 'Class 1 (4%): a building bought after 1987' },
+  { key: '3', rate: 0.05, label: 'Class 3 (5%): a building bought before 1988' },
+  { key: '6', rate: 0.1, label: 'Class 6 (10%): a frame or log building, or a fence or greenhouse' },
+  { key: '8', rate: 0.2, label: 'Class 8 (20%): appliances, furniture and equipment' },
+  { key: '10', rate: 0.3, label: 'Class 10 (30%): a vehicle' },
+  { key: '17', rate: 0.08, label: 'Class 17 (8%): a parking area or paving' },
+  { key: '50', rate: 0.55, label: 'Class 50 (55%): a computer' },
+];
+
 export const PROPERTY_TYPES = [
   { key: 'house', label: 'House' },
   { key: 'semi', label: 'Semi-detached' },
@@ -168,6 +183,18 @@ export const SCHEMAS = {
     vendor: text(120),
     note: text(300),
     paidBy: text(80), // a co-owner's name when only they paid it and only they claim it; empty when it's shared
+    receiptId: text(40), // set by the server when a receipt photo is attached
+  },
+  // A building or improvement that lasts: claimed over years as capital cost allowance, not expensed.
+  assets: {
+    label: text(120),
+    ccaClass: oneOf(...CCA_CLASSES.map((c) => c.key)),
+    cost: num, // what it cost, without the land (land can't be depreciated)
+    available: date, // when it was first rented out or put in use
+    // Undepreciated capital cost at the start of a year, from that year's return, when earlier claims were less than the most allowed.
+    uccYear: num,
+    ucc: num,
+    note: text(300),
   },
 };
 

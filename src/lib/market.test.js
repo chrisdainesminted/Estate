@@ -141,7 +141,7 @@ describe('listingToDeal', () => {
     expect(d.taxesAnnual).toBe(3675);
     expect(d.insuranceAnnual).toBe(3 * DEFAULT_MARKET.insurancePerUnit);
     expect(d.hoaMonthly).toBe(3 * DEFAULT_MARKET.utilitiesPerUnit);
-    expect(d.rentPerUnit).toBe(Math.round((1900 + 1700 + 1950) / 3));
+    expect(d.rentPerUnit).toBe(Math.round((1900 + DEFAULT_MARKET.rents[2] + 1950) / 3));
     expect(d.listingId).toBe('X13684758');
     expect(d.notes).toContain('MLS® X13684758');
   });
@@ -468,5 +468,17 @@ describe('alerts', () => {
   });
   it('names an alert plainly', () => {
     expect(alertName({ types: ['small'], maxLive: 2000 }, 'Hamilton')).toBe('2–4 units in Hamilton, under $2,000/mo to live in');
+  });
+});
+
+describe('sourced starting figures', () => {
+  it('moves settings saved with the old starting figures to the sourced ones, keeping your own', () => {
+    const old = normalizeMarket({ rate: 4.9, dscrRate: 6.5, rents: { 0: 1050, 1: 1350, 2: 1800, 3: 2000, 4: 2300 } });
+    expect(old.rate).toBe(DEFAULT_MARKET.rate);
+    expect(old.dscrRate).toBe(6.5); // changed by the person: kept
+    expect(old.rents[1]).toBe(DEFAULT_MARKET.rents[1]);
+    expect(old.rents[2]).toBe(1800); // changed by the person: kept
+    // Once moved, a later 4.9 is the person's own choice.
+    expect(normalizeMarket({ ...old, rate: 4.9 }).rate).toBe(4.9);
   });
 });

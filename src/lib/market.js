@@ -86,6 +86,24 @@ export const INSURANCE_MIN = 1500;
  * fill the gaps: financing, costs, and market rents by bedroom count for
  * units without a stated rent. Editable on the Listings tab.
  */
+/**
+ * Where the starting rates and rents come from, and when they were checked.
+ * Everyone can change them; these are published figures, not guesses.
+ */
+export const MARKET_SOURCES = {
+  checked: '2026-11-02',
+  rate: { what: 'Canada-wide average 5-year fixed uninsured (conventional) mortgage rate, September 25, 2026', source: 'nesto', url: 'https://www.nesto.ca/mortgage-rates/fixed/5-year/' },
+  dscrRate: { what: 'Low end of B-lender DSCR loan rates (7.49% to 8.49%), August 21, 2026, from one broker’s published rates', source: 'LendCity', url: 'https://lendcity.ca/rates/' },
+  rents: {
+    what: 'Average rents in Thunder Bay by bedrooms, October 2025 survey (its 3+ bedroom figure is used for 4+). The average includes long-time tenants, so a new lease often rents for more.',
+    source: 'CMHC Rental Market Survey',
+    url: 'https://www03.cmhc-schl.gc.ca/hmip-pimh/en/TableMapChart/Table?TableId=2.2.11&GeographyId=2240&GeographyTypeId=3&DisplayAs=Table',
+  },
+};
+// The starting figures before they were sourced: saved settings still holding them move to the sourced ones.
+const OLD_DEFAULTS = { rate: 4.9, dscrRate: 6, rents: { 0: 1050, 1: 1350, 2: 1700, 3: 2000, 4: 2300 } };
+const DEFAULTS_VERSION = 2;
+
 export const DEFAULT_MARKET = {
   // How listings are counted: 'dscr', with a DSCR loan, where the lender
   // qualifies the property on its rent; or 'own', your own money as a 20%
@@ -93,9 +111,9 @@ export const DEFAULT_MARKET = {
   lens: 'dscr',
   // In Canada, loans qualified on the rent come from alternative (B)
   // lenders: usually 20-25% down, at a rate above a regular mortgage's.
-  dscrDownPct: 25,
-  dscrRate: 6,
-  rate: 4.9, // regular mortgage: 5-year fixed, uninsured rental
+  dscrDownPct: 25, // DSCR programs lend up to 75-80% of the value
+  dscrRate: 7.49, // see MARKET_SOURCES
+  rate: 5.12, // regular mortgage: 5-year fixed, uninsured; see MARKET_SOURCES
   amortYears: 30,
   closingPct: 1, // legal, title, inspection; land transfer tax is added on top
   insurancePerUnit: 800, // $ a year per unit, at least INSURANCE_MIN
@@ -106,12 +124,20 @@ export const DEFAULT_MARKET = {
   maintPct: 6,
   vacancyPct: 4,
   capexPct: 7,
-  rents: { 0: 1050, 1: 1350, 2: 1700, 3: 2000, 4: 2300 }, // $/mo by bedrooms (4 = 4+)
+  rents: { 0: 976, 1: 1173, 2: 1493, 3: 1794, 4: 1794 }, // $/mo by bedrooms (4 = 4+), Thunder Bay; see MARKET_SOURCES
+  defaults: DEFAULTS_VERSION,
   types: ['single', 'small', 'large'],
   hidden: [],
 };
 
 export function normalizeMarket(m) {
+  // Settings saved before the figures were sourced: any still at the old starting value move to the sourced one.
+  if (m && m.defaults !== DEFAULTS_VERSION) {
+    const old = m;
+    m = { ...m, defaults: DEFAULTS_VERSION, rents: { ...(m.rents ?? {}) } };
+    for (const k of ['rate', 'dscrRate']) if (Number(old[k]) === OLD_DEFAULTS[k]) m[k] = DEFAULT_MARKET[k];
+    for (const [b, r] of Object.entries(OLD_DEFAULTS.rents)) if (Number(old.rents?.[b]) === r) m.rents[b] = DEFAULT_MARKET.rents[b];
+  }
   const rents = { ...DEFAULT_MARKET.rents };
   for (const k of Object.keys(rents)) if (Number(m?.rents?.[k]) > 0) rents[k] = Number(m.rents[k]);
   return {

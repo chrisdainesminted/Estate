@@ -1,6 +1,6 @@
 import { Suspense, lazy, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRight, BellPlus, BellRing, Check, ChevronDown, ExternalLink, Eye, EyeOff, Radar, RotateCcw, SlidersHorizontal, X } from 'lucide-react';
-import { DEFAULT_MARKET, LISTING_CITIES, LISTING_TYPES, SORTS, localMarket, alertMatches, alertName, daysListed, droppedInLatestRun, freshMatches, isNew, priceStory, underMarket, lensTargets, listingPageUrl, listingTaxes, listingToDeal, rankListings, siteName, typeOf, unitsOf } from '../lib/market.js';
+import { DEFAULT_MARKET, MARKET_SOURCES, LISTING_CITIES, LISTING_TYPES, SORTS, localMarket, alertMatches, alertName, daysListed, droppedInLatestRun, freshMatches, isNew, priceStory, underMarket, lensTargets, listingPageUrl, listingTaxes, listingToDeal, rankListings, siteName, typeOf, unitsOf } from '../lib/market.js';
 import { homeFor } from '../lib/firstHome.js';
 import { PROVINCES, cityByKey } from '../lib/canada.js';
 import { listingSentence } from '../lib/explain.js';
@@ -482,6 +482,25 @@ function Assumptions({ market, onMarket }) {
           {rent(3, '3 bedrooms')}
           {rent(4, '4+ bedrooms')}
         </fieldset>
+      </div>
+      <div className="border-t border-hairline px-5 py-3 text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="font-medium text-zinc-700 dark:text-zinc-300">Where the starting figures come from (checked {MARKET_SOURCES.checked})</p>
+        <ul className="mt-1 space-y-1">
+          {[
+            ['Regular mortgage rate', MARKET_SOURCES.rate],
+            ['DSCR loan rate', MARKET_SOURCES.dscrRate],
+            ['Rents', MARKET_SOURCES.rents],
+          ].map(([name, src]) => (
+            <li key={name}>
+              {name}: {src.what}.{' '}
+              <a href={src.url} target="_blank" rel="noopener noreferrer" className="font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+                {src.source}
+              </a>
+              {name === 'Rents' && market.city !== 'thunder-bay' ? ` Scaled to ${cityByKey(market.city).name} by its typical rent.` : ''}
+            </li>
+          ))}
+        </ul>
+        <p className="mt-1">Change any of them to your own quote or rent; a lender’s quote always beats an average.</p>
       </div>
     </Card>
   );

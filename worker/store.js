@@ -48,6 +48,7 @@ export class Store {
     sql.exec('CREATE TABLE IF NOT EXISTS items (collection TEXT, id TEXT, data TEXT, created INTEGER, updated INTEGER, PRIMARY KEY (collection, id))');
     sql.exec('CREATE TABLE IF NOT EXISTS hits (bucket TEXT PRIMARY KEY, n INTEGER)');
     sql.exec('CREATE TABLE IF NOT EXISTS photos (id TEXT PRIMARY KEY, listing TEXT, mime TEXT, data BLOB, created INTEGER)');
+    sql.exec('CREATE TABLE IF NOT EXISTS receipts (id TEXT PRIMARY KEY, expense TEXT, mime TEXT, data BLOB, created INTEGER)');
   }
 
   meta(k) {
@@ -70,6 +71,61 @@ export class Store {
 
   checkKey(keyHash) {
     return sameText(this.meta('keyHash'), keyHash);
+  }
+
+  // ---- the view-only link a co-owner gets for the books ----
+
+  checkViewKey(keyHash) {
+    const v = this.meta('viewKeyHash');
+    return Boolean(v) && sameText(v, keyHash);
+  }
+
+  setViewKey(keyHash) {
+    this.setMeta('viewKeyHash', keyHash || '');
+  }
+
+  get hasViewKey() {
+    return Boolean(this.meta('viewKeyHash'));
+  }
+
+  /** What the view-only link shows: the books for tax time, without tenants' contact details. */
+  books() {
+    const settings = this.get('settings', 'main') ?? {};
+    return {
+      readOnly: true,
+      settings: { name: settings.name || '', city: settings.city || '', owners: settings.owners ?? [] },
+      units: this.list('units').map((u) => ({ id: u.id, label: u.label || '', address: u.address || '' })),
+      payments: this.list('payments').map((p) => ({ id: p.id, unitId: p.unitId, month: p.month, amount: p.amount, paidOn: p.paidOn || '' })),
+      expenses: this.list('expenses'),
+      assets: this.list('assets'),
+    };
+  }
+
+  // ---- receipts: a photo per expense, private to the workspace ----
+
+  addReceipt(expenseId, mime, bytes) {
+    const e = this.get('expenses', expenseId);
+    if (!e) throw new StoreError(404, 'Not found.');
+    if (!PHOTO_TYPES.includes(mime)) throw new StoreError(415, 'Receipts must be a JPEG, PNG or WebP photo.');
+    const size = bytes?.byteLength ?? 0;
+    if (!size || size > MAX_PHOTO_BYTES) throw new StoreError(413, 'That photo is too large.');
+    if (e.receiptId) this.sql.exec('DELETE FROM receipts WHERE id = ?', e.receiptId);
+    const id = randomToken(12);
+    this.sql.exec('INSERT INTO receipts (id, expense, mime, data, created) VALUES (?, ?, ?, ?, ?)', id, expenseId, mime, bytes, this.now());
+    return this.write('expenses', expenseId, { ...e, receiptId: id }, e.created);
+  }
+
+  removeReceipt(expenseId) {
+    const e = this.get('expenses', expenseId);
+    if (!e) throw new StoreError(404, 'Not found.');
+    this.sql.exec('DELETE FROM receipts WHERE expense = ?', expenseId);
+    return this.write('expenses', expenseId, { ...e, receiptId: '' }, e.created);
+  }
+
+  getReceipt(receiptId) {
+    const r = this.sql.exec('SELECT mime, data FROM receipts WHERE id = ?', receiptId).toArray()[0];
+    if (!r) throw new StoreError(404, 'Not found.');
+    return { mime: r.mime, data: r.data };
   }
 
   /** At most `max` of `kind` from one address an hour. */
@@ -163,6 +219,7 @@ export class Store {
     const n = this.sql.exec('SELECT COUNT(*) AS n FROM items WHERE collection = ?', collection).toArray()[0].n;
     if (n >= MAX_ITEMS) throw new StoreError(413, 'Too many records of this kind.');
     const data = clean(collection, input);
+    if (collection === 'expenses') data.receiptId = '';
     if (collection === 'units') {
       this.checkBilling(data, null);
       data.repairToken = randomToken(12);
@@ -188,6 +245,7 @@ export class Store {
     const old = this.get(collection, id);
     if (!old) throw new StoreError(404, 'Not found.');
     const changes = clean(collection, patch);
+    if (collection === 'expenses') delete changes.receiptId;
     if (collection === 'units') this.checkBilling({ ...old, ...changes }, id);
     if (collection === 'slots') {
       // Booking state moves only through applications.
@@ -223,6 +281,7 @@ export class Store {
       for (const s of this.list('slots')) if (s.listingId === id && s.status === 'open') this.remove('slots', s.id);
       this.sql.exec('DELETE FROM photos WHERE listing = ?', id);
     }
+    if (collection === 'expenses') this.sql.exec('DELETE FROM receipts WHERE expense = ?', id);
     if (collection === 'applications') for (const m of this.list('messages')) if (m.applicationId === id) this.sql.exec('DELETE FROM items WHERE collection = ? AND id = ?', 'messages', m.id);
     return true;
   }

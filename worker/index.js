@@ -142,10 +142,28 @@ export class Workspace extends DurableObject {
         case 'payClaim':
           return s.payClaim(req.unitId, req.token, req.body, req.ip);
       }
+      // The books and their receipts also open with the view-only link a co-owner gets.
+      if (req.op === 'books' || req.op === 'receipt') {
+        const h = await hashKey(req.key ?? '');
+        if (!s.checkKey(h) && !s.checkViewKey(h)) throw new StoreError(401, 'This link isn’t valid for these books.');
+        return req.op === 'books' ? s.books() : s.getReceipt(req.receiptId);
+      }
       if (!s.checkKey(await hashKey(req.key ?? ''))) throw new StoreError(401, 'This private link isn’t valid for the workspace.');
       switch (req.op) {
         case 'all':
-          return { ...s.all(), config: { verification: canEmail(this.env), billing: canBill(this.env) } };
+          return { ...s.all(), config: { verification: canEmail(this.env), billing: canBill(this.env), booksShared: s.hasViewKey } };
+        case 'shareBooks': {
+          const viewKey = randomToken(24);
+          s.setViewKey(await hashKey(viewKey));
+          return { key: viewKey };
+        }
+        case 'unshareBooks':
+          s.setViewKey('');
+          return { ok: true };
+        case 'addReceipt':
+          return s.addReceipt(req.expenseId, req.mime, req.bytes);
+        case 'removeReceipt':
+          return s.removeReceipt(req.expenseId);
         case 'billingSetup': {
           if (!canBill(this.env)) throw new StoreError(501, 'Billing isn’t set up on this site yet.');
           const stripe = stripeClient(this.env.STRIPE_SECRET_KEY);
@@ -631,6 +649,20 @@ async function api(request, env, url) {
     return answer(await ws.call({ op: 'addPhoto', ws: wsId, key, listingId: rest[1], mime, bytes }));
   }
 
+  // Receipts: a private photo per expense, read with the workspace's key (or the co-owner's view-only key).
+  if (rest[0] === 'receipts' && rest.length === 2 && method === 'GET') {
+    const res = await ws.call({ op: 'receipt', ws: wsId, key, receiptId: rest[1] });
+    if (res?.error) return json({ error: res.error }, res.status);
+    return new Response(res.data, { headers: { 'content-type': res.mime, 'cache-control': 'private, max-age=86400' } });
+  }
+  if (rest[0] === 'expenses' && rest[2] === 'receipt' && rest.length === 3 && method === 'POST') {
+    const mime = (request.headers.get('content-type') || '').split(';')[0].trim();
+    if (!PHOTO_TYPES.includes(mime)) return json({ error: 'Receipts must be a JPEG, PNG or WebP photo.' }, 415);
+    const bytes = await request.arrayBuffer();
+    if (bytes.byteLength > MAX_PHOTO) return json({ error: 'That photo is too large.' }, 413);
+    return answer(await ws.call({ op: 'addReceipt', ws: wsId, key, expenseId: rest[1], mime, bytes }));
+  }
+
   const body = method === 'POST' || method === 'PUT' ? await readBody(request) : undefined;
   let call = null;
   // Public: a listing's page and application, an applicant's status and messages, a unit's repair form.
@@ -645,6 +677,10 @@ async function api(request, env, url) {
   else if (rest[0] === 'pay' && rest.length === 3 && method === 'POST') call = { op: 'payClaim', unitId: rest[1], token: rest[2], body, ip };
   // The owner's own records.
   else if (rest.length === 0 && method === 'GET') call = { op: 'all', key };
+  else if (rest[0] === 'books' && rest.length === 1 && method === 'GET') call = { op: 'books', key };
+  else if (rest[0] === 'share' && rest.length === 1 && method === 'POST') call = { op: 'shareBooks', key };
+  else if (rest[0] === 'share' && rest.length === 1 && method === 'DELETE') call = { op: 'unshareBooks', key };
+  else if (rest[0] === 'expenses' && rest[2] === 'receipt' && rest.length === 3 && method === 'DELETE') call = { op: 'removeReceipt', key, expenseId: rest[1] };
   else if (rest[0] === 'slots' && rest[1] === 'batch' && method === 'POST') call = { op: 'createSlots', key, body };
   else if (rest[0] === 'applications' && rest[2] === 'slot' && method === 'POST') call = { op: 'moveSlot', key, id: rest[1], body };
   else if (rest[0] === 'applications' && rest[2] === 'read' && method === 'POST') call = { op: 'readThread', key, id: rest[1] };

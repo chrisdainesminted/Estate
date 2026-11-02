@@ -213,3 +213,43 @@ describe('photos, messages and publishing', () => {
     expect(s.get('settings', 'main').emailVerified).toBe(false);
   });
 });
+
+describe('the books for co-owners and tax time', () => {
+  it('opens the books with a view-only key that can be turned off', async () => {
+    expect(s.checkViewKey(await hashKey('anything'))).toBe(false);
+    s.setViewKey(await hashKey('view-key'));
+    expect(s.checkViewKey(await hashKey('view-key'))).toBe(true);
+    expect(s.checkKey(await hashKey('view-key'))).toBe(false); // it can't change anything
+    s.setViewKey('');
+    expect(s.checkViewKey(await hashKey('view-key'))).toBe(false);
+  });
+
+  it('shows the books without tenants’ contact details', () => {
+    s.update('settings', 'main', { name: 'Sam', email: 'sam@x.ca', owners: [{ name: 'Sam', share: 50 }, { name: 'Lee', share: 50 }] });
+    const u = s.create('units', { label: 'Upper', rent: 1700, tenantName: 'Pat', tenantEmail: 'pat@x.ca', tenantPhone: '807' });
+    s.create('payments', { unitId: u.id, month: '2026-10', amount: 1700, paidOn: '2026-10-01' });
+    s.create('expenses', { date: '2026-10-05', amount: 120, category: 'repairs' });
+    s.create('assets', { label: 'Building', ccaClass: '1', cost: 300000, available: '2024-06-01' });
+    const b = s.books();
+    expect(b.readOnly).toBe(true);
+    expect(b.settings).toEqual({ name: 'Sam', city: '', owners: [{ name: 'Sam', share: 50 }, { name: 'Lee', share: 50 }] });
+    expect(JSON.stringify(b)).not.toMatch(/pat@x\.ca|Pat|sam@x\.ca/);
+    expect(b.payments[0]).toMatchObject({ month: '2026-10', amount: 1700 });
+    expect(b.assets[0]).toMatchObject({ ccaClass: '1', cost: 300000 });
+  });
+
+  it('keeps one private receipt photo per expense, set only by the server', () => {
+    const e = s.create('expenses', { date: '2026-10-05', amount: 120, category: 'repairs', receiptId: 'forged' });
+    expect(e.receiptId).toBe('');
+    const bytes = new Uint8Array([1, 2, 3]);
+    const withReceipt = s.addReceipt(e.id, 'image/jpeg', bytes);
+    expect(withReceipt.receiptId).toBeTruthy();
+    expect(s.getReceipt(withReceipt.receiptId).mime).toBe('image/jpeg');
+    expect(s.update('expenses', e.id, { receiptId: 'forged', note: 'x' }).receiptId).toBe(withReceipt.receiptId);
+    expect(() => s.addReceipt(e.id, 'application/pdf', bytes)).toThrow(/JPEG/);
+    const again = s.addReceipt(e.id, 'image/png', bytes);
+    expect(() => s.getReceipt(withReceipt.receiptId)).toThrow(/Not found/); // the old one is replaced
+    s.remove('expenses', e.id);
+    expect(() => s.getReceipt(again.receiptId)).toThrow(/Not found/);
+  });
+});

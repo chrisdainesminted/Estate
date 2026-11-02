@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applicationReplies, increaseNotice, leaseSheet, nextIncrease, ownerSplit, ownersOf, receiptMessage, rentReference, rentReminder, rentStatus, sharesTotal, splitCents, yearCsv, yearSummary } from './landlord.js';
+import { assetCca, ccaYear, firstYearFactor, applicationReplies, increaseNotice, leaseSheet, nextIncrease, ownerSplit, ownersOf, receiptMessage, rentReference, rentReminder, rentStatus, sharesTotal, splitCents, yearCsv, yearSummary } from './landlord.js';
 import { TENANCY, rulesFor } from './tenancyRules.js';
 import { PROVINCES } from './canada.js';
 
@@ -169,5 +169,46 @@ describe('a co-owner’s share of line 9369', () => {
     expect(a.net).toBe(10044.6);
     expect(b.net).toBe(10044.6);
     expect(a.gross - a.total).toBeCloseTo(a.net, 10);
+  });
+});
+
+describe('capital cost allowance', () => {
+  it('uses the first-year rule for when the asset went into use', () => {
+    expect(firstYearFactor('2017-06-01')).toBe(0.5);
+    expect(firstYearFactor('2021-03-01')).toBe(1.5);
+    expect(firstYearFactor('2025-03-01')).toBe(1);
+    expect(firstYearFactor('2028-03-01')).toBe(0.5);
+  });
+
+  it('declines from the cost each year at the class rate', () => {
+    const building = { ccaClass: '1', cost: 300000, available: '2025-05-01' };
+    expect(assetCca(building, 2024).max).toBe(0);
+    expect(assetCca(building, 2025)).toEqual({ rate: 0.04, uccStart: 300000, max: 12000, uccEnd: 288000 });
+    expect(assetCca(building, 2026)).toEqual({ rate: 0.04, uccStart: 288000, max: 11520, uccEnd: 276480 });
+    // Old rules: half the rate in the first year.
+    expect(assetCca({ ccaClass: '8', cost: 2000, available: '2016-01-10' }, 2016).max).toBe(200);
+  });
+
+  it('carries on from a UCC taken from a return when less was claimed', () => {
+    const a = { ccaClass: '1', cost: 300000, available: '2025-05-01', uccYear: 2026, ucc: 300000 };
+    expect(assetCca(a, 2026)).toEqual({ rate: 0.04, uccStart: 300000, max: 12000, uccEnd: 288000 });
+    expect(assetCca(a, 2025).max).toBe(12000); // the year before still counts from the cost
+  });
+
+  it('never lets CCA create or increase a rental loss', () => {
+    const assets = [{ ccaClass: '1', cost: 300000, available: '2025-05-01' }];
+    const profit = ccaYear(assets, 2026, { net: 20000 });
+    expect(profit).toMatchObject({ max: 11520, claim: 11520, net: 8480, limited: false });
+    const thin = ccaYear(assets, 2026, { net: 5000 });
+    expect(thin).toMatchObject({ claim: 5000, net: 0, limited: true });
+    expect(ccaYear(assets, 2026, { net: -800 })).toMatchObject({ claim: 0, net: -800 });
+  });
+
+  it('gives each co-owner CCA on their share, limited by their own net', () => {
+    const owners = [{ name: 'A', share: 50 }, { name: 'B', share: 50 }];
+    const summary = yearSummary([{ month: '2026-01', amount: 20000 }], [{ date: '2026-02-01', category: 'interest', amount: 8000, paidBy: 'B' }], 2026, owners);
+    const c = ccaYear([{ ccaClass: '1', cost: 300000, available: '2025-05-01' }], 2026, summary, owners);
+    expect(c.owners[0]).toMatchObject({ max: 5760, claim: 5760, net: 4240 });
+    expect(c.owners[1]).toMatchObject({ max: 5760, claim: 2000, net: 0, limited: true }); // 10,000 share less 8,000 paid alone
   });
 });

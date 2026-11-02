@@ -31,6 +31,18 @@ export async function call(path, { method = 'GET', body, key } = {}) {
   return data;
 }
 
+/** A receipt photo, fetched with the workspace's key (or a co-owner's view-only key). */
+export async function receiptBlob(wsId, key, receiptId) {
+  let res;
+  try {
+    res = await fetch(`/api/w/${wsId}/receipts/${receiptId}`, { headers: { authorization: `Bearer ${key}` } });
+  } catch {
+    throw new ApiError(0, 'Couldn’t reach Squarely. Check your connection and try again.');
+  }
+  if (!res.ok) throw new ApiError(res.status, 'That receipt couldn’t be opened.');
+  return res.blob();
+}
+
 /** The landlord's workspace, from this browser: { id, key } or null. */
 const WS_KEY = 'bedrock-landlord';
 export function savedWorkspace() {
@@ -59,6 +71,8 @@ export const links = {
   // The same tenant link, opening on paying rent.
   pay: (ws, unit) => `${links.origin()}/rent/#w=${ws}&u=${unit.id}&t=${unit.repairToken}&v=pay`,
   private: (w) => `${links.origin()}/app/?view=landlord#landlord=${w.id}.${w.key}`,
+  // A co-owner's view-only link to the books (no tenants' details, no changes).
+  books: (w, viewKey) => `${links.origin()}/app/?view=landlord#books=${w.id}.${viewKey}`,
 };
 
 /** "#a=1&b=2" as an object. */

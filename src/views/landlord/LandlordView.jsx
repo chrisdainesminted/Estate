@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CalendarDays, CreditCard, Home, Inbox as InboxIcon, KeyRound, Landmark, ReceiptText, Scale, Settings, Wrench } from 'lucide-react';
 import { Button, Card, CardHeader, ViewHeader } from '../../components/ui.jsx';
-import { ApiError, call, links, saveWorkspace, savedWorkspace } from '../../lib/landlordApi.js';
+import { ApiError, call, links, receiptBlob, saveWorkspace, savedWorkspace } from '../../lib/landlordApi.js';
 import { useAccount } from '../../hooks/useAccount.js';
 import { cityByKey } from '../../lib/canada.js';
 import { rentStatus, today } from '../../lib/landlord.js';
@@ -15,6 +15,7 @@ import Expenses from './Expenses.jsx';
 import Rules from './Rules.jsx';
 import SettingsPanel from './SettingsPanel.jsx';
 import BillingPanel from './BillingPanel.jsx';
+import BooksView, { parseBooks } from './BooksView.jsx';
 
 /**
  * A photo made ready to upload: at most 1600 pixels on its long side, as a
@@ -59,7 +60,13 @@ const TABS = [
  * rent, repairs, expenses for tax time, and the province's rules. Lives on
  * the website's server, opened with the private link made here.
  */
-export default function LandlordView({ homeCity }) {
+export default function LandlordView(props) {
+  // A co-owner's view-only link opens just the books, read-only.
+  const [books] = useState(() => parseBooks(location.hash));
+  return books ? <BooksView books={books} /> : <LandlordWorkspace {...props} />;
+}
+
+function LandlordWorkspace({ homeCity }) {
   const [ws, setWs] = useState(() => {
     const fromLink = parseWorkspace(location.hash);
     if (fromLink) {
@@ -187,6 +194,32 @@ export default function LandlordView({ homeCity }) {
       billingSetup: () => call(`/w/${ws?.id}/billing/setup`, { method: 'POST', key: ws?.key, body: {} }),
       billingRemove: async () => {
         await call(`/w/${ws?.id}/billing/card`, { method: 'DELETE', key: ws?.key });
+        await load();
+      },
+      uploadReceipt: async (expenseId, file) => {
+        const blob = await shrinkPhoto(file);
+        let res;
+        try {
+          res = await fetch(`/api/w/${ws?.id}/expenses/${expenseId}/receipt`, { method: 'POST', headers: { authorization: `Bearer ${ws?.key}`, 'content-type': blob.type }, body: blob });
+        } catch {
+          throw new ApiError(0, 'Couldn’t upload. Check your connection.');
+        }
+        const data = await res.json().catch(() => null);
+        if (!res.ok) throw new ApiError(res.status, data?.error || 'Couldn’t upload that receipt.');
+        await load();
+      },
+      removeReceipt: async (expenseId) => {
+        await call(`/w/${ws?.id}/expenses/${expenseId}/receipt`, { method: 'DELETE', key: ws?.key });
+        await load();
+      },
+      receiptBlob: (receiptId) => receiptBlob(ws?.id, ws?.key, receiptId),
+      shareBooks: async () => {
+        const { key } = await call(`/w/${ws?.id}/share`, { method: 'POST', key: ws?.key, body: {} });
+        await load();
+        return links.books(ws, key);
+      },
+      unshareBooks: async () => {
+        await call(`/w/${ws?.id}/share`, { method: 'DELETE', key: ws?.key });
         await load();
       },
       verifySend: () => call(`/w/${ws?.id}/verify/send`, { method: 'POST', key: ws?.key, body: {} }),

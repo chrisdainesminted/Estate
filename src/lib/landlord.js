@@ -2,13 +2,13 @@
 // rental income laid out like the CRA's form T776, when rent can next go up,
 // and the reply templates the landlord sends from their own email or phone.
 
-import { T776 } from '../../worker/schema.js';
+import { CCA_CLASSES, T776 } from '../../worker/schema.js';
 import { rulesFor } from './tenancyRules.js';
 import { provinceName } from './canada.js';
 import { money } from './format.js';
 import { dateLabel, thisMonth, today, whenLabel } from './when.js';
 
-export { T776 };
+export { CCA_CLASSES, T776 };
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const plain = (s) => String(s).replace(/\u2060/g, '');
@@ -126,7 +126,7 @@ const csvCell = (v) => {
 export const toCsv = (rows) => `${rows.map((r) => r.map(csvCell).join(',')).join('\n')}\n`;
 
 /** The year's records as a CSV an accountant can open. */
-export function yearCsv(summary, payments, expenses, units, owners = []) {
+export function yearCsv(summary, payments, expenses, units, owners = [], cca = null) {
   const unitName = (id) => units.find((u) => u.id === id)?.label || '';
   const y = summary.year;
   return toCsv([
@@ -134,8 +134,19 @@ export function yearCsv(summary, payments, expenses, units, owners = []) {
     ['T776 line', 'Item', 'Amount', ''],
     ['8141', 'Gross rents', summary.gross.toFixed(2), ''],
     ...summary.lines.filter((l) => l.amount).map((l) => [l.line, l.label, l.amount.toFixed(2), '']),
-    ['9369', 'Net income (loss) before capital cost allowance', summary.net.toFixed(2), ''],
-    ...(owners.length ? [[], ['Each co-owner', 'Share', 'Their share of 9369', 'Less expenses they paid alone', 'Net to report'], ...ownerSplit(summary, owners).map((o) => [o.name, `${o.share}%`, o.net.toFixed(2), o.personal.toFixed(2), o.after.toFixed(2)])] : []),
+    ['9369', 'Net income (loss) before adjustments', summary.net.toFixed(2), ''],
+    ...(cca && !owners.length ? [['9936', 'Capital cost allowance (most allowed, within the rental-loss limit)', cca.claim.toFixed(2), ''], ['9946', 'Net income (loss)', cca.net.toFixed(2), '']] : []),
+    ...(owners.length
+      ? [
+          [],
+          ['Each co-owner', 'Share', 'Their share of 9369', 'Less expenses they paid alone', 'Before CCA', ...(cca ? ['CCA on their share (9936)', 'Net income (loss) (9946)'] : [])],
+          ...ownerSplit(summary, owners).map((o) => {
+            const c = cca?.owners.find((x) => x.name === o.name);
+            return [o.name, `${o.share}%`, o.net.toFixed(2), o.personal.toFixed(2), o.after.toFixed(2), ...(cca ? [(c?.claim ?? 0).toFixed(2), (c?.net ?? o.after).toFixed(2)] : [])];
+          }),
+        ]
+      : []),
+    ...(cca?.rows.length ? [[], ['Capital cost allowance', 'Class', 'UCC at the start of the year', 'Most allowed this year', 'UCC at the end of the year'], ...cca.rows.map((a) => [a.label, a.ccaClass, a.uccStart.toFixed(2), a.max.toFixed(2), a.uccEnd.toFixed(2)])] : []),
     [],
     ['Rent received', '', '', ''],
     ['Month', 'Unit', 'Amount', 'Paid on'],
@@ -317,4 +328,61 @@ export function leaseSheet({ unit, settings, province }) {
     ['Deposit', unit.deposit ? `${plain(money(unit.deposit))}. ${r.deposit}` : r.deposit],
   ];
   return { form: r.lease, url: r.leaseUrl || r.board?.url || '', rows, text: rows.map(([k, v]) => `${k}: ${v || '—'}`).join('\n') };
+}
+
+/**
+ * How much of a class's rate can be claimed in the year an asset is first
+ * put to use. The half-year rule allows half; the Accelerated Investment
+ * Incentive raised it to 1.5 times for property available for use after
+ * November 20, 2018 and before 2024, and to the full rate for 2024 to 2027.
+ */
+export function firstYearFactor(available) {
+  const d = String(available || '');
+  if (!d || d < '2018-11-21') return 0.5;
+  const y = Number(d.slice(0, 4));
+  if (y <= 2023) return 1.5;
+  if (y <= 2027) return 1;
+  return 0.5;
+}
+
+/**
+ * The most capital cost allowance one asset allows in a year, with its
+ * undepreciated capital cost (UCC) before and after, assuming the most was
+ * claimed every year before. When less was claimed, the UCC at the start
+ * of a later year (from that year's return) takes over from there.
+ */
+export function assetCca(asset, year) {
+  const rate = CCA_CLASSES.find((c) => c.key === asset?.ccaClass)?.rate ?? 0;
+  const cost = Math.max(num(asset?.cost), 0);
+  const first = Number(String(asset?.available || '').slice(0, 4));
+  const y0 = Number(year);
+  if (!rate || !cost || !first || y0 < first) return { rate, uccStart: 0, max: 0, uccEnd: 0 };
+  const known = num(asset.uccYear) > first && num(asset.uccYear) <= y0 && asset.ucc != null;
+  let ucc = known ? Math.max(num(asset.ucc), 0) : cost;
+  for (let y = known ? num(asset.uccYear) : first; ; y += 1) {
+    const claim = Math.min(cents(ucc * rate * (y === first ? firstYearFactor(asset.available) : 1)), cents(ucc));
+    if (y === y0) return { rate, uccStart: cents(ucc), max: claim, uccEnd: cents(ucc - claim) };
+    ucc = Math.max(ucc - claim, 0);
+  }
+}
+
+/**
+ * The year's capital cost allowance (T776 line 9936) and net income after
+ * it (line 9946). Each owner claims on their share of every asset, and the
+ * claim can't create or increase a rental loss, so it stops at their net
+ * income before CCA (line 9369's share less what they paid alone).
+ */
+export function ccaYear(assets, year, summary, owners = []) {
+  const rows = (assets ?? []).map((a) => ({ ...a, ...assetCca(a, year) })).filter((a) => a.uccStart > 0 || a.max > 0);
+  const max = cents(rows.reduce((sum, a) => sum + a.max, 0));
+  if (!owners.length) {
+    const claim = Math.min(max, Math.max(cents(summary.net), 0));
+    return { rows, max, claim, limited: claim < max, net: cents(summary.net - claim), owners: [] };
+  }
+  const shares = splitCents(max, owners.map((o) => o.share));
+  const split = ownerSplit(summary, owners).map((o, i) => {
+    const claim = Math.min(shares[i], Math.max(o.after, 0));
+    return { name: o.name, share: o.share, max: shares[i], claim, limited: claim < shares[i], net: cents(o.after - claim) };
+  });
+  return { rows, max, claim: cents(split.reduce((sum, o) => sum + o.claim, 0)), limited: split.some((o) => o.limited), net: null, owners: split };
 }
