@@ -30,6 +30,7 @@ import {
   Trash2,
   Undo2,
   Flag,
+  ListChecks,
 } from 'lucide-react';
 import { useDeals } from './hooks/useDeals.js';
 import { accountCall } from './lib/account.js';
@@ -66,6 +67,8 @@ import Logo, { LogoMark } from './components/Logo.jsx';
 import { useToast } from './components/toast.jsx';
 import { Button, SkeletonCard, signedClass } from './components/ui.jsx';
 import { normalizeProfile } from './lib/firstHome.js';
+import { myPlan, nextStep as nextStepFor } from './lib/journey.js';
+import NextStep from './components/NextStep.jsx';
 import { guessCity } from './lib/canada.js';
 
 // Views and charts load on demand so the first screen arrives quickly.
@@ -75,6 +78,8 @@ const CompareView = lazy(() => import('./views/CompareView.jsx'));
 const ListingsView = lazy(() => import('./views/ListingsView.jsx'));
 const CashView = lazy(() => import('./views/CashView.jsx'));
 const HomeView = lazy(() => import('./views/HomeView.jsx'));
+const HomesForMe = lazy(() => import('./views/HomesForMe.jsx'));
+const GetReady = lazy(() => import('./views/GetReady.jsx'));
 const LandlordView = lazy(() => import('./views/landlord/LandlordView.jsx'));
 const HelpSheet = lazy(() => import('./components/HelpSheet.jsx'));
 const AccountSheet = lazy(() => import('./components/AccountSheet.jsx'));
@@ -86,38 +91,62 @@ const YEARS = 10;
 const VIEW_KEY = 'bedrock-view';
 const TABS_KEY = 'bedrock-all-tabs';
 
-// `about` is what the help panel says each tab is for. The `basic` tabs
-// always show; the rest wait behind More until they're useful.
+// `about` is what the help panel says each tab is for. First-time buyers see
+// the `buy` tabs; the `invest` tabs sit behind the Investing switch, and of
+// those the ones not `basic` wait behind More until they're useful.
 const VIEWS = [
   {
     value: 'home',
-    label: 'Home',
+    label: 'My plan',
     icon: KeyRound,
+    group: 'buy',
     basic: true,
-    keywords: 'first home buy afford qualify down payment fhsa savings grants rebate suite permit build',
-    about: 'Your first home: what you could buy, the government money you can get, when you’ll be ready, and how to add a rental suite.',
+    keywords: 'first home buy afford qualify down payment fhsa savings grants rebate suite permit build plan gap gift',
+    about: 'What you could buy today, the cash it takes, when you’ll be ready for the home you want, and the shortcuts that get you there sooner.',
   },
-  { value: 'analyze', label: 'Analyze', icon: LayoutDashboard, basic: true, about: 'One deal in detail: what you’d keep each month, what a lender would say, and the most you should pay.' },
+  {
+    value: 'homes',
+    label: 'Homes for me',
+    icon: Home,
+    group: 'buy',
+    basic: true,
+    keywords: 'listings for sale afford fits stretch budget first home',
+    about: 'Today’s listings you could live in, each with what it would cost you a month and the cash to close, marked fits, stretch or not yet.',
+  },
+  {
+    value: 'ready',
+    label: 'Get ready',
+    icon: ListChecks,
+    group: 'buy',
+    basic: true,
+    keywords: 'checklist steps credit pre-approval mortgage broker realtor offer inspection insurance lawyer closing moving',
+    about: 'Every step from your credit report to moving day, explained and ticked off as you go, with a mortgage broker one click away.',
+  },
+  { value: 'analyze', label: 'Analyze', icon: LayoutDashboard, group: 'invest', basic: true, about: 'One deal in detail: what you’d keep each month, what a lender would say, and the most you should pay.' },
   {
     value: 'cash',
     label: 'Cash',
     icon: Banknote,
+    group: 'invest',
     basic: true,
     keywords: 'own money cash flow cash on cash 20% down mortgage payment income',
     about: 'Your own money as a 20% down payment: the cash flow after the mortgage payment, and the return on your cash.',
   },
-  { value: 'listings', label: 'Listings', icon: Radar, basic: true, about: 'Real Thunder Bay properties for sale, found every morning and checked against your targets.' },
-  { value: 'portfolio', label: 'Portfolio', icon: Briefcase, about: 'The properties you own, added up: what they bring in each month and what they’re worth today.' },
-  { value: 'compare', label: 'Compare', icon: Columns3, about: 'Up to three deals side by side, with the best of each row marked.' },
-  { value: 'plan', label: 'Plan', icon: Sprout, about: 'When your savings and rent could buy the next property, and where that leads in 10 years.' },
+  { value: 'listings', label: 'Listings', icon: Radar, group: 'invest', basic: true, about: 'Properties for sale across Canada, found every morning and checked against your targets.' },
+  { value: 'portfolio', label: 'Portfolio', icon: Briefcase, group: 'invest', about: 'The properties you own, added up: what they bring in each month and what they’re worth today.' },
+  { value: 'compare', label: 'Compare', icon: Columns3, group: 'invest', about: 'Up to three deals side by side, with the best of each row marked.' },
+  { value: 'plan', label: 'Plan', icon: Sprout, group: 'invest', about: 'When your savings and rent could buy the next property, and where that leads in 10 years.' },
   {
     value: 'landlord',
     label: 'Landlord',
     icon: Building2,
+    group: 'invest',
     keywords: 'tenant applicant viewing booking calendar rent payment late repair maintenance expense t776 tax lease notice deposit',
     about: 'Run your rentals: listing pages where people apply and book viewings, rent tracking, repair requests, expenses for tax time, and your province’s rules.',
   },
 ];
+const INVEST_VIEWS = new Set(VIEWS.filter((v) => v.group === 'invest').map((v) => v.value));
+const INVEST_KEY = 'bedrock-invest-view';
 const BASIC_VIEWS = new Set(VIEWS.filter((v) => v.basic).map((v) => v.value));
 
 // Analyze sections the command palette can jump to. The detail sections fold
@@ -338,6 +367,26 @@ export default function App() {
   const homeProfile = normalizeProfile(lib.settings.home);
   const homeCity = homeProfile.entered ? homeProfile.city : guessCity();
 
+  // "Your next step" atop the first-time buyer's pages.
+  const homeRate = normalizeMarket(lib.settings.market).rate;
+  const step = useMemo(() => nextStepFor({ profile: lib.settings.home, ready: lib.settings.ready, plan: myPlan({ profile: lib.settings.home, ratePct: homeRate }) }), [lib.settings.home, lib.settings.ready, homeRate]);
+  const goToStep = useCallback(
+    (st) => {
+      setView(st.view);
+      if (!st.anchor) return window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+      // Wait for the view to render, then bring the step into view.
+      let tries = 0;
+      const find = () => {
+        const el = document.getElementById(st.anchor);
+        if (el) el.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+        else if (tries++ < 20) setTimeout(find, 50);
+      };
+      requestAnimationFrame(find);
+    },
+    [setView],
+  );
+  const nextStepCard = <NextStep step={step} onGo={goToStep} />;
+
   const newDeal = useCallback(() => {
     const m = lib.settings.market;
     lib.insertDeal(homeRules === 'ca' ? { ...switchRules(DEFAULT_DEAL, 'ca'), city: homeCity, downPct: OWN_DOWN_PCT, rate: m.rate, refiRate: m.rate, termYears: m.amortYears } : {});
@@ -419,7 +468,29 @@ export default function App() {
   // Portfolio, Compare and Plan wait behind More until you have two deals of your own or own a property.
   const ownDeals = deals.filter((d) => !d.example);
   const tabsUnlocked = allTabs || ownDeals.length >= 2 || ownDeals.some((d) => d.status === 'owned');
-  const tabs = tabsUnlocked ? VIEWS : VIEWS.filter((v) => v.basic);
+  // First-time buyers see My plan, Homes for me and Get ready; the Investing switch swaps in the investor tools.
+  const investing = INVEST_VIEWS.has(view);
+  const groupViews = VIEWS.filter((v) => (v.group === 'invest') === investing);
+  const tabs = investing && !tabsUnlocked ? groupViews.filter((v) => v.basic) : groupViews;
+  useEffect(() => {
+    if (!investing) return;
+    try {
+      localStorage.setItem(INVEST_KEY, view);
+    } catch {
+      // per-viewer convenience only
+    }
+  }, [view, investing]);
+  const toggleInvesting = () => {
+    if (investing) return setView('home');
+    let back = 'analyze';
+    try {
+      const saved = localStorage.getItem(INVEST_KEY);
+      if (INVEST_VIEWS.has(saved)) back = saved;
+    } catch {
+      // per-viewer convenience only
+    }
+    setView(back);
+  };
   // Going to one of them any other way (search, a saved view) brings them all out.
   useEffect(() => {
     if (!BASIC_VIEWS.has(view)) showAllTabs();
@@ -427,7 +498,7 @@ export default function App() {
   const revealTabs = () => {
     showAllTabs();
     // The More button goes away: hand focus to the first tab it brought out.
-    requestAnimationFrame(() => document.querySelector(`header nav[aria-label="Views"] button:nth-child(${BASIC_VIEWS.size + 1})`)?.focus());
+    requestAnimationFrame(() => document.querySelector(`header nav[aria-label="Views"] button:nth-child(${groupViews.filter((v) => v.basic).length + 1})`)?.focus());
   };
   const importedIds = useMemo(() => new Set(deals.map((d) => d.listingId).filter(Boolean)), [deals]);
   // A listing opens as a deal with the loan its view counts: a DSCR loan on
@@ -448,6 +519,19 @@ export default function App() {
       window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
     },
     [deals, market, withUndo, lib, setView],
+  );
+  // From Homes for me: save the listing as a deal and show what living in it would cost, on My plan.
+  const liveInListing = useCallback(
+    (listing) => {
+      const existing = deals.find((d) => d.listingId === listing.id);
+      if (existing) lib.setActive(existing.id);
+      else withUndo(`Added “${listing.address}” to your deals`, () => lib.insertDeal(listingToDeal(listing, market, 'own')));
+      setLiveDealId(existing?.id ?? null);
+      setView('home');
+      openSection('home-live', true);
+      requestAnimationFrame(() => requestAnimationFrame(() => document.getElementById('home-live')?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' })));
+    },
+    [deals, market, withUndo, lib, setView, openSection],
   );
   const hideListing = useCallback(
     (listing) => withUndo(`Hid “${listing.address}”`, () => lib.updateSettings('market', { hidden: [...market.hidden, listing.id] })),
@@ -643,18 +727,33 @@ export default function App() {
                   {v.label}
                 </button>
               ))}
-              {!tabsUnlocked && (
+              {investing && !tabsUnlocked && (
                 <button type="button" onClick={revealTabs} className={tabClass(false)} aria-label="More tabs: Portfolio, Compare and Plan" title="More tabs">
                   <Ellipsis className="size-4" aria-hidden /> More
                 </button>
               )}
             </nav>
 
-            <div className="order-4 w-full pb-1 lg:order-none lg:w-auto lg:pb-0">
-              <DealPicker items={baseItems} activeId={activeId} onSelect={pickDeal} onNew={newDeal} />
-            </div>
+            {investing && (
+              <div className="order-4 w-full pb-1 lg:order-none lg:w-auto lg:pb-0">
+                <DealPicker items={baseItems} activeId={activeId} onSelect={pickDeal} onNew={newDeal} />
+              </div>
+            )}
 
             <div className="ml-auto flex items-center gap-2 lg:ml-0">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={investing}
+                onClick={toggleInvesting}
+                title={investing ? 'Back to your first-home plan' : 'Rental property tools: analyze deals, cash flow, your portfolio and landlord tools'}
+                className="inline-flex h-9 items-center gap-2 rounded-full px-2.5 text-sm font-medium whitespace-nowrap text-zinc-700 transition hover:bg-well focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:text-zinc-300"
+              >
+                <span aria-hidden className={`relative inline-block h-5 w-9 rounded-full transition ${investing ? 'bg-emerald-600 dark:bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}>
+                  <span className={`absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow transition-transform ${investing ? 'translate-x-4' : ''}`} />
+                </span>
+                Investing
+              </button>
               <button
                 type="button"
                 onClick={() => setPaletteOpen(true)}
@@ -715,14 +814,43 @@ export default function App() {
                 market={normalizeMarket(baseMarket)}
                 items={baseItems}
                 liveDealId={liveDealId ?? activeId}
+                account={lib.account}
                 onHome={(patch) => lib.updateSettings('home', patch)}
                 onSuite={(patch) => lib.updateSettings('suite', patch)}
-                ready={lib.settings.ready}
                 rvb={lib.settings.rvb}
-                onReady={(patch) => lib.updateSettings('ready', patch)}
                 onRvb={(patch) => lib.updateSettings('rvb', patch)}
                 onPickDeal={setLiveDealId}
                 onOpen={openDeal}
+                onAccount={() => setAccountOpen(true)}
+                onView={setView}
+                nextStep={step?.view === 'home' && step.id !== 'start' && step.anchor === 'plan-gap' ? null : nextStepCard}
+              />
+            )}
+
+            {view === 'homes' && (
+              <HomesForMe
+                feedState={marketFeed}
+                indexState={marketIndex}
+                city={listCity}
+                onCity={(listingCity) => lib.updateSettings('market', { listingCity })}
+                market={market}
+                profile={normalizeProfile(lib.settings.home)}
+                alerts={lib.settings.alerts}
+                onAlerts={lib.replaceAlerts}
+                onAnalyze={liveInListing}
+                onView={setView}
+                nextStep={step?.view === 'homes' ? null : nextStepCard}
+              />
+            )}
+
+            {view === 'ready' && (
+              <GetReady
+                profile={lib.settings.home}
+                ready={lib.settings.ready}
+                market={normalizeMarket(baseMarket)}
+                onReady={(patch) => lib.updateSettings('ready', patch)}
+                onView={setView}
+                nextStep={nextStepCard}
               />
             )}
 
@@ -867,7 +995,7 @@ export default function App() {
             </p>
           </footer>
         </main>
-        {!isDesktop && <Dock views={VIEWS} view={view} onView={setView} result={dockResult} onEdit={() => setSheetOpen(true)} />}
+        {!isDesktop && <Dock views={groupViews} view={view} onView={setView} result={dockResult} onEdit={() => setSheetOpen(true)} />}
       </div>
 
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} commands={commands} />}
@@ -880,7 +1008,7 @@ export default function App() {
             city={homeCity}
             rents={rents}
             onQuickCheck={quickCheck}
-            moreHidden={isDesktop && !tabsUnlocked}
+            moreHidden={isDesktop && investing && !tabsUnlocked}
             onShowAll={showAllTabs}
           />
         </Suspense>

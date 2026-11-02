@@ -1,8 +1,8 @@
-import { useContext, useMemo, useState } from 'react';
-import { SectionsContext } from '../components/Section.jsx';
+import { useMemo, useState } from 'react';
 import { Check, ExternalLink } from 'lucide-react';
 import { Button, NumberField } from '../components/ui.jsx';
 import { buyCheck } from '../lib/firstHome.js';
+import { stepsFor } from '../lib/journey.js';
 import { cityByKey, provinceName } from '../lib/canada.js';
 import { RENT_VS_BUY_DEFAULTS, rentVsBuy } from '../lib/rentVsBuy.js';
 import { money } from '../lib/format.js';
@@ -15,100 +15,88 @@ const Ext = ({ href, children }) => (
   </a>
 );
 
-/* ---------- Am I ready? ---------- */
+/* ---------- Get ready: every step to moving day ---------- */
 
 /**
- * The steps between "I want to buy" and closing day. Steps Squarely can see
- * for itself (savings, programs) tick themselves; the rest you tick.
+ * Every step between "I want to buy" and moving day, each explained, in
+ * order. Saving ticks itself from the person's numbers; the rest they tick,
+ * and the ticks are saved with their numbers (and their account, if any).
  */
-export function ReadyChecklist({ p, ready, onReady, ratePct, taxPct, rentEach, benefitsTotal }) {
+export function ReadyChecklist({ p, ready, onReady, ratePct, taxPct, rentEach, benefitsTotal, onBroker, onView }) {
   const place = cityByKey(p.city);
   const target = buyCheck({ profile: p, price: p.targetPrice, units: p.targetUnits, ratePct, taxesMonthly: (p.targetPrice * taxPct) / 1200, rentFromOthers: rentEach * (p.targetUnits - 1), city: p.city });
   const saved = p.savings >= target.cashNeeded;
   const quebec = place.province === 'QC';
-  const sections = useContext(SectionsContext);
-  // The broker section starts folded; open it before jumping there.
-  const openBroker = () => sections?.setOpen('home-broker', true);
-  const steps = [
-    {
-      id: 'credit',
-      title: 'Check your credit report',
-      body: (
-        <>
-          Lenders want a score around 680 or higher for the best rates. Your report is free from Equifax and TransUnion;{' '}
-          <Ext href="https://www.canada.ca/en/financial-consumer-agency/services/credit-reports-score/order-credit-report.html">how to get it</Ext>. Fix any mistakes before you
-          apply.
-        </>
-      ),
-    },
-    {
-      id: 'fhsa',
-      title: 'Open a First Home Savings Account',
-      body: (
-        <>
-          Up to $8,000 a year comes off your taxable income and comes out tax-free to buy. Open one now even with a little in it: the room starts the year you open it.{' '}
-          <Ext href="https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/first-home-savings-account.html">FHSA rules</Ext>
-        </>
-      ),
-    },
-    {
-      id: 'save',
-      auto: saved,
-      title: `Save ${money(target.cashNeeded)} for the down payment and closing`,
-      body: saved
-        ? `You have ${money(p.savings)}, enough for the ${money(p.targetPrice)} home you’re aiming for.`
-        : `You have ${money(p.savings)} of ${money(target.cashNeeded)} for a ${money(p.targetPrice)} home (${money(target.down)} down plus closing costs). “When you’ll be ready” below works out how long.`,
-    },
-    {
-      id: 'programs',
-      title: `Plan for the ${money(benefitsTotal)} in government money`,
-      body: 'Money you can get, above, lists each program. Claim the land transfer tax refund through your lawyer at closing and the buyers’ tax credit on your next return.',
-    },
-    {
-      id: 'docs',
-      title: 'Gather your documents',
-      body: 'Two years of T4s or Notices of Assessment, recent pay stubs, a letter from your employer, 90 days of bank statements for the down payment, and photo ID. Self-employed: two years of T1 Generals.',
-    },
-    {
-      id: 'preapproval',
-      title: 'Get pre-approved',
-      body: (
-        <>
-          A pre-approval holds a rate for 90 to 120 days and tells sellers you’re serious. A broker compares many lenders at once;{' '}
-          <a href="#home-broker" onClick={openBroker} className={link}>
-            talk to one
-          </a>
-          , or read{' '}
-          <a href={sitePage('/lenders/')} className={link}>
-            how to find a lender
-          </a>
-          .
-        </>
-      ),
-    },
-    {
-      id: 'lawyer',
-      title: quebec ? 'Choose a notary' : 'Choose a real estate lawyer',
-      body: quebec
-        ? 'In Québec a notary handles the deed and the mortgage. Expect about $1,500 to $2,500.'
-        : 'They check the title, hold the money and register the home in your name. Expect about $1,500 to $2,500 with disbursements.',
-    },
-    {
-      id: 'inspection',
-      title: 'Book a home inspection',
-      body: 'Make your offer conditional on one, about $400 to $600. With a rental unit, ask the inspector to look at fire separation and exits too.',
-    },
-    {
-      id: 'insurance',
-      title: 'Line up home insurance',
-      body: 'Your lender needs proof before closing. If you’ll rent out a unit, tell the insurer: a landlord policy for that part is a must.',
-    },
-    {
-      id: 'closing',
-      title: 'Keep money aside for moving and day one',
-      body: 'Movers, utility hook-ups, a few months of repairs, and property tax adjustments at closing. Keep a cushion after the down payment.',
-    },
-  ];
+  const c = target.closing;
+  const rental = p.targetUnits > 1;
+  const go = (view) => (e) => {
+    e.preventDefault();
+    onView?.(view);
+  };
+  const bodies = {
+    credit: (
+      <>
+        Lenders want a score around 680 or higher for the best rates; 600 is about the least most will take. Your report is free from Equifax and TransUnion:{' '}
+        <Ext href="https://www.canada.ca/en/financial-consumer-agency/services/credit-reports-score/order-credit-report.html">how to get it</Ext>. Fix any mistakes, pay every bill
+        on time, and keep card balances under a third of the limit.
+      </>
+    ),
+    fhsa: (
+      <>
+        Up to $8,000 a year comes off your taxable income and comes out tax-free to buy. Open one now even with a little in it: the room starts the year you open it. Any bank or
+        online brokerage can open one. <Ext href="https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/first-home-savings-account.html">FHSA rules</Ext>
+      </>
+    ),
+    save: saved ? (
+      `You have ${money(p.savings)}, enough for the ${money(p.targetPrice)} home you’re aiming for (${money(target.down)} down plus ${money(c.total)} closing).`
+    ) : (
+      <>
+        You have {money(p.savings)} of {money(target.cashNeeded)} for a {money(p.targetPrice)} home: {money(target.down)} down plus {money(c.total)} closing.{' '}
+        <a href="#plan-gap" onClick={go('home')} className={link}>
+          See your plan and shortcuts
+        </a>
+        . There’s also about {money(benefitsTotal)} in government money.
+      </>
+    ),
+    docs: 'Two years of T4s or Notices of Assessment, your two latest pay stubs, a letter from your employer with your salary and start date, 90 days of bank statements showing the down payment, and photo ID. Self-employed: two years of T1 Generals. A gift: a signed letter saying it isn’t a loan.',
+    preapproval: (
+      <>
+        A pre-approval checks your income and credit, holds a rate for 90 to 120 days, and tells sellers you’re serious. Do it once you’re within a few months of buying. A
+        mortgage broker compares many lenders at once and is usually free to you.{' '}
+        <button type="button" onClick={onBroker} className={link}>
+          Get a broker to call you
+        </button>{' '}
+        or read{' '}
+        <a href={sitePage('/lenders/')} className={link}>
+          how to find a lender
+        </a>
+        .
+      </>
+    ),
+    realtor: 'A buyer’s agent finds homes, books showings, writes your offer and negotiates. The seller usually pays their commission. Talk to two or three: ask how many first-time buyers they helped last year, and how they price an offer. You’ll sign a buyer agreement: read how long it lasts.',
+    search: (
+      <>
+        <a href="#homes" onClick={go('homes')} className={link}>
+          Homes for me
+        </a>{' '}
+        shows today’s listings with what each would cost you a month and the cash to close, marked fits, stretch or not yet. Go to viewings with your realtor; look at the roof,
+        windows, furnace age and water in the basement.{rental ? ' For a rental unit, check it has its own entrance and is legal.' : ''}
+      </>
+    ),
+    offer: `Your realtor writes it. Put in conditions: financing (5 to 7 days for your lender to approve this home) and inspection, so you can walk away and keep your deposit if either fails. The deposit, often 2 to 5% of the price, is due within a day of acceptance and comes out of your down payment.${rental ? ' Ask for the current rent and leases if a unit is rented.' : ''}`,
+    inspection: `A home inspector spends two or three hours checking the structure, roof, plumbing, wiring and heating, for about $400 to $600. Go along. If something big turns up, ask for a lower price or walk away before the condition ends.${rental ? ' Ask them to look at fire separation and exits for the rental unit.' : ''}`,
+    insurance: `Your lender needs proof of home insurance before closing. Get two or three quotes once your offer is firm.${rental ? ' Tell the insurer you’ll rent out a unit: it needs landlord coverage.' : ''}`,
+    lawyer: (
+      <>
+        {quebec ? 'In Québec a notary' : 'A real estate lawyer'} checks the title, moves the money and registers the home in your name, for about $1,500 to $2,500. Have this ready
+        for closing day, on top of the down payment: {money(c.ltt)} land transfer tax
+        {c.refund > 0 ? `, less ${money(c.refund)} first-time buyer rebate` : ''}, about {money(c.other)} in legal and other costs
+        {c.premiumPst > 0 ? `, and ${money(c.premiumPst)} sales tax on the mortgage insurance` : ''}. That’s {money(c.total)} in all for a {money(p.targetPrice)} home.
+      </>
+    ),
+    moving: 'Book movers early for month-end. Put hydro, gas, water and internet in your name from closing day. Change your address with Canada Post and the CRA. Keep a cushion for the first repairs, and claim the $1,500 home buyers’ tax credit on your next return.',
+  };
+  const steps = stepsFor(p).map((s) => ({ ...s, auto: s.id === 'save' ? saved : false, body: bodies[s.id] }));
   const done = (s) => s.auto || ready[s.id] === true;
   const count = steps.filter(done).length;
   return (
@@ -126,14 +114,14 @@ export function ReadyChecklist({ p, ready, onReady, ratePct, taxPct, rentEach, b
         {steps.map((s, i) => {
           const on = done(s);
           return (
-            <li key={s.id} className="flex gap-3 py-3">
+            <li key={s.id} id={`step-${s.id}`} className="flex scroll-mt-24 gap-3 py-3">
               <button
                 type="button"
                 role="checkbox"
                 aria-checked={on}
-                disabled={s.auto}
+                disabled={s.id === 'save'}
                 onClick={() => onReady({ [s.id]: !ready[s.id] })}
-                aria-label={`${s.title}${s.auto ? ' (done, from your numbers)' : ''}`}
+                aria-label={`${s.title}${s.id === 'save' ? (on ? ' (done, from your numbers)' : ' (ticks itself once your savings cover it)') : ''}`}
                 className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-[5px] border transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 ${on ? 'border-emerald-600 bg-emerald-600 text-white dark:border-emerald-400 dark:bg-emerald-400 dark:text-zinc-950' : 'border-(--line-strong) hover:border-emerald-500'}`}
               >
                 {on && <Check className="size-3.5" strokeWidth={3} aria-hidden />}

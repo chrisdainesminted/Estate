@@ -65,6 +65,7 @@ export function cleanAlert(a, i = 0) {
     types: types.length ? types : TYPES,
     maxPrice: n(a.maxPrice),
     maxLive: n(a.maxLive), // the most it may cost to live in, a month
+    fits: a.fits === true, // only homes the person could buy today, with their Home numbers
     minPerDoor: Number.isFinite(Number(a.minPerDoor)) && a.minPerDoor !== '' && a.minPerDoor != null ? Math.round(Number(a.minPerDoor)) : null,
     since: typeof a.since === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(a.since) ? a.since : new Date().toISOString().slice(0, 10),
   };

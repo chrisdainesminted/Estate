@@ -517,7 +517,7 @@ function Notice({ icon: Icon = Radar, title, children }) {
 }
 
 /** Which city's listings: every covered city by province, with how many listings each has. */
-function CityPicker({ city, index, onCity }) {
+export function CityPicker({ city, index, onCity }) {
   const cities = index?.cities ?? {};
   return (
     <div>

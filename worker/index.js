@@ -22,8 +22,9 @@ import { DirectoryStore, REPORT_REASONS, cleanInbox, inboxEmail } from './direct
 import { taxReminder } from '../src/lib/landlord.js';
 import { AccountStore } from './account.js';
 import { LoginStore, normalEmail } from './auth.js';
-import { alertMatches, alertName, feedDoc, freshMatches } from '../src/lib/market.js';
-import { homeFor, normalizeProfile } from '../src/lib/firstHome.js';
+import { alertMatches, alertName, feedDoc, freshMatches, normalizeMarket } from '../src/lib/market.js';
+import { homeFor, withGift } from '../src/lib/firstHome.js';
+import { readyReminder } from '../src/lib/journey.js';
 import { cityByKey } from '../src/lib/canada.js';
 import { monthlyBill } from './pricing.js';
 import { stripeClient, verifyWebhook } from './stripe.js';
@@ -413,8 +414,14 @@ export class Account extends DurableObject {
       switch (req.op) {
         case 'read':
           return a.read();
-        case 'write':
-          return a.write(req.body?.data, req.body?.updatedAt);
+        case 'write': {
+          // Turning the savings-month email on or off changes whether the daily run looks at this account.
+          const reminder = (d) => `${d?.settings?.home?.remindReady === true}|${d?.settings?.home?.readyBy ?? ''}`;
+          const before = reminder(a.read().data);
+          const r = a.write(req.body?.data, req.body?.updatedAt);
+          if (!r.stale && reminder(a.read().data) !== before) await this.register(req.id);
+          return r;
+        }
         case 'alerts': {
           const alerts = a.setAlerts(req.body?.alerts);
           await this.register(req.id);
@@ -461,10 +468,12 @@ export class Account extends DurableObject {
     return this.store.rekey();
   }
 
-  /** On the daily digest list only with alerts and a confirmed email. */
+  /** On the daily digest list only with a confirmed email and alerts or the savings-month email. */
   async register(id) {
     const r = this.store.read();
-    await directory(this.env).setAlerting(id, Boolean(r.emailVerified && r.email && r.alerts.length));
+    const home = r.data?.settings?.home;
+    const remind = home?.remindReady === true && typeof home?.readyBy === 'string';
+    await directory(this.env).setAlerting(id, Boolean(r.emailVerified && r.email && (r.alerts.length || remind)));
   }
 
   /** The day's alert email: listings new or cheaper since the last one, for each alert. */
@@ -472,10 +481,17 @@ export class Account extends DurableObject {
     const a = this.store;
     if (!a.ready) return { sent: false };
     const { data, alerts, email, emailVerified } = a.read();
-    if (!emailVerified || !email || !alerts.length) return { sent: false };
+    if (!emailVerified || !email) return { sent: false };
     const since = a.lastSent() || today;
     const market = data?.settings?.market;
-    const profile = normalizeProfile(data?.settings?.home);
+    const profile = withGift(data?.settings?.home);
+    // The month the savings plan said they'd be ready: one email, once.
+    const note = readyReminder({ profile: data?.settings?.home, ratePct: normalizeMarket(market).rate, today, origin, sent: a.meta('readySent') || '' });
+    if (note) {
+      await sendEmail(this.env, email, note.subject, `${note.body}\n\nTo stop these emails, open Squarely and turn off email in your account.`);
+      a.setMeta('readySent', note.month);
+    }
+    if (!alerts.length) return { sent: Boolean(note) };
     const feeds = new Map();
     const sections = [];
     for (const alert of alerts) {

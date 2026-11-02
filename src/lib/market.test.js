@@ -466,8 +466,15 @@ describe('alerts', () => {
     // Without a real tax bill there's no cost to live to match on.
     expect(alertMatches({ city: 'hamilton', maxLive: 1600 }, feed, { market: DEFAULT_MARKET, profile: {}, homeFor })).toHaveLength(0);
   });
+  it('keeps only homes you could buy today for a fits-my-budget alert', () => {
+    const homeFor = (deal) => ({ costToLive: 1500, canBuy: deal.price < 600000 });
+    const taxed = { listings: feed.listings.map((l) => ({ ...l, taxes: 5000 })) };
+    expect(alertMatches({ city: 'hamilton', fits: true }, taxed, { market: DEFAULT_MARKET, profile: {}, homeFor }).map((x) => x.listing.id)).toEqual(['a']);
+    expect(alertMatches({ city: 'hamilton', fits: true }, feed, { market: DEFAULT_MARKET, profile: {}, homeFor })).toHaveLength(0);
+  });
   it('names an alert plainly', () => {
     expect(alertName({ types: ['small'], maxLive: 2000 }, 'Hamilton')).toBe('2–4 units in Hamilton, under $2,000/mo to live in');
+    expect(alertName({ types: ['single', 'small'], fits: true }, 'Hamilton')).toBe('Houses and 2–4 units in Hamilton, that fit your budget');
   });
 });
 

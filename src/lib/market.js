@@ -609,10 +609,11 @@ export function alertMatches(alert, feed, { market, profile, homeFor } = {}) {
     .filter((l) => !alert.maxPrice || Number(l.price) <= alert.maxPrice)
     .map((l) => {
       const s = scoreListing(l, m);
-      if (s.needsTax) return { listing: l, perDoor: null, costToLive: null, needsTax: true };
+      if (s.needsTax) return { listing: l, perDoor: null, costToLive: null, needsTax: true, canBuy: false };
       const home = homeFor && profile ? homeFor(listingToDeal(l, m, 'own'), { ...profile, city: alert.city }, m.rate) : null;
-      return { listing: l, perDoor: s.perDoor, costToLive: home?.costToLive ?? null };
+      return { listing: l, perDoor: s.perDoor, costToLive: home?.costToLive ?? null, canBuy: home?.canBuy === true };
     })
+    .filter((x) => !alert.fits || x.canBuy)
     .filter((x) => !alert.maxLive || (x.costToLive != null && x.costToLive <= alert.maxLive))
     .filter((x) => alert.minPerDoor == null || (x.perDoor != null && x.perDoor >= alert.minPerDoor));
 }
@@ -629,5 +630,6 @@ export function alertName(alert, cityName) {
   if (alert.maxPrice) parts.push(`up to $${Math.round(alert.maxPrice).toLocaleString('en-CA')}`);
   if (alert.maxLive) parts.push(`under $${Math.round(alert.maxLive).toLocaleString('en-CA')}/mo to live in`);
   if (alert.minPerDoor != null) parts.push(`at least $${Math.round(alert.minPerDoor).toLocaleString('en-CA')}/door`);
+  if (alert.fits) parts.push('that fit your budget');
   return parts.join(', ');
 }

@@ -52,6 +52,9 @@ export const DEFAULT_PROFILE = {
   city: DEFAULT_CITY, // where you're buying: a key in canada.js CITIES
   rentOther: null, // $/mo a second unit would rent for; null = the city's average
   taxPct: null, // property tax, % of price a year; null = the city's typical rate
+  gift: 0, // money family will give toward the down payment
+  readyBy: null, // 'YYYY-MM': the month the savings plan says you'll be ready, kept for the reminder email
+  remindReady: false, // email me that month
   entered: false, // false until the person gives their own numbers; until then these are an example
 };
 
@@ -62,8 +65,9 @@ const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
 export function normalizeProfile(p) {
   const out = { ...DEFAULT_PROFILE };
-  for (const k of ['income', 'savings', 'monthlySave', 'debts', 'rentNow', 'targetPrice']) if (p && Number.isFinite(Number(p[k]))) out[k] = Math.max(Number(p[k]), 0);
-  for (const k of ['firstTime', 'newBuild']) if (typeof p?.[k] === 'boolean') out[k] = p[k];
+  for (const k of ['income', 'savings', 'monthlySave', 'debts', 'rentNow', 'targetPrice', 'gift']) if (p && Number.isFinite(Number(p[k]))) out[k] = Math.max(Number(p[k]), 0);
+  out.readyBy = typeof p?.readyBy === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(p.readyBy) ? p.readyBy : null;
+  for (const k of ['firstTime', 'newBuild', 'remindReady']) if (typeof p?.[k] === 'boolean') out[k] = p[k];
   if ([1, 2, 3, 4].includes(Number(p?.targetUnits))) out.targetUnits = Number(p.targetUnits);
   // Profiles saved before cities existed were all for Thunder Bay.
   if (p) out.city = cityByKey(p.city ?? 'thunder-bay').key;
@@ -71,6 +75,12 @@ export function normalizeProfile(p) {
   // Profiles saved before this flag existed count as entered once any answer differs from the example.
   out.entered = typeof p?.entered === 'boolean' ? p.entered : STARTER_KEYS.some((k) => typeof p?.[k] === 'number' && p[k] !== DEFAULT_PROFILE[k]);
   return out;
+}
+
+/** The profile with a family gift counted as money for buying, the way lenders count a gift letter. */
+export function withGift(p) {
+  const prof = normalizeProfile(p);
+  return prof.gift > 0 ? { ...prof, savings: prof.savings + prof.gift } : prof;
 }
 
 /**

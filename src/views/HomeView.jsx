@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
-import { ArrowRight, Check, CheckCircle2, ChevronDown, ExternalLink, XCircle } from 'lucide-react';
-import { RULES, RULES_CHECKED, benefits, buyCheck, liveIn, localFor, maxPrice, monthsToSave } from '../lib/firstHome.js';
+import { useEffect, useMemo, useState } from 'react';
+import { ArrowRight, BellRing, Check, CheckCircle2, ChevronDown, ExternalLink, XCircle } from 'lucide-react';
+import { RULES, RULES_CHECKED, benefits, buyCheck, liveIn, localFor, maxPrice } from '../lib/firstHome.js';
+import { monthName, myPlan } from '../lib/journey.js';
 import { SUITE_KINDS, SUITE_RULES_CHECKED, allowedFor, moneyFor, stepsFor, suitePayback } from '../lib/suites.js';
 import { cityByKey, guessCity, provinceName } from '../lib/canada.js';
 import { dealPlace } from '../lib/finance.js';
@@ -9,11 +10,10 @@ import { INSURANCE_MIN } from '../lib/market.js';
 import { Button, Card, CardHeader, LedgerHeading, LedgerLine, NumberField, Segmented, SelectField, SummaryCard, ViewHeader, signedClass } from '../components/ui.jsx';
 import { Section, SectionGroup } from '../components/Section.jsx';
 import CitySelect from '../components/CitySelect.jsx';
-import { BrokerForm, ReadyChecklist, RentVsBuy } from './HomeExtras.jsx';
+import { RentVsBuy } from './HomeExtras.jsx';
 import { sitePage } from '../lib/site.js';
 
 const checkedOn = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' });
-const monthFrom = (months) => new Date(new Date().getFullYear(), new Date().getMonth() + months, 1).toLocaleDateString('en-CA', { month: 'long', year: 'numeric' });
 const KIND = { 1: 'a house', 2: 'a duplex', 3: 'a triplex', 4: 'a fourplex' };
 // "Elsewhere in Ontario" reads as "Ontario" in a sentence.
 const placeName = (c) => c.name.replace(/^Elsewhere in /, '');
@@ -105,6 +105,7 @@ function Profile({ p, onHome }) {
         {f('monthlySave', { label: 'You can save', prefix: '$', suffix: '/mo', step: 50, decimals: 0 })}
         {f('rentNow', { label: 'Rent you pay now', prefix: '$', suffix: '/mo', step: 50, decimals: 0 })}
         {f('debts', { label: 'Debt payments', prefix: '$', suffix: '/mo', step: 25, decimals: 0, hint: 'Car, student loan, cards' })}
+        {f('gift', { label: 'Gift from family', prefix: '$', step: 1000, decimals: 0, hint: 'Toward the down payment' })}
         <div>
           <span className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">First home?</span>
           <Segmented size="sm" label="First home?" value={p.firstTime ? 'yes' : 'no'} onChange={(v) => onHome({ firstTime: v === 'yes' })} options={yesNo} />
@@ -165,44 +166,6 @@ function Benefits({ b }) {
           </div>
         </div>
       ))}
-    </div>
-  );
-}
-
-function Path({ p, onHome, ratePct, taxPct, rentEach }) {
-  const units = p.targetUnits;
-  const c = buyCheck({ profile: p, price: p.targetPrice, units, ratePct, taxesMonthly: (p.targetPrice * taxPct) / 1200, rentFromOthers: rentEach * (units - 1) });
-  const months = monthsToSave({ profile: p, target: c.cashNeeded });
-  return (
-    <div className="grid gap-6 p-5 @3xl:grid-cols-2">
-      <div className="grid content-start grid-cols-2 gap-3">
-        <NumberField id="home-target" label="The home you’re saving for" prefix="$" value={p.targetPrice} onChange={(v) => onHome({ targetPrice: v })} step={5000} decimals={0} />
-        <SelectField id="home-units" label="Type" value={units} onChange={(e) => onHome({ targetUnits: Number(e.target.value) })}>
-          {[1, 2, 3, 4].map((u) => (
-            <option key={u} value={u}>
-              {['House', 'Duplex', 'Triplex', 'Fourplex'][u - 1]}
-            </option>
-          ))}
-        </SelectField>
-      </div>
-      <div className="text-sm">
-        <LedgerHeading>To buy {KIND[units]} at {money(p.targetPrice)}</LedgerHeading>
-        <LedgerLine label="Down payment" value={money(c.down)} />
-        <LedgerLine label="Closing costs" value={money(c.closing.total)} />
-        <LedgerLine label="Cash you need" value={money(c.cashNeeded)} sum />
-        <LedgerLine label="You have" value={money(-p.savings)} />
-        <LedgerLine label="Still to save" value={money(c.shortCash)} sum />
-        <LedgerLine
-          label="Ready by"
-          value={months === 0 ? 'Now' : months == null ? 'Save more each month' : monthFrom(months)}
-          valueClass={`text-lg ${months === 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-zinc-950 dark:text-white'}`}
-          total
-        />
-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-          Saving {money(p.monthlySave)} a month{p.firstTime ? ' in an FHSA, with each spring’s tax refund added back' : ''}.{' '}
-          {c.qualify.pass ? 'Your income would qualify for it.' : 'Your income wouldn’t qualify for it yet: look at a cheaper home, more units, or less debt.'}
-        </p>
-      </div>
     </div>
   );
 }
@@ -341,7 +304,7 @@ function SuiteGuide({ s, onSuite, city }) {
  * number a person sees is about them.
  */
 function Start({ onHome }) {
-  const [v, setV] = useState({ income: null, savings: null, debts: null, rentNow: null });
+  const [v, setV] = useState({ income: null, savings: null, debts: null, rentNow: null, monthlySave: null });
   const [city, setCity] = useState(guessCity);
   const [missing, setMissing] = useState([]);
   const set = (key) => (n) => {
@@ -356,7 +319,7 @@ function Start({ onHome }) {
       document.getElementById(`start-${gaps[0]}`)?.focus();
       return;
     }
-    onHome({ city, rentOther: null, taxPct: null, targetPrice: cityByKey(city).price, income: v.income, savings: v.savings, debts: Number.isFinite(v.debts) ? v.debts : 0, rentNow: v.rentNow, entered: true });
+    onHome({ city, rentOther: null, taxPct: null, targetPrice: cityByKey(city).price, income: v.income, savings: v.savings, debts: Number.isFinite(v.debts) ? v.debts : 0, rentNow: v.rentNow, ...(Number.isFinite(v.monthlySave) ? { monthlySave: v.monthlySave } : {}), entered: true });
   };
   const label = { income: 'your income', savings: 'what you’ve saved', rentNow: 'the rent you pay' };
   return (
@@ -364,10 +327,10 @@ function Start({ onHome }) {
       <form onSubmit={submit} noValidate aria-labelledby="start-title">
         <div className="border-b border-hairline px-5 py-5 sm:px-6">
           <h2 id="start-title" className="text-xl font-semibold tracking-tight text-zinc-950 sm:text-2xl dark:text-white">
-            Five questions, then your answer
+            Six quick questions, then your answer
           </h2>
           <p className="mt-1.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-            What a bank would lend you, alone and with a tenant, and what it would cost you each month. Your answers stay in this browser.
+            About two minutes. You’ll see what a bank would lend you, alone and with a tenant, the cash you’d need, and when you’d be ready. Your answers stay in this browser unless you make an account.
           </p>
         </div>
         <div className="grid gap-4 px-5 py-5 sm:grid-cols-2 sm:px-6">
@@ -379,6 +342,7 @@ function Start({ onHome }) {
           <NumberField id="start-savings" label="Saved for buying" prefix="$" step={1000} decimals={0} value={v.savings} onChange={set('savings')} hint="Bank, TFSA, FHSA, RRSP: anything for the down payment" />
           <NumberField id="start-rentNow" label="Rent you pay now" prefix="$" suffix="/mo" step={50} decimals={0} value={v.rentNow} onChange={set('rentNow')} hint="Your share, if you split it" />
           <NumberField id="start-debts" label="Monthly debt payments" prefix="$" suffix="/mo" step={25} decimals={0} value={v.debts} onChange={set('debts')} hint="Car, student loan, card minimums. Leave blank if none" />
+          <NumberField id="start-monthlySave" label="You could save each month" prefix="$" suffix="/mo" step={50} decimals={0} value={v.monthlySave} onChange={set('monthlySave')} hint="A guess is fine. Blank uses $800" />
         </div>
         <div className="flex flex-col gap-3 border-t border-hairline px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <p role="alert" className="text-sm text-red-700 dark:text-red-400">
@@ -395,30 +359,150 @@ function Start({ onHome }) {
   );
 }
 
+/** The home you want, how far off it is, and what closes the gap. */
+function GapCard({ plan, onHome, onAccount, account }) {
+  const p = plan.profile;
+  const g = plan.goal;
+  const units = g.units;
+  const ready = g.short === 0 && g.qualifies;
+  return (
+    <Card id="plan-gap">
+      <div className="border-b border-hairline px-5 py-4 sm:px-6">
+        <h2 className="text-base font-semibold text-zinc-950 dark:text-white">The home you want, and when you’ll get there</h2>
+        <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">Start from a typical home in {placeName(plan.local.city)}, or set your own.</p>
+      </div>
+      <div className="grid gap-6 p-5 sm:px-6 @3xl:grid-cols-2">
+        <div className="grid content-start grid-cols-2 gap-3">
+          <NumberField id="home-target" label="Price" prefix="$" value={g.price} onChange={(v) => onHome({ targetPrice: v })} step={5000} decimals={0} />
+          <SelectField id="home-units" label="Type" value={units} onChange={(e) => onHome({ targetUnits: Number(e.target.value) })}>
+            {[1, 2, 3, 4].map((u) => (
+              <option key={u} value={u}>
+                {['House', 'Duplex (rent one unit)', 'Triplex', 'Fourplex'][u - 1]}
+              </option>
+            ))}
+          </SelectField>
+          <NumberField id="home-monthlySave2" label="You save" prefix="$" suffix="/mo" value={p.monthlySave} onChange={(v) => onHome({ monthlySave: v })} step={50} decimals={0} />
+          <NumberField id="home-gift2" label="Gift from family" prefix="$" value={plan.gift} onChange={(v) => onHome({ gift: v })} step={1000} decimals={0} />
+          <div className="col-span-2 text-sm">
+            <LedgerLine label="Down payment" value={money(g.check.down)} />
+            <LedgerLine label="Closing costs" tip="landTransferTax" value={money(g.check.closing.total)} />
+            <LedgerLine label="Cash you need" value={money(g.check.cashNeeded)} sum />
+            <LedgerLine label={plan.gift > 0 ? 'You have, with the gift' : 'You have'} value={money(-p.savings)} />
+            <LedgerLine label="Still to save" value={money(g.short)} sum />
+          </div>
+        </div>
+        <div className="grid content-start gap-4">
+          <div>
+            <p className={`text-xl font-semibold tracking-tight ${ready ? 'text-emerald-700 dark:text-emerald-400' : 'text-zinc-950 dark:text-white'}`}>
+              {ready
+                ? `You’re ready for ${KIND[units]} at ${money(g.price)}`
+                : g.short > 0
+                  ? `You’re ${money(g.short)} short`
+                  : 'You have the cash'}
+            </p>
+            {g.short > 0 && (
+              <p className="mt-1 text-[15px] text-zinc-700 dark:text-zinc-300">
+                {g.readyBy ? (
+                  <>
+                    Ready by <strong className="font-semibold text-zinc-950 dark:text-white">{monthName(g.readyBy)}</strong> at {money(p.monthlySave)} a month
+                    {p.firstTime ? ', with your FHSA refunds' : ''}.
+                  </>
+                ) : (
+                  'Save a little each month to get a date.'
+                )}
+              </p>
+            )}
+            {g.far && g.within2 > 0 && g.within2 < g.price && (
+              <div className="mt-3 rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-950 ring-1 ring-emerald-600/20 ring-inset dark:text-emerald-100">
+                That’s a long way off. {KIND[units].replace(/^a /, 'A ')} up to about <strong className="font-semibold">{money(g.within2)}</strong> is within two years for you.{' '}
+                <button type="button" onClick={() => onHome({ targetPrice: g.within2 })} className="font-semibold text-emerald-800 underline underline-offset-2 dark:text-emerald-300">
+                  Aim for that instead
+                </button>
+              </div>
+            )}
+            {!g.qualifies && (
+              <p className="mt-2 flex items-start gap-1.5 text-sm text-amber-800 dark:text-amber-300">
+                <XCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
+                {g.incomeNeeded
+                  ? `A lender would want about ${money(g.incomeNeeded)} of household income for this one, ${money(g.incomeShort)} more than yours. More units, a lower price or paying down debt closes that.`
+                  : 'A lender wouldn’t approve this one on your income. Try a lower price or more units.'}
+              </p>
+            )}
+          </div>
+          {plan.shortcuts.length > 0 && (
+            <div>
+              <LedgerHeading>Shortcuts</LedgerHeading>
+              <ul className="grid gap-3">
+                {plan.shortcuts.map((x) => (
+                  <li key={x.key} className="text-sm">
+                    <span className="flex items-baseline justify-between gap-3">
+                      <span className="font-semibold text-zinc-900 dark:text-white">{x.title}</span>
+                      <span className="tabular shrink-0 font-semibold text-emerald-700 dark:text-emerald-400">
+                        {x.unit === 'months' ? (x.value > 0 ? `${x.value} mo sooner` : '') : x.unit === 'monthly' ? `${money(x.value)}/mo` : x.key === 'hbp' ? `Up to ${money(x.value)}` : money(x.value)}
+                      </span>
+                    </span>
+                    <span className="mt-0.5 block text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">{x.text}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {g.short > 0 && g.readyBy && (
+            <div className="rounded-md border border-hairline p-3 text-sm">
+              <label className="flex items-start gap-2 text-zinc-800 dark:text-zinc-200">
+                <input type="checkbox" checked={p.remindReady} onChange={(e) => onHome({ remindReady: e.target.checked })} className="mt-1 accent-emerald-600" />
+                <span>
+                  <BellRing className="mr-1 inline size-3.5 text-emerald-600" aria-hidden />
+                  Email me in {monthName(g.readyBy)}, when I should have it saved
+                </span>
+              </label>
+              {p.remindReady && !account && (
+                <p className="mt-1.5 pl-6 text-xs text-zinc-600 dark:text-zinc-400">
+                  Emails need a free account with your email.{' '}
+                  <button type="button" onClick={onAccount} className="font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+                    Set one up
+                  </button>
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 /**
- * The Home tab: for someone buying their first home. What you could buy on
- * your own or with a tenant, the government money you can get, when you'll
- * be ready, what living in one of your deals would cost, and how to add a
- * rental unit through the permits.
+ * My plan: for someone buying their first home. The instant answer (what
+ * you could buy today, alone and with a rental unit, and the cash it takes),
+ * the gap to the home you want with the month you'd be ready and the
+ * shortcuts, the government money, and the deeper tools below.
  */
-export default function HomeView({ profile: p, suite, ready = {}, rvb = {}, market, items, liveDealId, onHome, onSuite, onReady, onRvb, onPickDeal, onOpen }) {
+export default function HomeView({ profile: raw, suite, rvb = {}, market, items, liveDealId, account, onHome, onSuite, onRvb, onPickDeal, onOpen, onAccount, onView, nextStep }) {
   const ratePct = Number(market.rate);
-  // Rent for a second unit and property tax where the profile is buying (the city's, unless they set their own).
-  const local = localFor(p);
+  const plan = useMemo(() => myPlan({ profile: raw, ratePct }), [raw, ratePct]);
+  // A family gift counts as savings everywhere below.
+  const p = plan.profile;
+  const local = plan.local;
   const taxPct = local.taxPct;
   const rentEach = local.rent;
   const insurance = (units) => Math.max((Number(market.insurancePerUnit) || 0) * units, INSURANCE_MIN) / 12;
   const b = useMemo(() => benefits({ profile: p, price: p.targetPrice, units: p.targetUnits }), [p]);
-  const solo = maxPrice({ profile: p, units: 1, ratePct, taxPct });
-  const duplex = maxPrice({ profile: p, units: 2, ratePct, taxPct, rentPerOtherUnit: rentEach });
+  const { solo, duplex } = plan;
+
+  // Keep the month the plan says you'll be ready with your numbers, for the reminder email.
+  const readyBy = raw.entered && plan.goal.short > 0 ? plan.goal.readyBy : null;
+  useEffect(() => {
+    if (raw.entered && readyBy !== raw.readyBy) onHome({ readyBy });
+  }, [raw.entered, raw.readyBy, readyBy]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const header = (
-    <ViewHeader title="Your first home">
-      How close you are to owning {p.entered ? `in ${placeName(local.city)}` : 'your first home'}. Estimates, not financial advice.
+    <ViewHeader title="My plan">
+      {raw.entered ? `Your path to a first home in ${placeName(local.city)}.` : 'Your path to a first home, in plain numbers.'} Estimates, not financial advice.
     </ViewHeader>
   );
 
-  if (!p.entered) {
+  if (!raw.entered) {
     return (
       <div className="space-y-6">
         {header}
@@ -435,22 +519,42 @@ export default function HomeView({ profile: p, suite, ready = {}, rvb = {}, mark
   return (
     <div className="space-y-6">
       {header}
+      {nextStep}
 
       <SummaryCard
         id="home-summary"
         head={
           <>
             <h2 className="text-xl font-semibold tracking-tight text-zinc-950 sm:text-2xl dark:text-white">
-              {duplex.price > 0 ? `You could buy up to ${money(duplex.price)}` : 'Let’s get you ready to buy'}
+              {plan.best.price > 0 ? `You could buy up to ${money(plan.best.price)} today` : 'Let’s get you ready to buy'}
             </h2>
-            <p className="mt-4 flex items-start gap-1.5 text-[15px] font-semibold text-emerald-700 dark:text-emerald-400">
-              <Check className="mt-0.5 size-4 shrink-0" aria-hidden />
-              {duplex.price > solo.price ? `${money(duplex.price - solo.price)} more by renting out half a duplex` : 'Renting out a unit is your strongest lever'}
-            </p>
-            <p className="mt-1 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
-              On your own, about {money(solo.price)}. A typical house in {placeName(local.city)} is about {money(local.city.price)}
+            {plan.best.price > 0 ? (
+              <ul className="mt-3 grid gap-1.5 text-[15px] text-zinc-700 dark:text-zinc-300">
+                <li>
+                  On your own: <strong className="font-semibold text-zinc-950 tabular-nums dark:text-white">{money(solo.price)}</strong>
+                </li>
+                <li>
+                  With a rental unit: <strong className="font-semibold text-zinc-950 tabular-nums dark:text-white">{money(duplex.price)}</strong>
+                  {duplex.price > solo.price && <span className="text-emerald-700 dark:text-emerald-400"> ({money(duplex.price - solo.price)} more)</span>}
+                </li>
+                <li>
+                  You’d need <strong className="font-semibold text-zinc-950 tabular-nums dark:text-white">{money(plan.cashToClose)}</strong> cash to close
+                </li>
+              </ul>
+            ) : (
+              <p className="mt-2 text-[15px] text-zinc-700 dark:text-zinc-300">Your savings don’t cover a down payment yet. The plan below shows how long until they do.</p>
+            )}
+            <p className="mt-3 flex items-start gap-1.5 text-sm text-zinc-600 dark:text-zinc-400">
+              <Check className="mt-0.5 size-4 shrink-0 text-emerald-600" aria-hidden />
+              Held back by your {plan.best.limit === 'income' ? 'income' : 'savings'}. A typical house in {placeName(local.city)} is about {money(local.city.price)}
               {local.city.priceEstimated ? ' (estimate)' : ''}, and there’s about {money(b.total)} in government money you can claim.
             </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button variant="primary" onClick={() => onView('homes')}>
+                Homes that fit me <ArrowRight className="size-4" aria-hidden />
+              </Button>
+              <Button onClick={() => onView('ready')}>Get ready to buy</Button>
+            </div>
           </>
         }
       >
@@ -460,17 +564,13 @@ export default function HomeView({ profile: p, suite, ready = {}, rvb = {}, mark
         </div>
       </SummaryCard>
 
-      <Profile p={p} onHome={onHome} />
+      <GapCard plan={plan} onHome={onHome} onAccount={onAccount} account={account} />
+
+      <Profile p={raw} onHome={onHome} />
 
       <SectionGroup>
         <Section id="home-money" title="Money you can get" value={money(b.total)} valueClass="text-emerald-700 dark:text-emerald-400" meaning="Tax refunds, rebates and your own RRSP.">
           <Benefits b={b} />
-        </Section>
-        <Section id="home-path" title="When you’ll be ready" meaning="When your savings cover the down payment and closing.">
-          <Path p={p} onHome={onHome} ratePct={ratePct} taxPct={taxPct} rentEach={rentEach} />
-        </Section>
-        <Section id="home-ready" title="Am I ready?" meaning="Every step to closing day, ticked off as you go.">
-          <ReadyChecklist p={p} ready={ready} onReady={onReady} ratePct={ratePct} taxPct={taxPct} rentEach={rentEach} benefitsTotal={b.total} />
         </Section>
         <Section id="home-rvb" title="Rent or buy, over 10 years" meaning="Where you’d be in 10 years, buying versus renting.">
           <RentVsBuy p={p} rvb={rvb} onRvb={onRvb} ratePct={ratePct} taxPct={taxPct} rentEach={rentEach} insuranceMonthly={insurance(p.targetUnits)} />
@@ -480,9 +580,6 @@ export default function HomeView({ profile: p, suite, ready = {}, rvb = {}, mark
         </Section>
         <Section id="home-suite" title="Add a suite or backyard home" meaning="What’s allowed where you are, the permits, and whether it pays.">
           <SuiteGuide s={suite} onSuite={onSuite} city={local.city.key} />
-        </Section>
-        <Section id="home-broker" title="Talk to a mortgage broker" meaning="Free pre-approval from a licensed broker.">
-          <BrokerForm p={p} maxPrice={duplex.price} />
         </Section>
       </SectionGroup>
 
