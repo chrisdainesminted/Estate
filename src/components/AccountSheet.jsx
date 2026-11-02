@@ -3,6 +3,7 @@ import { BellRing, Cloud, Copy, Mail, Trash2 } from 'lucide-react';
 import Sheet from './Sheet.jsx';
 import { Button } from './ui.jsx';
 import { accountCall, accountUrl, signOut } from '../lib/account.js';
+import { PlusOffer, PlusTag, usePlus } from './Plus.jsx';
 import AuthForm from './AuthForm.jsx';
 import { alertName } from '../lib/market.js';
 import { cityByKey } from '../lib/canada.js';
@@ -80,6 +81,8 @@ export default function AccountSheet({ open, onClose, hosted, account, onAccount
               </a>
             </div>
 
+            <PlusSection />
+
             <section className="border-t border-hairline pt-5">
               <h3 className="flex items-center gap-2 text-base font-semibold text-zinc-950 dark:text-white">
                 <BellRing className="size-4 text-emerald-600" aria-hidden /> Listing alerts
@@ -98,7 +101,7 @@ export default function AccountSheet({ open, onClose, hosted, account, onAccount
                   ))}
                 </ul>
               )}
-              <p className="mt-3 text-zinc-600 dark:text-zinc-400">New matches show on the Listings tab. Add an email to get a daily digest too.</p>
+              <p className="mt-3 text-zinc-600 dark:text-zinc-400">New matches show in the app. With Squarely Plus, add an email to get them each morning too. Your savings-month reminder emails are free.</p>
               {remote?.emailVerified ? (
                 <div className="mt-3 flex flex-wrap items-center gap-3">
                   <span className="text-emerald-700 dark:text-emerald-400">Emailing {remote.email}</span>
@@ -169,5 +172,32 @@ export default function AccountSheet({ open, onClose, hosted, account, onAccount
         )}
       </div>
     </Sheet>
+  );
+}
+
+/** Squarely Plus: what it is, and the subscription's state. */
+function PlusSection() {
+  const plus = usePlus();
+  if (plus.hosted) return null;
+  return (
+    <section className="border-t border-hairline pt-5">
+      <h3 className="flex items-center gap-2 text-base font-semibold text-zinc-950 dark:text-white">
+        <PlusTag /> Squarely Plus
+      </h3>
+      {plus.active ? (
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <span className="text-emerald-700 dark:text-emerald-400">
+            You have Plus{plus.cancelAt ? `, until ${new Date(plus.cancelAt).toLocaleDateString('en-CA', { month: 'long', day: 'numeric', year: 'numeric' })}` : ''}. Thank you.
+          </span>
+          <Button variant="ghost" onClick={plus.manage}>
+            Card, receipts or cancel
+          </Button>
+        </div>
+      ) : (
+        <div className="mt-2">
+          <PlusOffer />
+        </div>
+      )}
+    </section>
   );
 }

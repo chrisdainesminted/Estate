@@ -31,6 +31,9 @@ import {
   Undo2,
   Flag,
   ListChecks,
+  Hammer,
+  Tag,
+  Signpost,
 } from 'lucide-react';
 import { useDeals } from './hooks/useDeals.js';
 import { accountCall } from './lib/account.js';
@@ -68,7 +71,9 @@ import { useToast } from './components/toast.jsx';
 import { Button, SkeletonCard, signedClass } from './components/ui.jsx';
 import { normalizeProfile } from './lib/firstHome.js';
 import { myPlan, nextStep as nextStepFor } from './lib/journey.js';
+import { sellNextStep } from './lib/selling.js';
 import NextStep from './components/NextStep.jsx';
+import { PlusProvider, usePlusState } from './components/Plus.jsx';
 import { guessCity } from './lib/canada.js';
 
 // Views and charts load on demand so the first screen arrives quickly.
@@ -80,6 +85,9 @@ const CashView = lazy(() => import('./views/CashView.jsx'));
 const HomeView = lazy(() => import('./views/HomeView.jsx'));
 const HomesForMe = lazy(() => import('./views/HomesForMe.jsx'));
 const GetReady = lazy(() => import('./views/GetReady.jsx'));
+const BuildView = lazy(() => import('./views/BuildView.jsx'));
+const SellWorth = lazy(() => import('./views/SellView.jsx').then((m) => ({ default: m.SellWorth })));
+const SellReady = lazy(() => import('./views/SellView.jsx').then((m) => ({ default: m.SellReady })));
 const LandlordView = lazy(() => import('./views/landlord/LandlordView.jsx'));
 const HelpSheet = lazy(() => import('./components/HelpSheet.jsx'));
 const AccountSheet = lazy(() => import('./components/AccountSheet.jsx'));
@@ -114,6 +122,15 @@ const VIEWS = [
     about: 'Today’s listings you could live in, each with what it would cost you a month and the cash to close, marked fits, stretch or not yet.',
   },
   {
+    value: 'build',
+    label: 'Build',
+    icon: Hammer,
+    group: 'buy',
+    basic: true,
+    keywords: 'blueprint floor plan materials drywall lumber renovate basement addition takeoff store',
+    about: 'Upload a floor plan (or type the rooms) and get a materials list with quantities and where to buy each one.',
+  },
+  {
     value: 'ready',
     label: 'Get ready',
     icon: ListChecks,
@@ -121,6 +138,33 @@ const VIEWS = [
     basic: true,
     keywords: 'checklist steps credit pre-approval mortgage broker realtor offer inspection insurance lawyer closing moving',
     about: 'Every step from your credit report to moving day, explained and ticked off as you go, with a mortgage broker one click away.',
+  },
+  {
+    value: 'sell',
+    label: 'What it’s worth',
+    icon: Tag,
+    group: 'sell',
+    basic: true,
+    keywords: 'sell home value worth price estimate comparables net proceeds commission penalty',
+    about: 'What your home is likely worth from similar homes for sale now, and what you’d walk away with after selling.',
+  },
+  {
+    value: 'sellready',
+    label: 'Sell-ready',
+    icon: ListChecks,
+    group: 'sell',
+    basic: true,
+    keywords: 'sell checklist agent staging repairs offers closing',
+    about: 'Every step from deciding to sell to closing day, ticked off as you go.',
+  },
+  {
+    value: 'selllist',
+    label: 'List it',
+    icon: Signpost,
+    group: 'sell',
+    basic: true,
+    keywords: 'sell privately listing photos for sale by owner',
+    about: 'List your home for sale on Squarely: photos, details and messages from buyers.',
   },
   { value: 'analyze', label: 'Analyze', icon: LayoutDashboard, group: 'invest', basic: true, about: 'One deal in detail: what you’d keep each month, what a lender would say, and the most you should pay.' },
   {
@@ -146,7 +190,13 @@ const VIEWS = [
   },
 ];
 const INVEST_VIEWS = new Set(VIEWS.filter((v) => v.group === 'invest').map((v) => v.value));
-const INVEST_KEY = 'bedrock-invest-view';
+const MODES = [
+  { value: 'buy', label: 'Buying', first: 'home' },
+  { value: 'sell', label: 'Selling', first: 'sell' },
+  { value: 'invest', label: 'Investing', first: 'analyze' },
+];
+const groupOf = (view) => VIEWS.find((v) => v.value === view)?.group ?? 'buy';
+const MODE_KEY = 'bedrock-mode-view:';
 const BASIC_VIEWS = new Set(VIEWS.filter((v) => v.basic).map((v) => v.value));
 
 // Analyze sections the command palette can jump to. The detail sections fold
@@ -318,7 +368,22 @@ export default function App() {
   const compared = compare.map((c) => ({ ...effective.get(c.id), slot: c.slot })).filter((x) => x.deal);
   const owned = useMemo(() => baseItems.filter((x) => x.deal.status === 'owned'), [baseItems]);
   const prospects = useMemo(() => baseItems.filter((x) => x.deal.status !== 'owned'), [baseItems]);
-  const exports = useExports(current, baseItems);
+  const plus = usePlusState({ account: lib.account, hosted: HOSTED, onNeedAccount: () => setAccountOpen(true) });
+  const rawExports = useExports(current, baseItems);
+  // Back from Stripe: say so once, and tidy the address.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const back = url.searchParams.get('plus');
+    if (!back) return;
+    url.searchParams.delete('plus');
+    window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+    toast({ text: back === 'welcome' ? 'Welcome to Squarely Plus. Thank you for supporting Squarely.' : 'No charge made. Plus is there whenever you want it.' });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Deal memos as PDFs are part of Plus; without it, the button says so and offers it.
+  const exports = useMemo(
+    () => (plus.active ? rawExports : { ...rawExports, exportPdf: () => toast({ text: 'Deal memos as PDFs are part of Squarely Plus.', action: plus.available ? { label: 'Get Plus', onClick: plus.start } : undefined }) }),
+    [plus.active, plus.available, plus.start, rawExports, toast],
+  );
 
   // Any change worth taking back: do it, then offer Undo in a toast.
   const withUndo = useCallback(
@@ -385,7 +450,9 @@ export default function App() {
     },
     [setView],
   );
+  const sellStep = useMemo(() => sellNextStep(lib.settings.sell), [lib.settings.sell]);
   const nextStepCard = <NextStep step={step} onGo={goToStep} />;
+  const sellStepCard = <NextStep step={sellStep} onGo={goToStep} />;
 
   const newDeal = useCallback(() => {
     const m = lib.settings.market;
@@ -468,24 +535,24 @@ export default function App() {
   // Portfolio, Compare and Plan wait behind More until you have two deals of your own or own a property.
   const ownDeals = deals.filter((d) => !d.example);
   const tabsUnlocked = allTabs || ownDeals.length >= 2 || ownDeals.some((d) => d.status === 'owned');
-  // First-time buyers see My plan, Homes for me and Get ready; the Investing switch swaps in the investor tools.
-  const investing = INVEST_VIEWS.has(view);
-  const groupViews = VIEWS.filter((v) => (v.group === 'invest') === investing);
+  // Buying, selling or investing: each mode has its own tabs, and remembers the last one open.
+  const mode = groupOf(view);
+  const investing = mode === 'invest';
+  const groupViews = VIEWS.filter((v) => v.group === mode);
   const tabs = investing && !tabsUnlocked ? groupViews.filter((v) => v.basic) : groupViews;
   useEffect(() => {
-    if (!investing) return;
     try {
-      localStorage.setItem(INVEST_KEY, view);
+      localStorage.setItem(MODE_KEY + mode, view);
     } catch {
       // per-viewer convenience only
     }
-  }, [view, investing]);
-  const toggleInvesting = () => {
-    if (investing) return setView('home');
-    let back = 'analyze';
+  }, [view, mode]);
+  const switchMode = (m) => {
+    if (m === mode) return;
+    let back = MODES.find((x) => x.value === m).first;
     try {
-      const saved = localStorage.getItem(INVEST_KEY);
-      if (INVEST_VIEWS.has(saved)) back = saved;
+      const saved = localStorage.getItem(MODE_KEY + m);
+      if (groupOf(saved) === m && VIEWS.some((v) => v.value === saved)) back = saved;
     } catch {
       // per-viewer convenience only
     }
@@ -697,6 +764,7 @@ export default function App() {
   );
 
   return (
+    <PlusProvider value={plus}>
     <SectionsContext.Provider value={sections}>
       <div className="relative min-h-screen bg-(--page) print:hidden">
         <a
@@ -741,19 +809,20 @@ export default function App() {
             )}
 
             <div className="ml-auto flex items-center gap-2 lg:ml-0">
-              <button
-                type="button"
-                role="switch"
-                aria-checked={investing}
-                onClick={toggleInvesting}
-                title={investing ? 'Back to your first-home plan' : 'Rental property tools: analyze deals, cash flow, your portfolio and landlord tools'}
-                className="inline-flex h-9 items-center gap-2 rounded-full px-2.5 text-sm font-medium whitespace-nowrap text-zinc-700 transition hover:bg-well focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:text-zinc-300"
-              >
-                <span aria-hidden className={`relative inline-block h-5 w-9 rounded-full transition ${investing ? 'bg-emerald-600 dark:bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}>
-                  <span className={`absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow transition-transform ${investing ? 'translate-x-4' : ''}`} />
-                </span>
-                Investing
-              </button>
+              <div role="radiogroup" aria-label="I’m" className="inline-flex h-9 items-center rounded-full bg-well p-0.5 ring-1 ring-(--line-strong) ring-inset">
+                {MODES.map((m) => (
+                  <button
+                    key={m.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={mode === m.value}
+                    onClick={() => switchMode(m.value)}
+                    className={`h-8 rounded-full px-2.5 text-[13px] font-medium whitespace-nowrap transition focus-visible:outline-2 focus-visible:outline-emerald-500 sm:px-3 ${mode === m.value ? 'bg-(--panel) text-zinc-950 shadow-sm dark:text-white' : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'}`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
               <button
                 type="button"
                 onClick={() => setPaletteOpen(true)}
@@ -841,6 +910,35 @@ export default function App() {
                 onView={setView}
                 nextStep={step?.view === 'homes' ? null : nextStepCard}
               />
+            )}
+
+            {view === 'build' && <BuildView build={lib.settings.build} onBuild={(patch) => lib.updateSettings('build', patch)} account={lib.account} />}
+
+            {view === 'sell' && (
+              <SellWorth
+                sell={lib.settings.sell}
+                onSell={(patch) => lib.updateSettings('sell', patch)}
+                feedState={marketFeed}
+                indexState={marketIndex}
+                city={listCity}
+                onCity={(listingCity) => lib.updateSettings('market', { listingCity })}
+                nextStep={sellStep.view === 'sell' ? null : sellStepCard}
+              />
+            )}
+
+            {view === 'sellready' && <SellReady sell={lib.settings.sell} onSell={(patch) => lib.updateSettings('sell', patch)} onView={setView} nextStep={sellStepCard} />}
+
+            {view === 'selllist' && (
+              <>
+                <div className="space-y-2 px-1">
+                  <h2 className="text-[22px] font-semibold tracking-tight text-zinc-950 dark:text-white">List it on Squarely</h2>
+                  <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
+                    Sell privately with your own listing page: photos, the details buyers ask about, and messages straight to you. It lives in a free Squarely workspace: open Listings
+                    and choose For sale. No commission to Squarely.
+                  </p>
+                </div>
+                <LandlordView homeCity={homeCity} initialTab="listings" />
+              </>
             )}
 
             {view === 'ready' && (
@@ -1033,5 +1131,6 @@ export default function App() {
       )}
       <DealMemo item={current} />
     </SectionsContext.Provider>
+    </PlusProvider>
   );
 }

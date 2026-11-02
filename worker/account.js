@@ -111,6 +111,7 @@ export class AccountStore {
       email: this.meta('email') || '',
       emailVerified: this.meta('emailVerified') === '1',
       loginEmail: this.meta('loginEmail') || '',
+      plus: { active: this.isPlus, status: this.plus().status || '', until: Number(this.plus().until) || 0, cancelAt: Number(this.plus().cancelAt) || 0 },
       ...Object.fromEntries(Object.keys(SECTIONS).map((k) => [k, this.section(k)])),
     };
   }
@@ -189,6 +190,35 @@ export class AccountStore {
     this.setMeta('email', '');
     this.setMeta('emailVerified', '0');
     return this.read();
+  }
+
+  // ---- Squarely Plus ----
+
+  /** The Plus subscription as Stripe last told us: { status, customer, subscription, until }. */
+  plus() {
+    const raw = this.meta('plus');
+    return raw ? JSON.parse(raw) : {};
+  }
+
+  setPlus(patch) {
+    const p = { ...this.plus(), ...patch };
+    this.setMeta('plus', JSON.stringify(p));
+    return p;
+  }
+
+  /** Paid up: active or on trial, or a failed renewal still inside the period already paid for. */
+  get isPlus() {
+    const p = this.plus();
+    return ['active', 'trialing'].includes(p.status) || (p.status === 'past_due' && Number(p.until) > this.now());
+  }
+
+  /** At most `max` uses of something costly a day (reading blueprints). */
+  useDaily(name, max) {
+    const day = new Date(this.now()).toISOString().slice(0, 10);
+    const k = `use:${name}:${day}`;
+    const used = Number(this.meta(k) || 0);
+    if (used >= max) throw new StoreError(429, `That’s ${max} today. Try again tomorrow.`);
+    this.setMeta(k, used + 1);
   }
 
   /** The date alerts were last emailed (YYYY-MM-DD), so each digest covers only what's new. */

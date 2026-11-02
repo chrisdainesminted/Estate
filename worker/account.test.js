@@ -79,3 +79,28 @@ describe('saved sections', () => {
     expect(() => a.setSection('nope', [])).toThrow(/Unknown/);
   });
 });
+
+describe('Squarely Plus', () => {
+  let now = 1_800_000_000_000;
+  let acct;
+  beforeEach(() => {
+    acct = new AccountStore(memorySql(), () => now);
+  });
+  it('is on while active, and through the paid period after a failed renewal', () => {
+    expect(acct.isPlus).toBe(false);
+    acct.setPlus({ status: 'active', customer: 'cus_1' });
+    expect(acct.isPlus).toBe(true);
+    acct.setPlus({ status: 'past_due', until: now + 1000 });
+    expect(acct.isPlus).toBe(true);
+    now += 2000;
+    expect(acct.isPlus).toBe(false);
+    expect(acct.plus().customer).toBe('cus_1');
+  });
+  it('limits costly uses each day', () => {
+    acct.useDaily('blueprint', 2);
+    acct.useDaily('blueprint', 2);
+    expect(() => acct.useDaily('blueprint', 2)).toThrow(/2 today/);
+    now += 86_400_000;
+    expect(() => acct.useDaily('blueprint', 2)).not.toThrow();
+  });
+});

@@ -61,12 +61,13 @@ export default function Dock({ views, view, onView, result, onEdit }) {
           </Button>
         </section>
       )}
-      <nav aria-label="Views" className="grid border-t border-hairline" style={{ gridTemplateColumns: `repeat(${basic.length + 1}, minmax(0, 1fr))` }}>
+      <nav aria-label="Views" className="grid border-t border-hairline" style={{ gridTemplateColumns: `repeat(${basic.length + (extra.length ? 1 : 0)}, minmax(0, 1fr))` }}>
         {basic.map((v) => (
           <button key={v.value} type="button" aria-current={v.value === view ? 'page' : undefined} onClick={() => onView(v.value)} className={tabClass(v.value === view)}>
             {v.label}
           </button>
         ))}
+        {extra.length > 0 && (
         <div ref={more} className="relative grid">
           <button type="button" aria-haspopup="menu" aria-expanded={open} aria-current={inMore ? 'page' : undefined} onClick={() => setOpen((o) => !o)} className={tabClass(inMore)}>
             More
@@ -91,6 +92,7 @@ export default function Dock({ views, view, onView, result, onEdit }) {
             </div>
           )}
         </div>
+        )}
       </nav>
     </div>
   );

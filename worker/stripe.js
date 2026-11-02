@@ -4,6 +4,8 @@
 
 import { StoreError } from './store.js';
 
+export const PLUS_CENTS = 1200;
+
 /** Stripe's form encoding: { a: { b: 1 }, c: [x] } → a[b]=1&c[0]=x */
 function form(obj, prefix = '', out = new URLSearchParams()) {
   for (const [k, v] of Object.entries(obj)) {
@@ -37,7 +39,22 @@ export function stripeClient(secret, fetchImpl = fetch) {
     return r.data;
   };
   return {
-    createCustomer: (ws, email) => must('POST', 'customers', { email: email || undefined, metadata: { workspace: ws } }),
+    createCustomer: (ws, email, metadata) => must('POST', 'customers', { email: email || undefined, metadata: metadata ?? { workspace: ws } }),
+    /** Squarely Plus: $12 a month, through Stripe Checkout. */
+    subscribeSession: ({ customer, account, successUrl, cancelUrl }) =>
+      must('POST', 'checkout/sessions', {
+        mode: 'subscription',
+        customer,
+        client_reference_id: account,
+        line_items: { 0: { quantity: 1, price_data: { currency: 'cad', unit_amount: PLUS_CENTS, recurring: { interval: 'month' }, product_data: { name: 'Squarely Plus' } } } },
+        subscription_data: { metadata: { account } },
+        metadata: { account },
+        allow_promotion_codes: 'true',
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+      }),
+    /** Stripe's own page to change the card or cancel. */
+    portalSession: (customer, returnUrl) => must('POST', 'billing_portal/sessions', { customer, return_url: returnUrl }),
     setupSession: (customer, ws, successUrl, cancelUrl) =>
       must('POST', 'checkout/sessions', { mode: 'setup', customer, currency: 'cad', 'payment_method_types[0]': 'card', success_url: successUrl, cancel_url: cancelUrl, metadata: { workspace: ws } }),
     setupIntent: (id) => must('GET', `setup_intents/${id}`),

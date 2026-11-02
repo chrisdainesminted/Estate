@@ -66,7 +66,7 @@ export default function LandlordView(props) {
   return books ? <BooksView books={books} /> : <LandlordWorkspace {...props} />;
 }
 
-function LandlordWorkspace({ homeCity }) {
+function LandlordWorkspace({ homeCity, initialTab }) {
   const [ws, setWs] = useState(() => {
     const fromLink = parseWorkspace(location.hash);
     if (fromLink) {
@@ -80,7 +80,7 @@ function LandlordWorkspace({ homeCity }) {
   const [error, setError] = useState('');
   // Back from Stripe after saving a card: open Billing.
   const [tab, setTab] = useState(() => {
-    if (!/billing=/.test(location.hash)) return 'inbox';
+    if (!/billing=/.test(location.hash)) return initialTab ?? 'inbox';
     history.replaceState(null, '', location.pathname + location.search);
     return 'billing';
   });

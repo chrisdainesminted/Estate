@@ -28,6 +28,7 @@ import { readyReminder } from '../src/lib/journey.js';
 import { cityByKey } from '../src/lib/canada.js';
 import { monthlyBill } from './pricing.js';
 import { stripeClient, verifyWebhook } from './stripe.js';
+import { MAX_PLAN_BYTES, readBlueprint } from './blueprint.js';
 
 const MAX_BODY = 32 * 1024;
 const MAX_PHOTO = 1_500_000;
@@ -445,6 +446,31 @@ export class Account extends DurableObject {
         }
         case 'section':
           return { [req.name]: a.setSection(req.name, req.body?.value) };
+        case 'plusStart': {
+          if (!canBill(this.env)) throw new StoreError(501, 'Squarely Plus isn’t on sale on this site yet.');
+          if (a.isPlus) throw new StoreError(409, 'You already have Squarely Plus.');
+          const stripe = stripeClient(this.env.STRIPE_SECRET_KEY);
+          let customer = a.plus().customer;
+          if (!customer) {
+            const r = a.read();
+            customer = (await stripe.createCustomer(null, r.loginEmail || r.email, { account: req.id })).id;
+            a.setPlus({ customer });
+          }
+          const back = `${req.origin}/app/`;
+          const session = await stripe.subscribeSession({ customer, account: req.id, successUrl: `${back}?plus=welcome`, cancelUrl: `${back}?plus=cancelled` });
+          return { url: session.url };
+        }
+        case 'plusManage': {
+          if (!canBill(this.env) || !a.plus().customer) throw new StoreError(404, 'There’s no subscription on this account.');
+          const portal = await stripeClient(this.env.STRIPE_SECRET_KEY).portalSession(a.plus().customer, `${req.origin}/app/`);
+          return { url: portal.url };
+        }
+        case 'blueprint': {
+          if (!a.isPlus) throw new StoreError(402, 'Reading blueprints is part of Squarely Plus.');
+          if (!this.env.ANTHROPIC_API_KEY) throw new StoreError(501, 'Reading blueprints isn’t switched on for this site yet. Type the rooms in for now.');
+          a.useDaily('blueprint', 20);
+          return readBlueprint(this.env.ANTHROPIC_API_KEY, req.body ?? {});
+        }
         case 'setLoginEmail':
           a.setLoginEmail(req.email);
           return { ok: true };
@@ -468,12 +494,21 @@ export class Account extends DurableObject {
     return this.store.rekey();
   }
 
+  /** What Stripe says about the Plus subscription (called only from its signed webhook). */
+  async plusUpdate(id, patch) {
+    if (!this.store.ready) return { ok: false };
+    this.store.setPlus(patch);
+    await this.register(id);
+    return { ok: true };
+  }
+
   /** On the daily digest list only with a confirmed email and alerts or the savings-month email. */
   async register(id) {
     const r = this.store.read();
     const home = r.data?.settings?.home;
     const remind = home?.remindReady === true && typeof home?.readyBy === 'string';
-    await directory(this.env).setAlerting(id, Boolean(r.emailVerified && r.email && (r.alerts.length || remind)));
+    // Listing alert emails are part of Plus; the savings-month email is for everyone.
+    await directory(this.env).setAlerting(id, Boolean(r.emailVerified && r.email && ((r.alerts.length && r.plus.active) || remind)));
   }
 
   /** The day's alert email: listings new or cheaper since the last one, for each alert. */
@@ -491,7 +526,7 @@ export class Account extends DurableObject {
       await sendEmail(this.env, email, note.subject, `${note.body}\n\nTo stop these emails, open Squarely and turn off email in your account.`);
       a.setMeta('readySent', note.month);
     }
-    if (!alerts.length) return { sent: Boolean(note) };
+    if (!alerts.length || !a.isPlus) return { sent: Boolean(note) };
     const feeds = new Map();
     const sections = [];
     for (const alert of alerts) {
@@ -518,9 +553,10 @@ export class Account extends DurableObject {
   }
 }
 
-async function readBody(request) {
+async function readBody(request, max = MAX_BODY) {
+  if (Number(request.headers.get('content-length') || 0) > max) throw new StoreError(413, 'That’s too much to send at once.');
   const text = await request.text();
-  if (text.length > MAX_BODY) throw new StoreError(413, 'That’s too much text.');
+  if (text.length > max) throw new StoreError(413, 'That’s too much text.');
   try {
     return text ? JSON.parse(text) : {};
   } catch {
@@ -600,7 +636,9 @@ async function api(request, env, url) {
     const id = parts[1];
     const key = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
     const sub = parts.slice(2).join('/');
-    const body = method === 'GET' || method === 'DELETE' ? null : await readBody(request);
+    // A whole library, or a plan as base64, is bigger than an ordinary request.
+    const limit = sub === 'blueprint' ? Math.ceil(MAX_PLAN_BYTES * 1.4) : sub === '' ? 2_000_000 : MAX_BODY;
+    const body = method === 'GET' || method === 'DELETE' ? null : await readBody(request, limit);
     const op =
       sub === '' && method === 'GET' ? 'read'
       : sub === '' && method === 'PUT' ? 'write'
@@ -610,9 +648,12 @@ async function api(request, env, url) {
       : sub === 'email/check' && method === 'POST' ? 'emailCheck'
       : sub === 'email' && method === 'DELETE' ? 'emailDrop'
       : /^s\/[a-z]+$/.test(sub) && method === 'PUT' ? 'section'
+      : sub === 'plus' && method === 'POST' ? 'plusStart'
+      : sub === 'plus/manage' && method === 'POST' ? 'plusManage'
+      : sub === 'blueprint' && method === 'POST' ? 'blueprint'
       : null;
     if (!op) return json({ error: 'Not found.' }, 404);
-    return answer(await env.ACCOUNT.get(env.ACCOUNT.idFromName(id)).call({ op, id, key, body, name: sub.slice(2) }));
+    return answer(await env.ACCOUNT.get(env.ACCOUNT.idFromName(id)).call({ op, id, key, body, name: sub.slice(2), origin: url.origin }));
   }
 
   // The public search, and reporting a listing.
@@ -746,6 +787,23 @@ async function stripeWebhook(request, env) {
   if (!(await verifyWebhook(payload, request.headers.get('stripe-signature'), env.STRIPE_WEBHOOK_SECRET))) return json({ error: 'Bad signature.' }, 400);
   const event = JSON.parse(payload);
   const obj = event.data?.object ?? {};
+  // Squarely Plus: the subscription's state, kept on the account it was bought for.
+  const accountId = obj.metadata?.account;
+  if (accountId && ID.test(accountId)) {
+    const acct = env.ACCOUNT.get(env.ACCOUNT.idFromName(accountId));
+    if (event.type === 'checkout.session.completed' && obj.mode === 'subscription') await acct.plusUpdate(accountId, { status: 'active', customer: obj.customer, subscription: obj.subscription });
+    if (event.type.startsWith('customer.subscription.')) {
+      const end = obj.current_period_end ?? obj.items?.data?.[0]?.current_period_end;
+      await acct.plusUpdate(accountId, {
+        status: event.type === 'customer.subscription.deleted' ? 'canceled' : obj.status,
+        subscription: obj.id,
+        customer: obj.customer,
+        until: end ? end * 1000 : 0,
+        cancelAt: obj.cancel_at_period_end && end ? end * 1000 : 0,
+      });
+    }
+    return json({ ok: true });
+  }
   const wsId = obj.metadata?.workspace;
   if (!wsId || !ID.test(wsId)) return json({ ok: true });
   const ws = env.WORKSPACE.get(env.WORKSPACE.idFromName(wsId));

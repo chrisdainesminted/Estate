@@ -9,11 +9,13 @@ import { DEFAULT_PLAN } from '../lib/growth.js';
 import { DEFAULT_MARKET, normalizeMarket } from '../lib/market.js';
 import { DEFAULT_PROFILE, normalizeProfile } from '../lib/firstHome.js';
 import { DEFAULT_SUITE, normalizeSuite } from '../lib/suites.js';
+import { DEFAULT_BUILD, normalizeBuild } from '../lib/build.js';
+import { DEFAULT_SELL, normalizeSell } from '../lib/selling.js';
 
 // Per-library settings that travel with the deals: offer targets, the growth
 // plan, tax inputs, the assumptions used to underwrite daily listings, your
 // first-home numbers and your progress on adding a suite.
-const DEFAULT_SETTINGS = { targets: DEFAULT_TARGETS, plan: DEFAULT_PLAN, tax: DEFAULT_TAX, market: DEFAULT_MARKET, home: DEFAULT_PROFILE, suite: DEFAULT_SUITE, ready: {}, rvb: {}, alerts: [] };
+const DEFAULT_SETTINGS = { targets: DEFAULT_TARGETS, plan: DEFAULT_PLAN, tax: DEFAULT_TAX, market: DEFAULT_MARKET, home: DEFAULT_PROFILE, suite: DEFAULT_SUITE, ready: {}, rvb: {}, alerts: [], build: DEFAULT_BUILD, sell: DEFAULT_SELL };
 
 function normalizeSettings(s) {
   return {
@@ -29,6 +31,10 @@ function normalizeSettings(s) {
     // Saved listing searches: a city, property types and limits.
     alerts: (Array.isArray(s?.alerts) ? s.alerts : []).slice(0, 10).map((a, i) => (cleanAlert(a, i) ? { ...cleanAlert(a, i), ...(typeof a.seen === 'string' ? { seen: a.seen } : {}) } : null)).filter(Boolean),
     rvb: Object.fromEntries(Object.entries(s?.rvb && typeof s.rvb === 'object' ? s.rvb : {}).filter(([, v]) => Number.isFinite(Number(v))).map(([k, v]) => [k, Number(v)])),
+    // A build or renovation: the rooms from a floor plan, for the materials list.
+    build: normalizeBuild(s?.build),
+    // Selling a home: what it is, the sale numbers, and the sell-ready steps done.
+    sell: normalizeSell(s?.sell),
   };
 }
 

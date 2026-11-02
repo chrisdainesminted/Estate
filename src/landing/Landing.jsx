@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, ArrowUpRight, ClipboardCheck, Home, KeyRound, Landmark, Menu, Plus, X } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Check, ClipboardCheck, Hammer, Home, KeyRound, Landmark, Menu, Plus, Sparkles, Tag, TrendingUp, X } from 'lucide-react';
 import Logo from '../components/Logo.jsx';
 import { DEFAULT_PROFILE, RULES_CHECKED, homeFor, maxPrice } from '../lib/firstHome.js';
 import { CountUp, Reveal } from './motion.jsx';
@@ -80,9 +80,11 @@ export default function Landing() {
       <Nav />
       <main id="main">
         <Hero city={city} onCity={setCity} />
+        <Paths />
         <How />
         <Features />
         <Today feed={feed} shown={shown} picked={city} index={index} />
+        <Pricing />
         <Faq />
         <Closing />
       </main>
@@ -163,6 +165,8 @@ const ROTATE = [
   'See the real monthly cost.',
   'Find a home that fits.',
   'Add a suite that pays.',
+  'Build it for less.',
+  'Sell for what it’s worth.',
 ];
 const GRADIENT =
   'bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 bg-clip-text text-transparent dark:from-emerald-300 dark:via-emerald-400 dark:to-teal-300';
@@ -261,13 +265,13 @@ function Hero({ city, onCity }) {
         <div className="grid items-center gap-12 lg:grid-cols-[1.15fr_minmax(0,27rem)] lg:gap-16">
           <div className="rise">
             <p className="inline-flex items-center gap-2 rounded-full border border-(--line-strong) bg-(--panel)/60 px-3 py-1 text-xs font-medium text-zinc-600 backdrop-blur dark:text-zinc-300">
-              <span className="live-dot" aria-hidden /> For first-time buyers across Canada
+              <span className="live-dot" aria-hidden /> For buyers, sellers and investors across Canada
             </p>
             <h1 className="mt-6 max-w-4xl text-[40px] font-extrabold leading-[1.02] tracking-[-0.042em] text-balance text-zinc-950 sm:text-6xl lg:text-[72px] dark:text-white">
               Own your first home. <Rotator />
             </h1>
             <p className="mt-6 max-w-md text-lg leading-relaxed text-pretty text-zinc-600 sm:text-xl dark:text-zinc-400">
-              See how rental income could help you afford your first home.
+              Your first home, your next sale, your next rental: real numbers and the next step, all in one place.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <a href={open('home')} className={primary}>
@@ -472,6 +476,144 @@ function Today({ feed, shown, picked, index }) {
   );
 }
 
+const PATHS = [
+  {
+    icon: Home,
+    title: 'Buying',
+    lead: 'From “can I even?” to the keys.',
+    points: ['What you could buy today, and the cash to close', 'Homes that fit you, marked fits, stretch or not yet', 'Every step from credit check to moving day'],
+    view: 'home',
+    cta: 'Start my plan',
+  },
+  {
+    icon: Hammer,
+    title: 'Building',
+    lead: 'From a blueprint to a shopping list.',
+    points: ['Upload your floor plan and we read the rooms', 'Studs, drywall, insulation, paint and floors, counted', 'A search at Home Depot, RONA, Home Hardware and Canadian Tire for each'],
+    view: 'build',
+    cta: 'Price my build',
+  },
+  {
+    icon: Tag,
+    title: 'Selling',
+    lead: 'Know your number before an agent does.',
+    points: ['What it’s likely worth, from similar homes for sale now', 'What you walk away with after commission and the mortgage', 'A sell-ready checklist, and a free listing to sell privately'],
+    view: 'sell',
+    cta: 'What’s my home worth?',
+  },
+  {
+    icon: TrendingUp,
+    title: 'Investing',
+    lead: 'Every deal, run the way a lender runs it.',
+    points: ['Cash flow, DSCR and the most you should pay', 'Listings across Canada ranked every morning', 'Landlord tools: rent, repairs and your T776 at tax time'],
+    view: 'analyze',
+    cta: 'Analyze a deal',
+  },
+];
+
+function Paths() {
+  return (
+    <section aria-labelledby="paths-title" className="border-b border-hairline">
+      <div className={`${shell} ${section}`}>
+        <Reveal className="max-w-2xl">
+          <p className={eyebrow}>One place for all of it</p>
+          <h2 id="paths-title" className={`${h2} mt-3`}>
+            Whatever you’re doing with a home.
+          </h2>
+        </Reveal>
+        <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {PATHS.map((p, i) => (
+            <Reveal key={p.title} delay={i * 50}>
+              <a
+                href={open(p.view)}
+                className="tile group flex h-full flex-col rounded-2xl border border-hairline bg-(--panel) p-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent) sm:p-6"
+              >
+                <p.icon className="size-5 text-emerald-700 dark:text-emerald-400" aria-hidden />
+                <span className="mt-5 block text-lg font-semibold tracking-tight text-zinc-950 dark:text-white">{p.title}</span>
+                <span className="mt-1 block text-sm text-zinc-600 dark:text-zinc-400">{p.lead}</span>
+                <ul className="mt-4 grid gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+                  {p.points.map((x) => (
+                    <li key={x} className="flex gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-emerald-600" aria-hidden /> {x}
+                    </li>
+                  ))}
+                </ul>
+                <span className="mt-auto inline-flex items-center gap-1 pt-5 text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                  {p.cta} <ArrowRight className="size-4 transition group-hover:translate-x-0.5" aria-hidden />
+                </span>
+              </a>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Pricing() {
+  const free = ['Your buying plan, checklists and next steps', 'Homes for you, every morning', 'What your home is worth, and what you’d walk away with', 'Materials lists from rooms you type in', 'Deal analysis, listings and calculators'];
+  const plus = ['Blueprints read for you: upload a plan, get the materials list', 'Daily emails when a price drops or a new home fits you', 'Pricing report for your home, as a PDF', 'Deal memos and materials lists as PDFs'];
+  return (
+    <section id="pricing" aria-labelledby="pricing-title" className="scroll-mt-16 border-b border-hairline">
+      <div className={`${shell} ${section}`}>
+        <Reveal className="max-w-2xl">
+          <p className={eyebrow}>Pricing</p>
+          <h2 id="pricing-title" className={`${h2} mt-3`}>
+            Free to start. Plus when it saves you time.
+          </h2>
+        </Reveal>
+        <div className="mt-10 grid gap-3 lg:grid-cols-3">
+          <div className="rounded-2xl border border-hairline bg-(--panel) p-6">
+            <p className="text-lg font-semibold text-zinc-950 dark:text-white">Free</p>
+            <p className="mt-1 text-3xl font-semibold tracking-tight text-zinc-950 dark:text-white">$0</p>
+            <ul className="mt-5 grid gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+              {free.map((x) => (
+                <li key={x} className="flex gap-2">
+                  <Check className="mt-0.5 size-4 shrink-0 text-emerald-600" aria-hidden /> {x}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="rounded-2xl border-2 border-emerald-600/60 bg-(--panel) p-6">
+            <p className="flex items-center gap-2 text-lg font-semibold text-zinc-950 dark:text-white">
+              <Sparkles className="size-4 text-emerald-600" aria-hidden /> Plus
+            </p>
+            <p className="mt-1 text-3xl font-semibold tracking-tight text-zinc-950 dark:text-white">
+              $12<span className="text-base font-medium text-zinc-500">/month</span>
+            </p>
+            <ul className="mt-5 grid gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+              <li className="flex gap-2 font-medium">
+                <Check className="mt-0.5 size-4 shrink-0 text-emerald-600" aria-hidden /> Everything in Free
+              </li>
+              {plus.map((x) => (
+                <li key={x} className="flex gap-2">
+                  <Check className="mt-0.5 size-4 shrink-0 text-emerald-600" aria-hidden /> {x}
+                </li>
+              ))}
+            </ul>
+            <a href={open('home')} className={`${primary} mt-6`}>
+              Start free, upgrade any time
+            </a>
+          </div>
+          <div className="rounded-2xl border border-hairline bg-(--panel) p-6">
+            <p className="text-lg font-semibold text-zinc-950 dark:text-white">Landlords</p>
+            <p className="mt-1 text-3xl font-semibold tracking-tight text-zinc-950 dark:text-white">
+              2%<span className="text-base font-medium text-zinc-500"> of rent tracked</span>
+            </p>
+            <ul className="mt-5 grid gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+              {['Listings where people apply and book viewings', 'Rent tracking, reminders and receipts', 'Repairs, expenses and your T776 tax pack', 'At most $30 a unit; your first unit is free'].map((x) => (
+                <li key={x} className="flex gap-2">
+                  <Check className="mt-0.5 size-4 shrink-0 text-emerald-600" aria-hidden /> {x}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function How() {
   const steps = [
     ['Tell it about you', 'Income, savings and the rent you pay now. Two minutes, and it stays on your device.'],
@@ -570,7 +712,7 @@ const FAQ = [
   ],
   [
     'What does it cost?',
-    'Nothing for renters, buyers or the calculators, and listing a home is free. Landlords who track rent pay 2% of each tenanted unit’s rent, at most $30 a unit, and the first unit is free.',
+    'Plans, checklists, listings and calculators are free, and listing a home is free. Squarely Plus is $12 a month for blueprint reading, daily price-drop and fit emails, pricing reports and PDFs. Landlords who track rent pay 2% of each tenanted unit’s rent, at most $30 a unit, and the first unit is free.',
   ],
   [
     'I’ve never talked to a lender. Where do I start?',
