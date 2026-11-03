@@ -191,9 +191,9 @@ const VIEWS = [
 ];
 const INVEST_VIEWS = new Set(VIEWS.filter((v) => v.group === 'invest').map((v) => v.value));
 const MODES = [
-  { value: 'buy', label: 'Buying', first: 'home' },
-  { value: 'sell', label: 'Selling', first: 'sell' },
-  { value: 'invest', label: 'Investing', first: 'analyze' },
+  { value: 'buy', label: 'Buy', first: 'home' },
+  { value: 'sell', label: 'Sell', first: 'sell' },
+  { value: 'invest', label: 'Invest', first: 'analyze' },
 ];
 const groupOf = (view) => VIEWS.find((v) => v.value === view)?.group ?? 'buy';
 const MODE_KEY = 'bedrock-mode-view:';
