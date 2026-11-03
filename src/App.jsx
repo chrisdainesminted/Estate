@@ -314,6 +314,14 @@ function useAllTabs() {
 const HOSTED = typeof window !== 'undefined' && !window.location.pathname.startsWith('/app');
 const HOME_PAGE = typeof window !== 'undefined' && window.location.pathname.startsWith('/app') ? '/' : 'https://bedrock.signia83.workers.dev/';
 
+/**
+ * Signed out on the website: the account page, to make an account or sign
+ * in, coming back to `next` (a view) afterwards.
+ */
+function goSignIn(next = 'profile') {
+  window.location.assign(`/account/?next=${encodeURIComponent(next)}`);
+}
+
 /** A view named in the address (?view=listings), as the homepage's links use; read once, then tidied away. */
 function viewFromAddress() {
   const v = new URLSearchParams(window.location.search).get('view');
@@ -413,7 +421,9 @@ export default function App() {
   const compared = compare.map((c) => ({ ...effective.get(c.id), slot: c.slot })).filter((x) => x.deal);
   const owned = useMemo(() => baseItems.filter((x) => x.deal.status === 'owned'), [baseItems]);
   const prospects = useMemo(() => baseItems.filter((x) => x.deal.status !== 'owned'), [baseItems]);
-  const plus = usePlusState({ account: lib.account, hosted: HOSTED, onNeedAccount: () => setAccountOpen(true) });
+  // Your account: the account sheet when signed in (or on the Claude page); otherwise the sign-in page.
+  const openAccount = useCallback((next) => (lib.account || HOSTED ? setAccountOpen(true) : goSignIn(next)), [lib.account]);
+  const plus = usePlusState({ account: lib.account, hosted: HOSTED, onNeedAccount: () => openAccount('profile') });
   const rawExports = useExports(current, baseItems);
   // Back from Stripe: say so once, and tidy the address.
   useEffect(() => {
@@ -510,7 +520,7 @@ export default function App() {
   }, [lib, homeRules, homeCity, setView, isDesktop, toast]);
 
   // The profile button: your profile when signed in (the Claude page always is); otherwise make an account or sign in.
-  const openProfile = useCallback(() => (lib.account || HOSTED ? setView('profile') : setAccountOpen(true)), [lib.account, setView]);
+  const openProfile = useCallback(() => (lib.account || HOSTED ? setView('profile') : goSignIn('profile')), [lib.account, setView]);
 
   // A property you already own: a new deal marked owned, opened to fill in.
   const addOwned = useCallback(() => {
@@ -956,7 +966,7 @@ export default function App() {
                 onOpen={openDeal}
                 onView={setView}
                 onLandlord={(tab) => (setLandlordTab(tab), setView('landlord'))}
-                onAccount={() => setAccountOpen(true)}
+                onAccount={() => openAccount('profile')}
                 onAddOwned={addOwned}
                 settings={lib.settings}
                 onSettings={lib.updateSettings}
@@ -985,7 +995,7 @@ export default function App() {
                 onRvb={(patch) => lib.updateSettings('rvb', patch)}
                 onPickDeal={setLiveDealId}
                 onOpen={openDeal}
-                onAccount={() => setAccountOpen(true)}
+                onAccount={() => openAccount('profile')}
                 onView={setView}
                 nextStep={step?.view === 'home' && step.id !== 'start' && step.anchor === 'plan-gap' ? null : nextStepCard}
               />
@@ -1222,7 +1232,7 @@ export default function App() {
                 <LogoMark className="size-6" />
                 <span className="font-semibold text-zinc-800 dark:text-zinc-200">Squarely</span>
               </a>
-              <SyncStatus sync={lib.sync} account={lib.account} onOpen={() => setAccountOpen(true)} />
+              <SyncStatus sync={lib.sync} account={lib.account} onOpen={() => openAccount(view)} />
             </div>
             <p className="max-w-4xl sm:ml-auto sm:text-right">
               Estimates, not lending, tax or investment advice.{' '}

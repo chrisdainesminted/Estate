@@ -269,8 +269,16 @@ export default function Account() {
               ))}
             </ul>
           </div>
-          <div className="elevated rounded-2xl p-6">
-            <AuthForm start={new URLSearchParams(window.location.search).get('mode') === 'signin' ? 'signin' : 'signup'} />
+          {/* The form comes first on phones, so signing in needs no scrolling. */}
+          <div className="elevated max-lg:order-first rounded-2xl p-6">
+            <AuthForm
+              start={new URLSearchParams(window.location.search).get('mode') === 'signin' ? 'signin' : 'signup'}
+              // Sent here from the app: back to where you were (your profile) once you're in.
+              onDone={() => {
+                const next = new URLSearchParams(window.location.search).get('next');
+                if (next && /^[a-z]{2,20}$/.test(next)) window.location.assign(`/app/?view=${next}`);
+              }}
+            />
           </div>
         </div>
       </PageShell>
