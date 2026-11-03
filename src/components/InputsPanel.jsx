@@ -1,4 +1,5 @@
 import { feesLabel, isCondoDeal } from '../lib/condo.js';
+import { placeLabel } from '../lib/place.js';
 import { ChevronDown, Copy, Share2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { UNIT_TYPES, switchRules } from '../lib/presets.js';
@@ -388,7 +389,7 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
         title="About this deal"
         collapsible
         defaultOpen={false}
-        summary={[deal.status === 'owned' ? 'Owned' : 'Prospect', ca ? `${dealPlace(deal).name.replace(/^Elsewhere in /, '')} rules` : 'US rules', deal.address].filter(Boolean).join(' · ')}
+        summary={[deal.status === 'owned' ? 'Owned' : 'Prospect', ca ? placeLabel(deal) : 'US rules', deal.address].filter(Boolean).join(' · ')}
       >
         <div className="col-span-2 flex flex-wrap items-end gap-3">
           <div>
@@ -428,7 +429,9 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
           {ca && (
             <div className="min-w-48 flex-1">
               <CitySelect id={id('city')} label="Where" tip="landTransferTax" value={dealPlace(deal).key} onChange={(v) => onChange({ city: v })} />
-              <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">Sets the land transfer tax: {provinceName(dealPlace(deal).province)}’s.</p>
+              <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                Sets {provinceName(dealPlace(deal).province)}’s land transfer tax, and moves an estimated property tax and market rent to this city. Numbers you typed stay. An address that names the city sets it too.
+              </p>
             </div>
           )}
         </div>

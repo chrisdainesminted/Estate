@@ -76,6 +76,7 @@ import { myPlan, nextStep as nextStepFor } from './lib/journey.js';
 import { sellNextStep } from './lib/selling.js';
 import { distressOf } from './lib/distress.js';
 import { cityByKey } from './lib/canada.js';
+import { cityInAddress, moveToCity, placeLabel } from './lib/place.js';
 import NextStep from './components/NextStep.jsx';
 import AskSquarely from './components/AskSquarely.jsx';
 import { askContext } from './lib/ask.js';
@@ -844,7 +845,23 @@ export default function App() {
         ? { value: money(own.netCashFlow, { signed: true }), valueClass: signedClass(own.netCashFlow), sub: `${percent(own.coc, 1)} return · ${money(own.pi)} mortgage` }
         : null;
 
-  const editActive = useCallback((patch) => lib.updateDeal(active.id, patch), [lib, active.id]);
+  // Changing a Canadian deal's city (picked, or named in its address) moves the figures estimated for the old city to the new one's.
+  const editActive = useCallback(
+    (patch) => {
+      let next = patch;
+      if (active.country === 'ca') {
+        const named = typeof patch.address === 'string' ? cityInAddress(patch.address) : null;
+        const to = patch.city ?? (named && named !== active.city ? named : null);
+        if (to && to !== active.city) {
+          const { patch: moved, changed } = moveToCity({ ...active, ...patch, city: active.city }, to, lib.settings.market);
+          next = { ...patch, ...moved };
+          toast({ tone: 'info', text: `Now in ${placeLabel(next)}${changed.length ? `. Its ${changed.join(' and ')} moved to this city’s` : ''}.` });
+        }
+      }
+      lib.updateDeal(active.id, next);
+    },
+    [lib, active, toast],
+  );
 
   const inputs = (bare = false) => (
     <InputsPanel
@@ -1313,7 +1330,7 @@ export default function App() {
       )}
       {shareOpen && (
         <Suspense fallback={null}>
-          <ShareSheet deal={active} onClose={() => setShareOpen(false)} />
+          <ShareSheet deal={active} item={current} hosted={HOSTED} onClose={() => setShareOpen(false)} />
         </Suspense>
       )}
       <DealMemo item={current} />
