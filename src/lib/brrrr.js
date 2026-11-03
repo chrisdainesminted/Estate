@@ -5,6 +5,7 @@
 // you put in, what the refinance hands back, the equity left behind, and
 // what it rents for after. Then they're ranked.
 
+import { isCondo } from './condo.js';
 import { loanRate, monthlyPI } from './finance.js';
 import { transferTax } from './canada.js';
 import { listingPageUrl, listingRent, listingTaxes, normalizeMarket, unitsOf, INSURANCE_MIN } from './market.js';
@@ -47,8 +48,7 @@ export function bedsOf(listing) {
 
 // A unit in a building (an address like "303-235 Leland Avenue", or a listing
 // that says condo) is only compared with other condos, never with whole houses.
-const CONDO = /\b(condo(minium)?|apartment|strata)\b/i;
-export const isCondo = (l) => /^\s*(unit\s*|suite\s*|#\s*)?\d+[a-z]?\s*-\s*\d+/i.test(String(l?.address ?? '')) || CONDO.test(`${l?.highlights ?? ''} ${l?.type ?? ''}`);
+export { isCondo };
 
 const pointOf = (points, id) => (points instanceof Map ? points.get(id) : points?.[id]) ?? null;
 

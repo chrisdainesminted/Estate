@@ -2,6 +2,7 @@
 // for each property, how Squarely turns one into a deal, and how the list is
 // ranked. Pure functions, shared by the page and the run's scripts.
 
+import { isCondo } from './condo.js';
 import { DEFAULT_TARGETS, allCash, analyzeDeal, maxOffer, ownMoney } from './finance.js';
 import { DEFAULT_DEAL, UNIT_TYPES } from './presets.js';
 import { safeHttpUrl } from './format.js';
@@ -364,6 +365,7 @@ export function listingToDeal(listing, market, lens) {
     vacancyPct: m.vacancyPct,
     capexPct: m.capexPct,
     address: listing.address,
+    condo: isCondo(listing),
     listingUrl: listing.url || '',
     notes: [listing.highlights, rentNote, taxSource(listing, m) === 'you' && 'Property tax as you entered it.', listing.mls && `MLS® ${listing.mls}.`].filter(Boolean).join(' '),
     listingId: listing.id,

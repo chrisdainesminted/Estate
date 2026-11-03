@@ -1,3 +1,4 @@
+import { feesLabel } from '../lib/condo.js';
 import { money, percent, ratio } from '../lib/format.js';
 import { DscrChip, LedgerHeading, LedgerLine, signedClass } from './ui.jsx';
 import { Num } from './motion.jsx';
@@ -21,7 +22,7 @@ export default function DealLedgers({ deal, a, base, lender = true, heading = 'h
         <LedgerLine label={a.interestOnly ? 'Mortgage payment, interest only' : 'Mortgage payment'} tip="mortgagePayment" value={money(-a.pi)} />
         <LedgerLine label="Property tax" value={money(-a.taxes)} />
         <LedgerLine label="Insurance" value={money(-a.insurance)} />
-        {a.hoa > 0 && <LedgerLine label={ca ? 'Condo fees & utilities' : 'HOA fees'} value={money(-a.hoa)} />}
+        {a.hoa > 0 && <LedgerLine label={feesLabel(deal)} value={money(-a.hoa)} />}
         <LedgerLine label={`Running costs, ${percent(runningShare, 0)} of rent`} tip="opex" value={money(-a.opex.total)} />
         <LedgerLine
           label="Left for you"

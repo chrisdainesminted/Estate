@@ -1,3 +1,4 @@
+import { feesLabel, isCondoDeal } from '../lib/condo.js';
 import { ChevronDown, Copy, Share2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { UNIT_TYPES, switchRules } from '../lib/presets.js';
@@ -181,7 +182,7 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
         <NumberField id={id('ins')} label="Insurance" prefix="$" suffix="/yr" value={deal.insuranceAnnual} onChange={set('insuranceAnnual')} step={100} decimals={0} hint={`${money(a.insurance)}/mo`} />
         <NumberField
           id={id('hoa')}
-          label={ca ? 'Condo fees & utilities' : 'HOA fees'}
+          label={feesLabel(deal)}
           tip={ca ? 'utilities' : undefined}
           prefix="$"
           suffix="/mo"
@@ -189,8 +190,12 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
           onChange={set('hoaMonthly')}
           step={10}
           decimals={0}
-          hint={ca ? undefined : 'Leave at 0 if there are none'}
+          hint={isCondoDeal(deal) ? undefined : 'Owner-paid utilities, like water or shared heat'}
         />
+        <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+          <input type="checkbox" checked={isCondoDeal(deal)} onChange={(e) => onChange({ condo: e.target.checked })} className="accent-emerald-600" />
+          It’s a condo (pays condo fees)
+        </label>
         <Derived>
           <LedgerLine label="Loan, taxes & insurance (PITIA)" value={`${money(a.pitia)}/mo`} />
         </Derived>

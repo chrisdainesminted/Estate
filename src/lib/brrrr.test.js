@@ -63,3 +63,13 @@ describe('the BRRRR plan', () => {
     expect(normalizeBrrrr({ refiPct: 95, downPct: 1, rehabs: { a: 5, 'bad id!': 3 } })).toMatchObject({ refiPct: 80, downPct: 5, rehabs: { a: 5 } });
   });
 });
+
+describe('condo fees', () => {
+  it('only call it condo fees on a condo', async () => {
+    const { feesLabel } = await import('./condo.js');
+    expect(feesLabel({ country: 'ca', address: '228 Archibald Street S' })).toBe('Utilities you pay');
+    expect(feesLabel({ country: 'ca', address: '303-235 Leland Avenue S' })).toBe('Condo fees & utilities');
+    expect(feesLabel({ country: 'ca', address: '12 Main St', condo: true })).toBe('Condo fees & utilities');
+    expect(feesLabel({ country: 'us', address: '12 Main St' })).toBe('Utilities you pay');
+  });
+});

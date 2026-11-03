@@ -1,3 +1,4 @@
+import { feesLabel } from '../lib/condo.js';
 import { useMemo } from 'react';
 import { AlertTriangle, ArrowDownToLine, CheckCircle2, XCircle } from 'lucide-react';
 import { provinceName } from '../lib/canada.js';
@@ -81,7 +82,7 @@ function RentSection({ deal, c }) {
         <LedgerLine label="Mortgage payment" value={money(-c.pi)} />
         <LedgerLine label="Property taxes" value={money(-c.taxes)} />
         <LedgerLine label="Insurance" value={money(-c.insurance)} />
-        {c.hoa > 0 && <LedgerLine label={deal.country === 'ca' ? 'Condo fees & utilities' : 'HOA'} value={money(-c.hoa)} />}
+        {c.hoa > 0 && <LedgerLine label={feesLabel(deal)} value={money(-c.hoa)} />}
         <LedgerLine label="Property management" value={money(-c.opex.management)} />
         <LedgerLine label="Maintenance & repairs" value={money(-c.opex.maintenance)} />
         <LedgerLine label="Vacancy reserve" value={money(-c.opex.vacancy)} />
