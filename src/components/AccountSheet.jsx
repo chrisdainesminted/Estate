@@ -44,7 +44,7 @@ export default function AccountSheet({ open, onClose, hosted, account, onAccount
   const link = account ? accountUrl(account) : '';
 
   return (
-    <Sheet open={open} onClose={onClose} title="Your account" desktop>
+    <Sheet open={open} onClose={onClose} title={account || hosted ? 'Your account' : 'Make an account or sign in'} desktop>
       <div className="space-y-6 text-sm">
         {hosted ? (
           <p className="flex items-start gap-2 text-zinc-700 dark:text-zinc-300">
@@ -171,7 +171,7 @@ export default function AccountSheet({ open, onClose, hosted, account, onAccount
           </p>
         )}
 
-        {onView && (
+        {onView && (account || hosted) && (
           <section className="border-t border-hairline pt-5">
             <h3 className="text-base font-semibold text-zinc-950 dark:text-white">Your profile</h3>
             <p className="mt-1 text-zinc-600 dark:text-zinc-400">Your total equity, the properties you own, your tenants and your settings, on one page.</p>

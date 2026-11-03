@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ArrowRight, Building2, Cloud, FileSpreadsheet, FileText, Inbox, KeyRound, Mail, MessageSquare, Moon, Phone, Plus as PlusIcon, Sun, Users, Wrench } from 'lucide-react';
-import { Button, Card, CardHeader, ConfirmButton, NumberField, Segmented, SelectField, SkeletonCard, ViewHeader, signedClass } from '../components/ui.jsx';
+import { AlertTriangle, ArrowRight, Building2, CircleHelp, Cloud, FileSpreadsheet, FileText, Inbox, KeyRound, Mail, MessageSquare, Moon, Phone, Plus as PlusIcon, Sun, Users, Wrench } from 'lucide-react';
+import { Button, Card, CardHeader, NumberField, Segmented, SelectField, SkeletonCard, ViewHeader, signedClass } from '../components/ui.jsx';
 import { PlusOffer, PlusTag, usePlus } from '../components/Plus.jsx';
 import { useAccount } from '../hooks/useAccount.js';
 import { accountCall } from '../lib/account.js';
@@ -23,7 +23,7 @@ const primaryLink = `${linkBtn} bg-(--accent) font-semibold text-(--accent-ink) 
  * cash flow), each property with a way in, your tenants with what needs
  * doing and a message to each one a tap away, and your settings.
  */
-export default function ProfileView({ owned, prospects, hosted, account, syncText, dark, onToggleTheme, onOpen, onView, onLandlord, onAccount, onAddOwned, settings, onSettings, homeCity, exports, onReset }) {
+export default function ProfileView({ owned, prospects, hosted, account, syncText, dark, onToggleTheme, onOpen, onView, onLandlord, onAccount, onAddOwned, settings, onSettings, homeCity, exports, dealName, onHelp }) {
   const plus = usePlus();
   const [email, setEmail] = useState('');
   useEffect(() => {
@@ -100,7 +100,10 @@ export default function ProfileView({ owned, prospects, hosted, account, syncTex
         onAccount={onAccount}
         exports={exports}
         count={owned.length + prospects}
-        onReset={onReset}
+        dealName={dealName}
+        onHelp={onHelp}
+        syncText={syncText}
+        account={account}
       />
     </div>
   );
@@ -436,7 +439,7 @@ function Everyone({ rows, settings }) {
   );
 }
 
-function Settings({ plus, hosted, settings, onSettings, homeCity, dark, onToggleTheme, onAccount, exports, count, onReset }) {
+function Settings({ plus, hosted, settings, onSettings, homeCity, dark, onToggleTheme, onAccount, exports, count, dealName, onHelp, syncText, account }) {
   const market = normalizeMarket(settings.market);
   const brrrr = normalizeBrrrr(settings.brrrr);
   const cities = CITIES.filter((c) => !c.key.endsWith('-other'));
@@ -476,11 +479,20 @@ function Settings({ plus, hosted, settings, onSettings, homeCity, dark, onToggle
               ]}
             />
           </div>
-          {!hosted && (
-            <Button onClick={onAccount}>
-              <Mail className="size-4" aria-hidden /> Account, sync & email alerts
-            </Button>
-          )}
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400">Account & sync</p>
+            <p className="mb-2 flex items-center gap-1.5 text-sm text-zinc-700 dark:text-zinc-300">
+              <Cloud className="size-4 text-emerald-600" aria-hidden /> {syncText}
+            </p>
+            {!hosted && (
+              <Button onClick={onAccount}>
+                <Mail className="size-4" aria-hidden /> {account ? 'Account, sync & email alerts' : 'Make an account or sign in'}
+              </Button>
+            )}
+          </div>
+          <Button variant="ghost" onClick={onHelp} className="-ml-3.5">
+            <CircleHelp className="size-4" aria-hidden /> How Squarely works
+          </Button>
         </section>
 
         <section className="space-y-4">
@@ -510,20 +522,12 @@ function Settings({ plus, hosted, settings, onSettings, homeCity, dark, onToggle
           <div>
             <p className="mb-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400">Your data</p>
             <div className="flex flex-wrap gap-2">
-              <Button variant="ghost" onClick={exports.exportCsv} disabled={!count || exports.busy === 'csv'}>
-                <FileSpreadsheet className="size-4" aria-hidden /> All deals (CSV)
+              <Button variant="ghost" onClick={exports.exportPdf} disabled={!dealName || exports.busy === 'pdf'} className="max-w-full">
+                <FileText className="size-4 shrink-0" aria-hidden /> <span className="truncate">Deal memo (PDF){dealName ? `: ${dealName}` : ''}</span>
               </Button>
-              <ConfirmButton
-                label="Start over"
-                title="Start over?"
-                body="Clears every deal and setting on this device. You can undo it right after."
-                confirmLabel="Start over"
-                onConfirm={onReset}
-                align="left"
-                className="inline-flex items-center gap-1.5 rounded-md px-3.5 py-2 text-sm font-medium text-red-700 hover:bg-well dark:text-red-300"
-              >
-                Start over
-              </ConfirmButton>
+              <Button variant="ghost" onClick={exports.exportCsv} disabled={!count || exports.busy === 'csv'}>
+                <FileSpreadsheet className="size-4" aria-hidden /> All {count} deals (CSV)
+              </Button>
             </div>
           </div>
         </section>

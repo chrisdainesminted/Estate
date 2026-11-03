@@ -21,7 +21,6 @@ import {
   Moon,
   Plus,
   Radar,
-  RotateCcw,
   Search,
   Share2,
   Sparkles,
@@ -510,6 +509,9 @@ export default function App() {
     toast({ tone: 'info', text: 'New deal started. Fill in the inputs and everything updates as you type.' });
   }, [lib, homeRules, homeCity, setView, isDesktop, toast]);
 
+  // The profile button: your profile when signed in (the Claude page always is); otherwise make an account or sign in.
+  const openProfile = useCallback(() => (lib.account || HOSTED ? setView('profile') : setAccountOpen(true)), [lib.account, setView]);
+
   // A property you already own: a new deal marked owned, opened to fill in.
   const addOwned = useCallback(() => {
     const m = lib.settings.market;
@@ -800,17 +802,6 @@ export default function App() {
       { id: 'act-theme', group: 'Actions', label: dark ? 'Switch to light mode' : 'Switch to dark mode', icon: dark ? Sun : Moon, keywords: 'theme dark light', run: toggle },
       ...(neutral ? [] : [{ id: 'act-clear', group: 'Actions', label: 'Clear the what-if', icon: Undo2, keywords: 'reset sliders', run: () => setAdj(NO_ADJ) }]),
       ...(deals.length > 1 ? [{ id: 'act-delete', group: 'Actions', label: `Delete “${active.name}”`, icon: Trash2, keywords: 'remove', run: () => deleteDeal(active) }] : []),
-      {
-        id: 'act-reset',
-        group: 'Actions',
-        label: 'Start over with a blank property',
-        icon: RotateCcw,
-        keywords: 'reset clear blank start over',
-        run: () => {
-          withUndo('Cleared your deals', lib.resetAll);
-          setAdj(NO_ADJ);
-        },
-      },
       ...SECTIONS.map((s) => ({ id: `jump-${s.id}`, group: 'Jump to section', label: s.label, icon: s.id === 'sec-opinion' ? Sparkles : ListTree, keywords: `section scroll analyze ${s.keywords}`, run: () => jump(s.id) })),
     ];
     return list;
@@ -929,22 +920,7 @@ export default function App() {
                 <span className="max-xl:sr-only">Search…</span>
                 <kbd className="ml-auto hidden rounded-md px-1.5 py-0.5 font-sans text-[11px] ring-1 ring-(--line-strong) ring-inset xl:inline">{shortcutLabel}</kbd>
               </button>
-              <AppMenu
-                synced={lib.sync === 'cloud'}
-                syncText={lib.sync === 'cloud' ? (lib.account || HOSTED ? `Synced to your ${lib.account ? 'Squarely' : 'Claude'} account` : 'Synced') : 'Saved in this browser only'}
-                dark={dark}
-                onToggleTheme={toggle}
-                onAccount={() => setAccountOpen(true)}
-                onProfile={() => setView('profile')}
-                onHelp={() => setHelpOpen(true)}
-                exports={exports}
-                dealName={current?.deal?.name}
-                count={baseItems.length}
-                onReset={() => {
-                  withUndo('Cleared your deals', lib.resetAll);
-                  setAdj(NO_ADJ);
-                }}
-              />
+              <AppMenu signedIn={Boolean(lib.account) || HOSTED} synced={lib.sync === 'cloud'} onClick={openProfile} />
             </div>
           </div>
         </header>
@@ -986,10 +962,8 @@ export default function App() {
                 onSettings={lib.updateSettings}
                 homeCity={homeCity}
                 exports={exports}
-                onReset={() => {
-                  withUndo('Cleared your deals', lib.resetAll);
-                  setAdj(NO_ADJ);
-                }}
+                dealName={current?.deal?.name}
+                onHelp={() => setHelpOpen(true)}
               />
             )}
 
@@ -1301,7 +1275,14 @@ export default function App() {
             onClose={() => setAccountOpen(false)}
             hosted={HOSTED}
             account={lib.account}
-            onAccount={lib.setAccount}
+            onAccount={(link) => {
+              lib.setAccount(link);
+              // Just signed in or made an account: on to your profile.
+              if (link && !lib.account) {
+                setAccountOpen(false);
+                setView('profile');
+              }
+            }}
             alerts={lib.settings.alerts}
             onRemoveAlert={(id) => lib.replaceAlerts(lib.settings.alerts.filter((a) => a.id !== id))}
             pro={{ distressed: proCounts.distressed, taxSales: proCounts.taxSales, city: cityByKey(listCity).name }}
