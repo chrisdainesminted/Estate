@@ -7,6 +7,8 @@
   "name": "bedrock",
   "compatibility_date": "2026-10-01",
   "main": "worker/index.js",
+  // Keep variables set in the dashboard (like PLUS_EMAILS) when a deploy from GitHub runs.
+  "keep_vars": true,
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
