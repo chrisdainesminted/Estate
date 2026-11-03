@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ArrowRight, Building2, CircleHelp, Cloud, FileSpreadsheet, FileText, Inbox, KeyRound, Mail, MessageSquare, Moon, Phone, Plus as PlusIcon, Sun, Users, Wrench } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Building2, CircleHelp, Cloud, LogOut, FileSpreadsheet, FileText, Inbox, KeyRound, Mail, MessageSquare, Moon, Phone, Plus as PlusIcon, Sun, Users, Wrench } from 'lucide-react';
 import { Button, Card, CardHeader, NumberField, Segmented, SelectField, SkeletonCard, ViewHeader, signedClass } from '../components/ui.jsx';
 import { PlusOffer, PlusTag, usePlus } from '../components/Plus.jsx';
 import { useAccount } from '../hooks/useAccount.js';
@@ -23,7 +23,7 @@ const primaryLink = `${linkBtn} bg-(--accent) font-semibold text-(--accent-ink) 
  * cash flow), each property with a way in, your tenants with what needs
  * doing and a message to each one a tap away, and your settings.
  */
-export default function ProfileView({ owned, prospects, hosted, account, syncText, dark, onToggleTheme, onOpen, onView, onLandlord, onAccount, onAddOwned, settings, onSettings, homeCity, exports, dealName, onHelp }) {
+export default function ProfileView({ owned, prospects, hosted, account, syncText, dark, onToggleTheme, onOpen, onView, onLandlord, onAccount, onAddOwned, settings, onSettings, homeCity, exports, dealName, onHelp, onSignOut }) {
   const plus = usePlus();
   const [email, setEmail] = useState('');
   useEffect(() => {
@@ -104,6 +104,7 @@ export default function ProfileView({ owned, prospects, hosted, account, syncTex
         onHelp={onHelp}
         syncText={syncText}
         account={account}
+        onSignOut={onSignOut}
       />
     </div>
   );
@@ -439,7 +440,7 @@ function Everyone({ rows, settings }) {
   );
 }
 
-function Settings({ plus, hosted, settings, onSettings, homeCity, dark, onToggleTheme, onAccount, exports, count, dealName, onHelp, syncText, account }) {
+function Settings({ plus, hosted, settings, onSettings, homeCity, dark, onToggleTheme, onAccount, exports, count, dealName, onHelp, syncText, account, onSignOut }) {
   const market = normalizeMarket(settings.market);
   const brrrr = normalizeBrrrr(settings.brrrr);
   const cities = CITIES.filter((c) => !c.key.endsWith('-other'));
@@ -485,9 +486,16 @@ function Settings({ plus, hosted, settings, onSettings, homeCity, dark, onToggle
               <Cloud className="size-4 text-emerald-600" aria-hidden /> {syncText}
             </p>
             {!hosted && (
-              <Button onClick={onAccount}>
-                <Mail className="size-4" aria-hidden /> {account ? 'Account, sync & email alerts' : 'Make an account or sign in'}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={onAccount}>
+                  <Mail className="size-4" aria-hidden /> {account ? 'Account, sync & email alerts' : 'Make an account or sign in'}
+                </Button>
+                {account && (
+                  <Button variant="ghost" onClick={() => confirm('Sign out on this device? Your account stays; sign in again any time.') && onSignOut()}>
+                    <LogOut className="size-4" aria-hidden /> Sign out
+                  </Button>
+                )}
+              </div>
             )}
           </div>
           <Button variant="ghost" onClick={onHelp} className="-ml-3.5">

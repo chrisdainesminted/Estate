@@ -38,7 +38,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import { useDeals } from './hooks/useDeals.js';
-import { accountCall } from './lib/account.js';
+import { accountCall, signOut } from './lib/account.js';
 import { useTheme } from './hooks/useTheme.js';
 import { useExports } from './hooks/useExports.js';
 import { useMediaQuery, prefersReducedMotion } from './hooks/useMediaQuery.js';
@@ -974,6 +974,12 @@ export default function App() {
                 exports={exports}
                 dealName={current?.deal?.name}
                 onHelp={() => setHelpOpen(true)}
+                onSignOut={() => {
+                  signOut();
+                  lib.setAccount(null);
+                  setView('home');
+                  toast({ tone: 'info', text: 'Signed out on this device. Your account and everything in it stay saved.' });
+                }}
               />
             )}
 
