@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { CircleHelp, Cloud, FileSpreadsheet, FileText, Moon, RotateCcw, Sun, UserRound } from 'lucide-react';
+import { CircleHelp, Cloud, FileSpreadsheet, FileText, LayoutDashboard, Moon, RotateCcw, Sun, UserRound } from 'lucide-react';
 
 /**
  * The header's one menu: your account and sync, exports, help, the theme,
  * and starting over. Keeps the header to search plus this button.
  */
-export default function AppMenu({ synced, syncText, dark, onToggleTheme, onAccount, onHelp, exports, dealName, count, onReset }) {
+export default function AppMenu({ synced, syncText, dark, onToggleTheme, onAccount, onProfile, onHelp, exports, dealName, count, onReset }) {
   const [open, setOpen] = useState(false);
   const root = useRef(null);
   const first = useRef(null);
@@ -60,6 +60,15 @@ export default function AppMenu({ synced, syncText, dark, onToggleTheme, onAccou
               <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">{syncText}</span>
             </span>
           </button>
+          {onProfile && (
+            <button type="button" role="menuitem" onClick={act(onProfile)} className={item}>
+              <LayoutDashboard className={icon} aria-hidden />
+              <span className="min-w-0">
+                <span className="block font-medium">Your profile</span>
+                <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">Equity, properties, tenants, settings</span>
+              </span>
+            </button>
+          )}
           <div className="my-1 border-t border-hairline" />
           <button type="button" role="menuitem" onClick={act(exports.exportPdf)} className={item} disabled={exports.busy === 'pdf'}>
             <FileText className={icon} aria-hidden />

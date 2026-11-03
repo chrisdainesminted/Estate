@@ -15,7 +15,7 @@ const field = 'field w-full px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100
  * private link, and get listing alerts by email. No password; the link is
  * the key, so it's shown with a plain warning.
  */
-export default function AccountSheet({ open, onClose, hosted, account, onAccount, alerts, onRemoveAlert , pro, onView }) {
+export default function AccountSheet({ open, onClose, hosted, account, onAccount, alerts, onRemoveAlert, pro, onView }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -169,6 +169,16 @@ export default function AccountSheet({ open, onClose, hosted, account, onAccount
           <p role="alert" className="text-red-700 dark:text-red-300">
             {error}
           </p>
+        )}
+
+        {onView && (
+          <section className="border-t border-hairline pt-5">
+            <h3 className="text-base font-semibold text-zinc-950 dark:text-white">Your profile</h3>
+            <p className="mt-1 text-zinc-600 dark:text-zinc-400">Your total equity, the properties you own, your tenants and your settings, on one page.</p>
+            <Button className="mt-3" onClick={() => onView('profile')}>
+              Open your profile
+            </Button>
+          </section>
         )}
 
         {pro && onView && <ProSection pro={pro} onView={onView} />}

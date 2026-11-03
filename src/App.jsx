@@ -36,6 +36,7 @@ import {
   Signpost,
   Repeat,
   Gem,
+  UserRound,
 } from 'lucide-react';
 import { useDeals } from './hooks/useDeals.js';
 import { accountCall } from './lib/account.js';
@@ -94,6 +95,7 @@ const GetReady = lazy(() => import('./views/GetReady.jsx'));
 const BuildView = lazy(() => import('./views/BuildView.jsx'));
 const BrrrrView = lazy(() => import('./views/BrrrrView.jsx'));
 const ProView = lazy(() => import('./views/ProView.jsx'));
+const ProfileView = lazy(() => import('./views/ProfileView.jsx'));
 const SellWorth = lazy(() => import('./views/SellView.jsx').then((m) => ({ default: m.SellWorth })));
 const SellReady = lazy(() => import('./views/SellView.jsx').then((m) => ({ default: m.SellReady })));
 const LandlordView = lazy(() => import('./views/landlord/LandlordView.jsx'));
@@ -216,6 +218,15 @@ const VIEWS = [
     keywords: 'tenant applicant viewing booking calendar rent payment late repair maintenance expense t776 tax lease notice deposit',
     about: 'Run your rentals: listing pages where people apply and book viewings, rent tracking, repair requests, expenses for tax time, and your province’s rules.',
   },
+  {
+    value: 'profile',
+    label: 'Your profile',
+    icon: UserRound,
+    // Opened from the menu; belongs to no mode, so the tabs stay as they were.
+    hidden: true,
+    keywords: 'profile account dashboard equity net worth properties tenants message settings',
+    about: 'Your total equity, the properties you own, your tenants with a message to each a tap away, and your settings.',
+  },
 ];
 const INVEST_VIEWS = new Set(VIEWS.filter((v) => v.group === 'invest').map((v) => v.value));
 const MODES = [
@@ -224,6 +235,7 @@ const MODES = [
   { value: 'invest', label: 'Invest', first: 'analyze' },
 ];
 const groupOf = (view) => VIEWS.find((v) => v.value === view)?.group ?? 'buy';
+const ownGroup = (view) => VIEWS.find((v) => v.value === view)?.group ?? null;
 const MODE_KEY = 'bedrock-mode-view:';
 // Switches inside a tab, and views opened from menus, never unfold More.
 const BASIC_VIEWS = new Set(VIEWS.filter((v) => v.basic || v.parent || v.hidden).map((v) => v.value));
@@ -364,6 +376,11 @@ export default function App() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  // The landlord tab to open on, when the profile sends you to rent, repairs or the inbox.
+  const [landlordTab, setLandlordTab] = useState(null);
+  useEffect(() => {
+    if (view !== 'landlord') setLandlordTab(null);
+  }, [view]);
   const [shareOpen, setShareOpen] = useState(false);
   const [fromLink, setFromLink] = useState(false);
   // The deal the Home tab tries living in; the open deal until you pick another.
@@ -459,7 +476,8 @@ export default function App() {
   // in the city on your Home numbers (or the one your time zone suggests).
   const homeRules = !active.example && active.country === 'us' ? 'us' : 'ca';
   const homeProfile = normalizeProfile(lib.settings.home);
-  const homeCity = homeProfile.entered ? homeProfile.city : guessCity();
+  // A city picked on the profile counts even before the rest of My plan is filled in.
+  const homeCity = homeProfile.entered || lib.settings.home?.city ? homeProfile.city : guessCity();
 
   // "Your next step" atop the first-time buyer's pages.
   const homeRate = normalizeMarket(lib.settings.market).rate;
@@ -491,6 +509,15 @@ export default function App() {
     if (!isDesktop) setSheetOpen(true);
     toast({ tone: 'info', text: 'New deal started. Fill in the inputs and everything updates as you type.' });
   }, [lib, homeRules, homeCity, setView, isDesktop, toast]);
+
+  // A property you already own: a new deal marked owned, opened to fill in.
+  const addOwned = useCallback(() => {
+    const m = lib.settings.market;
+    lib.insertDeal({ ...switchRules(DEFAULT_DEAL, 'ca'), name: 'My property', city: homeCity, status: 'owned', yearsOwned: 0, downPct: OWN_DOWN_PCT, rate: m.rate, refiRate: m.rate, termYears: m.amortYears });
+    setView('analyze');
+    if (!isDesktop) setSheetOpen(true);
+    toast({ tone: 'info', text: 'Fill in what you paid, your mortgage and the rent. It’s in your portfolio and your profile’s equity.' });
+  }, [lib, homeCity, setView, isDesktop, toast]);
 
   // The quick check: a new deal from a price, a type and a rent, with everything else typical.
   const quickCheck = useCallback(
@@ -575,13 +602,18 @@ export default function App() {
   const ownDeals = deals.filter((d) => !d.example);
   const tabsUnlocked = allTabs || ownDeals.length >= 2 || ownDeals.some((d) => d.status === 'owned');
   // Buying, selling or investing: each mode has its own tabs, and remembers the last one open.
-  const mode = groupOf(view);
+  // A view in no mode (your profile) keeps the mode you came from.
+  const lastMode = useRef(ownGroup(view) ?? 'buy');
+  const viewGroup = ownGroup(view);
+  if (viewGroup) lastMode.current = viewGroup;
+  const mode = viewGroup ?? lastMode.current;
   const investing = mode === 'invest';
   const groupViews = VIEWS.filter((v) => v.group === mode && !v.parent && !v.hidden);
   const tabs = investing && !tabsUnlocked ? groupViews.filter((v) => v.basic) : groupViews;
   // A view shown as a switch inside another tab lights up that tab.
   const tabView = VIEWS.find((v) => v.value === view)?.parent ?? view;
   useEffect(() => {
+    if (!ownGroup(view)) return;
     try {
       localStorage.setItem(MODE_KEY + mode, view);
     } catch {
@@ -589,7 +621,7 @@ export default function App() {
     }
   }, [view, mode]);
   const switchMode = (m) => {
-    if (m === mode) return;
+    if (m === mode && viewGroup) return;
     let back = MODES.find((x) => x.value === m).first;
     try {
       const saved = localStorage.getItem(MODE_KEY + m);
@@ -903,6 +935,7 @@ export default function App() {
                 dark={dark}
                 onToggleTheme={toggle}
                 onAccount={() => setAccountOpen(true)}
+                onProfile={() => setView('profile')}
                 onHelp={() => setHelpOpen(true)}
                 exports={exports}
                 dealName={current?.deal?.name}
@@ -933,7 +966,32 @@ export default function App() {
               />
             )}
 
-            {view === 'landlord' && <LandlordView homeCity={homeCity} />}
+            {view === 'landlord' && <LandlordView key={landlordTab ?? 'inbox'} homeCity={homeCity} initialTab={landlordTab ?? undefined} />}
+
+            {view === 'profile' && (
+              <ProfileView
+                owned={owned}
+                prospects={prospects.filter((x) => !x.deal.example).length}
+                hosted={HOSTED}
+                account={lib.account}
+                syncText={lib.sync === 'cloud' ? (lib.account || HOSTED ? `Synced to your ${lib.account ? 'Squarely' : 'Claude'} account` : 'Synced') : 'Saved in this browser only'}
+                dark={dark}
+                onToggleTheme={toggle}
+                onOpen={openDeal}
+                onView={setView}
+                onLandlord={(tab) => (setLandlordTab(tab), setView('landlord'))}
+                onAccount={() => setAccountOpen(true)}
+                onAddOwned={addOwned}
+                settings={lib.settings}
+                onSettings={lib.updateSettings}
+                homeCity={homeCity}
+                exports={exports}
+                onReset={() => {
+                  withUndo('Cleared your deals', lib.resetAll);
+                  setAdj(NO_ADJ);
+                }}
+              />
+            )}
 
             {view === 'plan' && (
               <PlanView owned={owned} deals={baseItems} plan={lib.settings.plan} onPlan={(patch) => lib.updateSettings('plan', patch)} dark={dark} onOpen={openDeal} />
