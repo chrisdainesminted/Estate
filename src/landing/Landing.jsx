@@ -167,6 +167,7 @@ const ROTATE = [
   'Add a suite that pays.',
   'Build it for less.',
   'Sell for what it’s worth.',
+  'Find your next deal.',
 ];
 const GRADIENT =
   'bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 bg-clip-text text-transparent dark:from-emerald-300 dark:via-emerald-400 dark:to-teal-300';
@@ -268,7 +269,7 @@ function Hero({ city, onCity }) {
               <span className="live-dot" aria-hidden /> For buyers, sellers and investors across Canada
             </p>
             <h1 className="mt-6 max-w-4xl text-[40px] font-extrabold leading-[1.02] tracking-[-0.042em] text-balance text-zinc-950 sm:text-6xl lg:text-[72px] dark:text-white">
-              Own your first home. <Rotator />
+              Buy, sell or invest. <Rotator />
             </h1>
             <p className="mt-6 max-w-md text-lg leading-relaxed text-pretty text-zinc-600 sm:text-xl dark:text-zinc-400">
               Your first home, your next sale, your next rental: real numbers and the next step, all in one place.
