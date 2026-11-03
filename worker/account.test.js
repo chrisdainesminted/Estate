@@ -96,6 +96,20 @@ describe('Squarely Plus', () => {
     expect(acct.isPlus).toBe(false);
     expect(acct.plus().customer).toBe('cus_1');
   });
+  it('is on for good for a login email the site gives Plus to, whatever Stripe says', () => {
+    acct.setLoginEmail('owner@example.com');
+    expect(acct.isPlus).toBe(false);
+    acct.setComp(['someone@example.com', ' Owner@Example.com ']);
+    expect(acct.isPlus).toBe(true);
+    acct.setPlus({ status: 'canceled' });
+    expect(acct.isPlus).toBe(true);
+    acct.setComp(['']);
+    expect(acct.isPlus).toBe(false);
+  });
+  it('gives no one Plus without a login email', () => {
+    acct.setComp(['']);
+    expect(acct.compPlus).toBe(false);
+  });
   it('limits costly uses each day', () => {
     acct.useDaily('blueprint', 2);
     acct.useDaily('blueprint', 2);

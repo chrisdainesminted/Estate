@@ -11,6 +11,9 @@
 // - RESEND_API_KEY and EMAIL_FROM: send email (sign-in codes). With both set,
 //   a listing appears in public search only once its owner confirms their email.
 // - ADMIN_KEY: opens the review page for reported listings (/homes/#admin).
+// - PLUS_EMAILS: login emails, comma-separated, that have Squarely Plus for
+//   good without paying (the owner's own account, say). A secret, so the
+//   addresses stay out of the code.
 // - STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET: landlord billing (pricing.js).
 //   A daily job charges each landlord with a card once a month; the webhook
 //   at /api/stripe/webhook hears when a card is saved or a charge settles.
@@ -407,6 +410,7 @@ export class Account extends DurableObject {
 
   async call(req) {
     const a = this.store;
+    a.setComp(String(this.env.PLUS_EMAILS || '').split(','));
     try {
       if (req.op === 'init') {
         a.init(await hashKey(req.key));

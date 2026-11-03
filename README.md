@@ -23,6 +23,7 @@ Optional settings in Cloudflare (Workers → bedrock → Settings → Variables 
 - `ANTHROPIC_API_KEY`: lets Plus members upload a blueprint and have Claude read the rooms (`worker/blueprint.js`, up to 20 plans an account a day), and use Ask Squarely on the website (`worker/ask.js`, up to 40 questions an account a day). Without it, people type their rooms in, and Ask Squarely works only on the Claude page, through the viewer's own Claude account.
 - `RESEND_API_KEY` and `EMAIL_FROM` (an address on a domain verified in Resend): turns on email: password reset links, listing-alert digests, and email confirmation; once set, a listing shows in public search only after its owner confirms their email with a code. Until then listings publish straight away.
 - `SITE_URL` (optional): the address used in email links, if not the workers.dev one.
+- `PLUS_EMAILS` (optional, a secret): login emails, comma-separated, that have Squarely Plus for good without paying, such as the owner's own account. Plus turns on the next time that account loads; there's no subscription to manage.
 - `OWNER_EMAIL`: where broker-introduction requests and contact-form messages are emailed (needs the two email settings above). Each email's reply-to is the person who wrote, and every request is also kept at `/homes/#admin`.
   For local development, add `EMAIL_DEV=log` to `.dev.vars` (with any values for the two above) and emails are printed to the wrangler log instead of sent.
 

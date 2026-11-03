@@ -196,7 +196,9 @@ function PlusSection() {
       <h3 className="flex items-center gap-2 text-base font-semibold text-zinc-950 dark:text-white">
         <PlusTag /> Squarely Plus
       </h3>
-      {plus.active ? (
+      {plus.comp ? (
+        <p className="mt-2 text-emerald-700 dark:text-emerald-400">You have Plus for good, on the house. Every Plus tool is on.</p>
+      ) : plus.active ? (
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <span className="text-emerald-700 dark:text-emerald-400">
             You have Plus{plus.cancelAt ? `, until ${new Date(plus.cancelAt).toLocaleDateString('en-CA', { month: 'long', day: 'numeric', year: 'numeric' })}` : ''}. Thank you.

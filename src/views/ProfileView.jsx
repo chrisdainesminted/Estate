@@ -511,6 +511,8 @@ function Settings({ plus, hosted, settings, onSettings, homeCity, dark, onToggle
           </h3>
           {plus.hosted ? (
             <p className="text-sm text-zinc-600 dark:text-zinc-400">Every Plus tool is on for your Claude page.</p>
+          ) : plus.comp ? (
+            <p className="text-sm text-emerald-700 dark:text-emerald-400">You have Plus for good, on the house. Every Plus tool is on.</p>
           ) : plus.active ? (
             <div className="space-y-2 text-sm">
               <p className="text-emerald-700 dark:text-emerald-400">You have Plus{plus.cancelAt ? `, until ${new Date(plus.cancelAt).toLocaleDateString('en-CA', { month: 'long', day: 'numeric', year: 'numeric' })}` : ''}.</p>

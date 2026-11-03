@@ -75,6 +75,8 @@ export class AccountStore {
   constructor(sql, now = () => Date.now()) {
     this.sql = sql;
     this.now = now;
+    // Login emails given Plus for good, free (the site's PLUS_EMAILS setting).
+    this.comp = new Set();
     sql.exec('CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)');
   }
 
@@ -111,7 +113,7 @@ export class AccountStore {
       email: this.meta('email') || '',
       emailVerified: this.meta('emailVerified') === '1',
       loginEmail: this.meta('loginEmail') || '',
-      plus: { active: this.isPlus, status: this.plus().status || '', until: Number(this.plus().until) || 0, cancelAt: Number(this.plus().cancelAt) || 0 },
+      plus: { active: this.isPlus, comp: this.compPlus, status: this.plus().status || '', until: Number(this.plus().until) || 0, cancelAt: Number(this.plus().cancelAt) || 0 },
       ...Object.fromEntries(Object.keys(SECTIONS).map((k) => [k, this.section(k)])),
     };
   }
@@ -206,8 +208,20 @@ export class AccountStore {
     return p;
   }
 
-  /** Paid up: active or on trial, or a failed renewal still inside the period already paid for. */
+  /** The login emails that have Plus for good, without paying. */
+  setComp(emails) {
+    this.comp = new Set((emails ?? []).map((e) => String(e).trim().toLowerCase()).filter(Boolean));
+  }
+
+  /** Plus for good: this account signs in with an email the site gives Plus to. */
+  get compPlus() {
+    const login = String(this.meta('loginEmail') || '').toLowerCase();
+    return Boolean(login) && this.comp.has(login);
+  }
+
+  /** Paid up: active or on trial, or a failed renewal still inside the period already paid for; or Plus for good. */
   get isPlus() {
+    if (this.compPlus) return true;
     const p = this.plus();
     return ['active', 'trialing'].includes(p.status) || (p.status === 'past_due' && Number(p.until) > this.now());
   }

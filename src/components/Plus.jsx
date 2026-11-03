@@ -52,7 +52,7 @@ export function usePlusState({ account, hosted, onNeedAccount }) {
       accountCall(account)
         .then((r) => {
           if (!live) return;
-          setState({ active: Boolean(r.plus?.active), ready: true, status: r.plus?.status ?? '', cancelAt: r.plus?.cancelAt ?? 0 });
+          setState({ active: Boolean(r.plus?.active), comp: Boolean(r.plus?.comp), ready: true, status: r.plus?.status ?? '', cancelAt: r.plus?.cancelAt ?? 0 });
           if (welcome && !r.plus?.active && tries++ < 6) setTimeout(load, 2500);
         })
         .catch(() => live && setState((s) => ({ ...s, ready: true })));
@@ -82,6 +82,8 @@ export function usePlusState({ account, hosted, onNeedAccount }) {
       ready: hosted || state.ready,
       status: state.status,
       cancelAt: state.cancelAt,
+      // Plus for good, given by the site: nothing to manage or cancel.
+      comp: !hosted && Boolean(state.comp),
       hosted,
       available: !hosted && available,
       hasAccount: Boolean(account),
