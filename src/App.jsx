@@ -945,6 +945,11 @@ export default function App() {
                 prospects={prospects}
                 dark={dark}
                 onOpen={openDeal}
+                onEdit={(id) => {
+                  // Open it with its numbers ready to change: the edit sheet on phones, the inputs at the top on wider screens.
+                  openDeal(id);
+                  if (!isDesktop) setSheetOpen(true);
+                }}
                 onMarkOwned={(id) => {
                   const d = deals.find((x) => x.id === id);
                   withUndo(`Moved “${d?.name}” to your portfolio`, () => lib.updateDeal(id, { status: 'owned', yearsOwned: 0 }));

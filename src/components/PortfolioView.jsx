@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ArrowRight, Briefcase, CheckCircle2, XCircle } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Briefcase, CheckCircle2, Pencil, XCircle } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { estimateToday, portfolioSummary } from '../lib/finance.js';
 import { TONE_CLASSES, TONE_TEXT, verdict } from '../lib/dscr.js';
@@ -179,12 +179,12 @@ function ImpactCard({ owned, prospects, onOpen, onMarkOwned }) {
   );
 }
 
-function PropertiesTable({ owned, onOpen }) {
+function PropertiesTable({ owned, onOpen, onEdit }) {
   return (
     <Card delay={240}>
-      <CardHeader title="Properties" subtitle="Click a property to open its full analysis." />
+      <CardHeader title="Properties" subtitle="Click a property to open its full analysis, or Edit to change its numbers." />
       <div className="thin-scroll overflow-x-auto">
-        <table className="w-full min-w-[760px] text-sm">
+        <table className="w-full min-w-[820px] text-sm">
           <thead>
             <tr className="caption">
               {['Property', 'Doors', 'Rent /mo', 'PITIA', 'Net cash flow', 'DSCR', 'Cash-on-cash', 'Equity today', 'Verdict'].map((h, i) => (
@@ -203,9 +203,15 @@ function PropertiesTable({ owned, onOpen }) {
               return (
                 <tr key={x.deal.id} className="border-t border-hairline transition hover:bg-well">
                   <td className="py-3 pr-4 pl-6">
-                    <button type="button" onClick={() => onOpen(x.deal.id)} className="text-left font-medium text-zinc-900 hover:text-emerald-700 dark:text-white dark:hover:text-emerald-300">
-                      {x.deal.name}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={() => onOpen(x.deal.id)} className="text-left font-medium text-zinc-900 hover:text-emerald-700 dark:text-white dark:hover:text-emerald-300">
+                        {x.deal.name}
+                      </button>
+                      {/* Beside the name, so it's in view on phones without scrolling the table sideways. */}
+                      <Button variant="secondary" className="px-2 py-0.5 text-xs" onClick={() => onEdit(x.deal.id)} aria-label={`Edit ${x.deal.name}`}>
+                        <Pencil className="size-3" aria-hidden /> Edit
+                      </Button>
+                    </div>
                     <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
                       Owned {Number(x.deal.yearsOwned) || 0} {Number(x.deal.yearsOwned) === 1 ? 'year' : 'years'}
                       {x.deal.example && <ExampleTag />}
@@ -233,7 +239,7 @@ function PropertiesTable({ owned, onOpen }) {
   );
 }
 
-export default function PortfolioView({ owned, prospects, dark, onOpen, onMarkOwned }) {
+export default function PortfolioView({ owned, prospects, dark, onOpen, onEdit = onOpen, onMarkOwned }) {
   const p = useMemo(() => portfolioSummary(owned), [owned]);
 
   if (!owned.length) {
@@ -304,7 +310,7 @@ export default function PortfolioView({ owned, prospects, dark, onOpen, onMarkOw
         </div>
       </SummaryCard>
 
-      <PropertiesTable owned={owned} onOpen={onOpen} />
+      <PropertiesTable owned={owned} onOpen={onOpen} onEdit={onEdit} />
 
       <SectionGroup>
         <Section id="pf-cashflow" title="Cash flow by property" meaning={cashFlowRanking(owned)} subtitle="Monthly, after the loan payment and running costs. Tap a bar to open that property.">
