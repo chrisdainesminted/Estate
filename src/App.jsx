@@ -35,13 +35,14 @@ import {
   Tag,
   Signpost,
   Repeat,
+  Gem,
 } from 'lucide-react';
 import { useDeals } from './hooks/useDeals.js';
 import { accountCall } from './lib/account.js';
 import { useTheme } from './hooks/useTheme.js';
 import { useExports } from './hooks/useExports.js';
 import { useMediaQuery, prefersReducedMotion } from './hooks/useMediaQuery.js';
-import { useMarket, useMarketIndex } from './hooks/useMarket.js';
+import { useMarket, useMarketIndex, useTaxSales } from './hooks/useMarket.js';
 import { OWN_DOWN_PCT, analyzeDeal, applyAdjustments, isNeutralAdjustment, maxOffer, ownMoney, projectDeal, refiAnalysis, saleAnalysis } from './lib/finance.js';
 import { money, percent, ratio } from './lib/format.js';
 import { DEFAULT_DEAL, MAX_COMPARE, switchRules } from './lib/presets.js';
@@ -90,6 +91,7 @@ const HomesForMe = lazy(() => import('./views/HomesForMe.jsx'));
 const GetReady = lazy(() => import('./views/GetReady.jsx'));
 const BuildView = lazy(() => import('./views/BuildView.jsx'));
 const BrrrrView = lazy(() => import('./views/BrrrrView.jsx'));
+const ProView = lazy(() => import('./views/ProView.jsx'));
 const SellWorth = lazy(() => import('./views/SellView.jsx').then((m) => ({ default: m.SellWorth })));
 const SellReady = lazy(() => import('./views/SellView.jsx').then((m) => ({ default: m.SellReady })));
 const LandlordView = lazy(() => import('./views/landlord/LandlordView.jsx'));
@@ -189,6 +191,15 @@ const VIEWS = [
     basic: true,
     keywords: 'brrrr brrr buy rehab rent refinance repeat fixer under market value arv renovation flip',
     about: 'Homes ranked for buy, rehab, rent, refinance, repeat: priced furthest under the homes like them once the work is paid for.',
+  },
+  {
+    value: 'pro',
+    label: 'Pro',
+    icon: Gem,
+    group: 'invest',
+    basic: true,
+    keywords: 'pro plus distressed power of sale foreclosure tax sale bank owned estate sale receivership below market deals',
+    about: 'Squarely Plus: below-market properties (lender, estate and court sales, and city tax sales) with the numbers run, and every Plus tool.',
   },
   { value: 'portfolio', label: 'Portfolio', icon: Briefcase, group: 'invest', about: 'The properties you own, added up: what they bring in each month and what they’re worth today.' },
   { value: 'compare', label: 'Compare', icon: Columns3, group: 'invest', about: 'Up to three deals side by side, with the best of each row marked.' },
@@ -545,6 +556,7 @@ export default function App() {
   const listCity = listingCity(baseMarket?.listingCity ?? linkedCity, homeCity, marketIndex.feed);
   const market = useMemo(() => localMarket(baseMarket, listCity), [baseMarket, listCity]);
   const marketFeed = useMarket(listCity);
+  const taxSales = useTaxSales();
 
   // Portfolio, Compare and Plan wait behind More until you have two deals of your own or own a property.
   const ownDeals = deals.filter((d) => !d.example);
@@ -964,6 +976,20 @@ export default function App() {
                   else delete taxes[id];
                   lib.updateSettings('market', homePatch({ taxes }, market));
                 }}
+              />
+            )}
+
+            {view === 'pro' && (
+              <ProView
+                feedState={marketFeed}
+                indexState={marketIndex}
+                city={listCity}
+                onCity={(listingCity) => lib.updateSettings('market', { listingCity })}
+                market={market}
+                plan={lib.settings.brrrr}
+                taxSales={taxSales}
+                onView={setView}
+                onAnalyze={openBrrrr}
               />
             )}
 

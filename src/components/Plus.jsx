@@ -13,6 +13,7 @@ export const PLUS_FEATURES = [
   { key: 'alerts', text: 'Daily emails when a listing drops its price or a new one fits you' },
   { key: 'report', text: 'Pricing report for your home, as a PDF to share' },
   { key: 'pdf', text: 'Deal memos and materials lists as PDFs' },
+  { key: 'pro', text: 'Pro deals: tax sales and lender, estate and court sales, with the numbers run' },
   { key: 'ask', text: 'Ask Squarely: questions answered from your own numbers' },
 ];
 

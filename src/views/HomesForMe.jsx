@@ -69,8 +69,8 @@ export default function HomesForMe({ feedState, indexState, city, onCity, market
         </Card>
       )}
 
-      {status === 'loading' && <SkeletonCard className="h-96" />}
-      {status !== 'loading' && !rows.length && (
+      {status === 'checking' && <SkeletonCard className="h-96" />}
+      {status !== 'checking' && !rows.length && (
         <Card className="p-6 text-sm text-zinc-600 dark:text-zinc-400">No homes of one to four units listed in {place.name} today. Try a nearby city, or check back tomorrow: listings are found every morning.</Card>
       )}
 

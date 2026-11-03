@@ -5,12 +5,13 @@ The scheduled "Squarely listings" task follows this every morning. It finds prop
 - Squarely page: https://claude.ai/artifact/5KH4ZZHoZ8CvCKF5CXutGJ
 - Saved feeds: collection `data/users/me`, one document per city, named by the `plan` command (Thunder Bay's is `thunderbay`, Calgary's `calgary`, St. John's `stjohns`, and so on)
 - Index of every city: collection `data/users/me`, document `markets`
+- Municipal tax sales: collection `data/users/me`, document `taxsales`
 - Owner's library and settings: collection `data/users/me`, document `bedrock` (read it; never write it)
 - The run's tool, published with the page: `tools/bedrock-market.mjs` (a bundle of `scripts/market/cli.mjs`: `plan`, `merge`, `index` and `score` below). This file is published beside it as `tools/RUNBOOK.md`, so a run needs no copy of the repository.
 
 ## Rules
 
-- Change nothing except the city documents for today's cities and the `markets` document. Don't edit, commit or push any repository, and never write the `bedrock` document.
+- Change nothing except the city documents for today's cities, the `markets` document and the `taxsales` document. Don't edit, commit or push any repository, and never write the `bedrock` document.
 - Use web search only. Don't scrape REALTOR.ca or any other site. (This environment can't open web pages anyway.)
 - Only properties in that city (the city itself, not the region around it) that are for sale now. Skip places for rent, sold or leased listings, vacant land and commercial-only property.
 - **Only real listings.** Every listing needs a link to its own listing page, copied exactly from a search result: a page whose address shows the property's street number and street, on a listing site such as REALTOR.ca, REW, Zolo, HouseSigma, Zoocasa, Point2, Wahi, Redfin, RE/MAX, Royal LePage, Century 21, Coldwell Banker, eXp, Square Yards, HonestDoor, Centris (Québec), DuProprio (Québec), PropertyGuys, OnePercent, or a local brokerage's own site. Never type, build or adjust a link, and never use a search, area or neighbourhood page. If no result links to the property's own page, leave the property out. The merge tool turns away anything without one.
@@ -30,6 +31,7 @@ The scheduled "Squarely listings" task follows this every morning. It finds prop
 
 2. **Plan today.**
    - ArtifactData `get` with the page URL, collection `data/users/me`, doc_id `markets`, out_dir `$RUN/index`. Note its `version`. If there's no such document, this is the first run across Canada; use `-` for `$INDEX`. Otherwise `$INDEX` is the saved file (`find "$RUN/index" -name '*.json'`).
+   - ArtifactData `get` with doc_id `taxsales`, out_dir `$RUN/taxsales`. Note its `version`. If it's missing, use `-` for `$TAXSALES`; otherwise `$TAXSALES` is the saved file.
    - ArtifactData `get` with doc_id `bedrock`, out_dir `$RUN/settings`. If it's missing, defaults apply. Call the saved file `$SETTINGS`.
    - `node "$TOOL" plan "$INDEX" --count 4` prints today's cities, one per line: the city key, its document name, the name to search with, and its typical house price. Thunder Bay is always first.
 
@@ -73,6 +75,10 @@ The scheduled "Squarely listings" task follows this every morning. It finds prop
         29. Thunder Bay ON price reduced house for sale
         30. Thunder Bay ON open house this weekend
         31. Thunder Bay for sale by owner house
+        32. Thunder Bay power of sale house
+        33. Thunder Bay bank owned OR mortgagee sale property
+        34. Thunder Bay estate sale house
+        35. Thunder Bay court ordered sale OR receivership property
         Then one search per site, each `site:<site> Thunder Bay house for sale`, for every site here: realtor.ca, rew.ca, zolo.ca, housesigma.com, zoocasa.com, point2homes.com, wahi.com, redfin.ca, remax.ca, royallepage.ca, c21.ca, coldwellbanker.ca, exprealty.ca, onepercentrealty.com, squareyards.ca, honestdoor.com, propertyguys.com, kijiji.ca. Then the same for `Thunder Bay duplex OR triplex for sale` on realtor.ca, zolo.ca, housesigma.com and remax.ca. Finally `Thunder Bay real estate brokerage listings` and one `site:` search on each local brokerage site those results name.
       - Every other city (`$NAME` as printed; `$PRICE` is its typical house price, rounded; `$P1` to `$P4` are 50%, 75%, 125% and 160% of it):
         1. `$NAME` duplex for sale
@@ -92,6 +98,8 @@ The scheduled "Squarely listings" task follows this every morning. It finds prop
         15. `$NAME` new listing house for sale
         16. `$NAME` price reduced house for sale
         17. `$NAME` for sale by owner house
+        18. `$NAME` power of sale OR bank owned house
+        19. `$NAME` estate sale OR court ordered sale house
         Then one search per site, each `site:<site> $NAME house for sale`, for every site here: realtor.ca, rew.ca, zolo.ca, housesigma.com, zoocasa.com, point2homes.com, wahi.com, redfin.ca, remax.ca, royallepage.ca, c21.ca, coldwellbanker.ca, exprealty.ca, onepercentrealty.com, squareyards.ca, honestdoor.com, propertyguys.com (in Québec also centris.ca and duproprio.com). Then `site:realtor.ca $NAME duplex OR triplex for sale` and `site:zolo.ca $NAME duplex OR triplex for sale`.
 
       Then confirm saved listings: search the address (with the city) of every saved listing whose `lastSeen` is three or more days old, oldest first, up to 25 for Thunder Bay and 15 for other cities. If a result still shows its listing page for sale, include it in `found.json` like any other. If it shows the property sold, include it with status `sold`; if there's no for-sale page for it any more, include it with status `gone`.
@@ -103,6 +111,12 @@ The scheduled "Squarely listings" task follows this every morning. It finds prop
         4. `site:realtor.ca "<address>" <city>`
         5. `<MLS number> taxes`, if the listing has one
       When a result states the annual property tax for that address, include the listing in `found.json` with its `url`, `price` and `taxes`. Never guess, estimate or work out a tax figure (not from an assessment, not from a mill rate): leave it out when no page states it.
+
+      Then **look for tax sales**: land the city is selling by public tender (or, outside Ontario, at auction) for unpaid property tax. Search `$NAME tax sale properties <this year>` and `$NAME tax sale <next year>`; in Ontario also `site:ontario.ca "sale of land for tax arrears" <city name>` (the Ontario Gazette). Record a property only from the municipality's own notice or the provincial gazette, never from a reseller or a news story, and only while its tender or auction date is still ahead. Write them to `$RUN/$CITY/taxsales.json` as an array of objects with the tax sale fields below (`[]` when there are none), then:
+
+      ```bash
+      node "$TOOL" taxsales "$TAXSALES" "$RUN/$CITY/taxsales.json" --city "$CITY" --today "$TODAY" > "$RUN/taxsales-next.json" && TAXSALES="$RUN/taxsales-next.json"
+      ```
 
    c. **Write `$RUN/$CITY/found.json`**: a JSON array with one object for each listing found today in that city, including ones already saved, so their dates and prices update. Fields below.
 
@@ -120,12 +134,14 @@ The scheduled "Squarely listings" task follows this every morning. It finds prop
 
    If one city's searches or save fail, note it and go on to the next city.
 
-4. **Save the index.** ArtifactData `set` with collection `data/users/me`, doc_id `markets`, file_path `$INDEX` (the last `index-next.json`), and `if_version` from step 2 (leave it out on the first run). If the version changed, re-read `markets`, redo step 3f for each of today's cities against it (their `next.json` files are still in `$RUN`), and save once more.
+4. **Save the tax sales.** ArtifactData `set` with collection `data/users/me`, doc_id `taxsales`, file_path `$TAXSALES` (the last `taxsales-next.json`), and `if_version` from step 2 (leave it out if there was no document). If the version changed, re-read it and redo each city's `taxsales` command against it once.
 
-5. **Report.** Your final message becomes the phone notification, so keep it short.
+5. **Save the index.** ArtifactData `set` with collection `data/users/me`, doc_id `markets`, file_path `$INDEX` (the last `index-next.json`), and `if_version` from step 2 (leave it out on the first run). If the version changed, re-read `markets`, redo step 3f for each of today's cities against it (their `next.json` files are still in `$RUN`), and save once more.
+
+6. **Report.** Your final message becomes the phone notification, so keep it short.
    - With standouts: "N listing(s) beat your targets today", then one line each with the city, address, price, cash flow per door, "(rents estimated)" where the score script says so, and the link.
    - Without: "No standouts today. Checked <cities>: X listings, Y new, Z price drops."
-   - Always add one line: "<N> searches, <T> tax bills found."
+   - Always add one line: "<N> searches, <T> tax bills found." Add "<D> distressed listings, <S> open tax sales." when there are any.
    - If searching or saving failed for a city, say which plainly.
 
 ### Listing fields
@@ -144,5 +160,19 @@ The scheduled "Squarely listings" task follows this every morning. It finds prop
 | `taxes` | number | Annual property tax, if stated |
 | `yearBuilt` | number | If stated |
 | `highlights` | string | One short line: condition, who pays utilities, tenancy facts (200 characters at most) |
+| `distress` | string | Only when the listing says so: `power-of-sale`, `bank-owned`, `receivership` (court-ordered or trustee sale), `estate`, or `as-is` |
 | `status` | string | `active`, `conditional` (sold subject to conditions), `sold`, or `gone` (a saved listing with no for-sale page any more) |
 
+
+### Tax sale fields
+
+| Field | Type | Notes |
+|---|---|---|
+| `address` | string | Street address, if the notice gives one |
+| `legal` | string | The legal description (e.g. `PCL 1234 SEC TBF; LT 5 PL 1001`), if given. One of `address` or `legal` is required |
+| `roll` | string | The assessment roll number |
+| `minimumBid` | number | **Required.** The minimum tender amount (or the auction's opening bid) in dollars |
+| `deadline` | string | The tender or auction date, `YYYY-MM-DD` |
+| `size` | string | Lot size or area as the notice states it |
+| `notes` | string | One short line the notice states, e.g. "vacant land" or "no access road" |
+| `url` | string | **Required.** The https link to the official notice (the municipality's page or PDF, or the gazette) |

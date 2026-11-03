@@ -2,6 +2,7 @@ import { Suspense, lazy, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRight, BellPlus, BellRing, Check, ChevronDown, ExternalLink, Eye, EyeOff, Radar, RotateCcw, SlidersHorizontal, X } from 'lucide-react';
 import { CITY_RENTS, DEFAULT_MARKET, MARKET_SOURCES, LISTING_CITIES, LISTING_TYPES, SORTS, localMarket, alertMatches, alertName, daysListed, droppedInLatestRun, freshMatches, isNew, priceStory, underMarket, lensTargets, listingPageUrl, listingTaxes, listingToDeal, rankListings, siteName, typeOf, unitsOf } from '../lib/market.js';
 import { homeFor } from '../lib/firstHome.js';
+import { DISTRESS, distressOf } from '../lib/distress.js';
 import { PROVINCES, cityByKey } from '../lib/canada.js';
 import { listingSentence } from '../lib/explain.js';
 import { money, percent } from '../lib/format.js';
@@ -261,6 +262,7 @@ function ListingRow({ s, home, rank, sort, feed, below, imported, hidden, onAnal
     s.meets && 'Beats your targets',
     noTax && 'Tax not listed',
     isNew(l, feed) && 'New',
+    distressOf(l) && DISTRESS[distressOf(l)].label,
     drop > 0 && `Down ${money(drop)}`,
     below > 0 && `${Math.round(below * 100)}% under the going rate`,
     hidden && 'Hidden',

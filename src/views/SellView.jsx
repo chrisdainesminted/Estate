@@ -81,7 +81,7 @@ export function SellWorth({ sell, onSell, feedState, indexState, city, onCity, n
         </div>
       </Card>
 
-      {status === 'loading' ? (
+      {status === 'checking' ? (
         <SkeletonCard className="h-64" />
       ) : (
         <SummaryCard

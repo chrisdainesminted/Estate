@@ -5,6 +5,7 @@ import { cityByKey, provinceName } from '../../src/lib/canada.js';
 import { DEFAULT_TARGETS } from '../../src/lib/finance.js';
 import { money, percent } from '../../src/lib/format.js';
 import { parseArgs, readJson, unwrap } from './io.mjs';
+import { mergeTaxSales } from '../../src/lib/distress.js';
 
 // Plain text for the terminal: drop the invisible word joiner money() puts after a sign.
 const plainMoney = (v, opts) => money(v, opts).replace(/\u2060/g, '');
@@ -119,4 +120,23 @@ export function runIndex(argv) {
   const next = updateIndex(unwrap(readJson(positional[0]), 'cities'), city, feed);
   process.stdout.write(`${JSON.stringify(next)}\n`);
   console.error(`index: ${city} has ${next.cities[city].count} listings as of ${next.cities[city].date}; ${Object.keys(next.cities).length} cities indexed`);
+}
+
+/** taxsales <taxsales.json|-> <found.json> --city key [--today YYYY-MM-DD]: print the tax sale document with today's findings for that city. */
+export function runTaxSales(argv) {
+  const { flags, positional } = parseArgs(argv);
+  const [prevPath, foundPath] = positional;
+  if (!foundPath) {
+    console.error('usage: taxsales <taxsales.json|-> <found.json> --city key [--today YYYY-MM-DD]');
+    process.exitCode = 2;
+    return;
+  }
+  const today = typeof flags.today === 'string' ? flags.today : new Date().toLocaleDateString('en-CA', { timeZone: 'America/Toronto' });
+  const prev = unwrap(readJson(prevPath), 'cities');
+  const foundJson = readJson(foundPath);
+  const found = Array.isArray(foundJson) ? foundJson : [];
+  const city = cityFlag(flags);
+  const { doc, stats } = mergeTaxSales(prev, found, { city, today });
+  process.stdout.write(`${JSON.stringify(doc)}\n`);
+  console.error(`taxsales ${city} ${today}: ${stats.open} open, ${stats.added} new (${found.length - stats.added} already known or turned away: each needs an address or legal description, a minimum bid and the official notice's https link)`);
 }

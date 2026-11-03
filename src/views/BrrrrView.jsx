@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ArrowRight, ChevronDown, ExternalLink, Wrench } from 'lucide-react';
 import { GRADES, rankBrrrr } from '../lib/brrrr.js';
+import { DISTRESS, distressOf } from '../lib/distress.js';
 import { cityByKey } from '../lib/canada.js';
 import { money, percent } from '../lib/format.js';
 import { siteName, taxSource } from '../lib/market.js';
@@ -73,8 +74,8 @@ export default function BrrrrView({ feedState, indexState, city, onCity, market,
         </div>
       </Card>
 
-      {status === 'loading' && <SkeletonCard className="h-96" />}
-      {status !== 'loading' && ranked.length === 0 && (
+      {status === 'checking' && <SkeletonCard className="h-96" />}
+      {status !== 'checking' && ranked.length === 0 && (
         <Card className="p-6 text-sm text-zinc-600 dark:text-zinc-400">Not enough similar homes for sale in {place.name} today to compare. Try a bigger city nearby, or check back tomorrow.</Card>
       )}
 
@@ -96,7 +97,10 @@ export default function BrrrrView({ feedState, indexState, city, onCity, market,
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${TONE[g.tone]}`}>{g.label}</span>
                         <span className="text-xs text-zinc-500 tabular-nums dark:text-zinc-400">Score {r.score}/100</span>
-                        {r.fixer && (
+                        {distressOf(r.listing) && (
+                          <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-600/25 ring-inset dark:text-amber-300">{DISTRESS[distressOf(r.listing)].label}</span>
+                        )}
+                        {r.fixer && !distressOf(r.listing) && (
                           <span className="inline-flex items-center gap-1 text-xs text-amber-700 dark:text-amber-300">
                             <Wrench className="size-3" aria-hidden /> Listed as needing work
                           </span>

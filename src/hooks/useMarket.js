@@ -59,3 +59,6 @@ export const useMarket = (cityKey) => useRunDoc(feedDoc(cityKey), isFeed);
 
 /** Every city's feed at a glance: { cities: { key: { date, count } } }. */
 export const useMarketIndex = () => useRunDoc(INDEX_DOC, isIndex);
+
+/** Municipal tax sales the run found: { cities: { key: { checked, sales: [...] } } }. */
+export const useTaxSales = () => useRunDoc('taxsales', isIndex);

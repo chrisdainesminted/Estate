@@ -300,9 +300,12 @@ export function cleanListing(raw) {
     taxes: positive(raw.taxes),
     yearBuilt: year >= 1800 && year <= 2100 ? year : null,
     highlights: text(raw.highlights, 220),
+    // A distressed sale the listing states: power-of-sale, bank-owned, receivership, estate or as-is.
+    distress: DISTRESS_KINDS.includes(raw.distress) ? raw.distress : null,
     status: STATUSES.includes(raw.status) ? raw.status : 'active',
   };
 }
+const DISTRESS_KINDS = ['power-of-sale', 'bank-owned', 'receivership', 'estate', 'as-is', 'tax-sale'];
 
 /**
  * Monthly rent for the whole property: the listing's stated rents where it
