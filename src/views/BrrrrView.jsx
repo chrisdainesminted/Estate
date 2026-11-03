@@ -3,7 +3,7 @@ import { ArrowRight, ChevronDown, ExternalLink, Wrench } from 'lucide-react';
 import { GRADES, rankBrrrr } from '../lib/brrrr.js';
 import { cityByKey } from '../lib/canada.js';
 import { money, percent } from '../lib/format.js';
-import { siteName } from '../lib/market.js';
+import { siteName, taxSource } from '../lib/market.js';
 import { Button, Card, CardHeader, NumberField, SkeletonCard, ViewHeader, signedClass } from '../components/ui.jsx';
 import { CityPicker } from './ListingsView.jsx';
 
@@ -26,7 +26,7 @@ const STEPS = [
  * Each is set against similar homes for sale nearby (its likely value once
  * fixed up), then run through the plan with your renovation budget.
  */
-export default function BrrrrView({ feedState, indexState, city, onCity, market, plan, onPlan, onOpen, nextStep }) {
+export default function BrrrrView({ feedState, indexState, city, onCity, market, plan, onPlan, onOpen, onTax, nextStep }) {
   const { status, feed } = feedState;
   const [open, setOpen] = useState(null);
   const [showAll, setShowAll] = useState(false);
@@ -104,7 +104,14 @@ export default function BrrrrView({ feedState, indexState, city, onCity, market,
                     <div className="flex flex-wrap items-end gap-x-5 gap-y-2 sm:justify-end">
                       <Num label="Value added" value={money(r.created)} cls={signedClass(r.created)} strong />
                       <Num label="Cash left in" value={r.cashLeft <= 0 ? `${money(-r.cashLeft)} out` : money(r.cashLeft)} cls={r.cashLeft <= 0 ? 'text-emerald-700 dark:text-emerald-400' : ''} />
-                      <Num label="Cash flow after" value={r.cashFlow == null ? 'Tax unknown' : `${money(r.cashFlow, { signed: true })}/mo`} cls={r.cashFlow == null ? 'text-zinc-500' : signedClass(r.cashFlow)} />
+                      {r.cashFlow == null ? (
+                        <button type="button" onClick={() => setOpen(r.listing.id)} className="text-right">
+                          <span className="block text-[11px] text-zinc-500 dark:text-zinc-400">Cash flow after</span>
+                          <span className="text-sm font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-400">Add the tax bill</span>
+                        </button>
+                      ) : (
+                        <Num label="Cash flow after" value={`${money(r.cashFlow, { signed: true })}/mo`} cls={signedClass(r.cashFlow)} />
+                      )}
                       <Button variant="ghost" className="px-2" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : r.listing.id)}>
                         {isOpen ? 'Less' : 'The numbers'} <ChevronDown className={`size-4 transition ${isOpen ? 'rotate-180' : ''}`} aria-hidden />
                       </Button>
@@ -142,6 +149,14 @@ export default function BrrrrView({ feedState, indexState, city, onCity, market,
                         <Line l={`Rent${r.rentSource === 'stated' ? '' : ' (typical CMHC rent, estimate)'}`} v={`${money(r.rent)}/mo`} />
                         <Line l="Mortgage payment after" v={`${money(r.payment)}/mo`} />
                         <Line l="Cash flow after" v={r.cashFlow == null ? 'Needs the tax bill' : `${money(r.cashFlow, { signed: true })}/mo`} strong />
+                        {onTax && (r.cashFlow == null || taxSource(r.listing, market) === 'you') && (
+                          <TaxBox
+                            id={r.listing.id}
+                            own={taxSource(r.listing, market) === 'you' ? market.taxes[r.listing.id] : undefined}
+                            url={r.url}
+                            onTax={onTax}
+                          />
+                        )}
                         <div className="mt-3 flex flex-wrap gap-2">
                           <Button onClick={() => onOpen(r)}>
                             Open in Analyze <ArrowRight className="size-4" aria-hidden />
@@ -208,5 +223,35 @@ function Line({ l, v, strong = false }) {
       <span>{l}</span>
       <span className="tabular-nums">{v}</span>
     </p>
+  );
+}
+
+/**
+ * The yearly tax bill for a listing that doesn't state one: typed in from
+ * the listing page or the agent, so its cash flow can be worked out.
+ * Squarely never fills this in itself.
+ */
+function TaxBox({ id, own, url, onTax }) {
+  const [v, setV] = useState(own);
+  return (
+    <div className="mt-3 rounded-md border border-hairline p-3">
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="w-44">
+          <NumberField id={`tax-${id}`} label="Yearly property tax" prefix="$" value={v} onChange={setV} step={100} decimals={0} />
+        </div>
+        <Button variant="primary" disabled={!(v > 0)} onClick={() => onTax(id, v)}>
+          {own != null ? 'Update' : 'Use this bill'}
+        </Button>
+        {own != null && (
+          <Button variant="ghost" className="text-xs" onClick={() => (setV(undefined), onTax(id, null))}>
+            Remove
+          </Button>
+        )}
+      </div>
+      <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+        {own != null ? 'Your number, from the listing or the agent. ' : 'The listing doesn’t state it. '}
+        Find it further down the {url ? 'listing page' : 'listing'}, or ask the listing agent. Saved for you, and used everywhere in Squarely.
+      </p>
+    </div>
   );
 }

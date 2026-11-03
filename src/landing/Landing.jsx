@@ -436,7 +436,7 @@ function Today({ feed, shown, picked, index }) {
               <p className="mt-3 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
                 {wanted.key.endsWith('-other')
                   ? `The morning run searches 27 cities; here’s ${placeName(place)} to show how it works.`
-                  : `The morning run hasn’t reached ${placeName(wanted)} yet; it searches every city about every two weeks. Here’s ${placeName(place)} meanwhile.`}
+                  : `The morning run hasn’t reached ${placeName(wanted)} yet; it searches every city about every nine days. Here’s ${placeName(place)} meanwhile.`}
               </p>
             )}
           </div>

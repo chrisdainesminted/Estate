@@ -1,6 +1,6 @@
 # Daily listings run, across Canada
 
-The scheduled "Squarely listings" task follows this every morning. It finds properties for sale in Thunder Bay (every day) and in two more Canadian cities taken in turn (so each gets searched about every two weeks), saves each city's list to the Squarely page's database, and reports any that beat the owner's targets. The page's Listings tab does the full analysis live from what this run saves, using the owner's current assumptions moved to each city.
+The scheduled "Squarely listings" task follows this every morning. It finds properties for sale in Thunder Bay (every day) and in three more Canadian cities taken in turn (so each of the 27 gets searched about every nine days), saves each city's list to the Squarely page's database, and reports any that beat the owner's targets. The page's Listings tab does the full analysis live from what this run saves, using the owner's current assumptions moved to each city.
 
 - Squarely page: https://claude.ai/artifact/5KH4ZZHoZ8CvCKF5CXutGJ
 - Saved feeds: collection `data/users/me`, one document per city, named by the `plan` command (Thunder Bay's is `thunderbay`, Calgary's `calgary`, St. John's `stjohns`, and so on)
@@ -13,7 +13,7 @@ The scheduled "Squarely listings" task follows this every morning. It finds prop
 - Change nothing except the city documents for today's cities and the `markets` document. Don't edit, commit or push any repository, and never write the `bedrock` document.
 - Use web search only. Don't scrape REALTOR.ca or any other site. (This environment can't open web pages anyway.)
 - Only properties in that city (the city itself, not the region around it) that are for sale now. Skip places for rent, sold or leased listings, vacant land and commercial-only property.
-- **Only real listings.** Every listing needs a link to its own listing page, copied exactly from a search result: a page whose address shows the property's street number and street, on a listing site such as REALTOR.ca, REW, Zolo, RE/MAX, Royal LePage, Century 21, Coldwell Banker, Square Yards, HonestDoor, Centris (Québec) or OnePercent. Never type, build or adjust a link, and never use a search, area or neighbourhood page. If no result links to the property's own page, leave the property out. The merge tool turns away anything without one.
+- **Only real listings.** Every listing needs a link to its own listing page, copied exactly from a search result: a page whose address shows the property's street number and street, on a listing site such as REALTOR.ca, REW, Zolo, HouseSigma, Zoocasa, Point2, Wahi, Redfin, RE/MAX, Royal LePage, Century 21, Coldwell Banker, eXp, Square Yards, HonestDoor, Centris (Québec), DuProprio (Québec), PropertyGuys, OnePercent, or a local brokerage's own site. Never type, build or adjust a link, and never use a search, area or neighbourhood page. If no result links to the property's own page, leave the property out. The merge tool turns away anything without one.
 - Leave out anything the results show as sold, conditionally sold, expired, terminated or off the market, and anything whose sources disagree on the asking price.
 - Record only what a source states, and leave a field out rather than guess. Rents are current rents only: leave a unit's rent `null` if it's vacant or the figure is the agent's estimate of market rent.
 
@@ -31,64 +31,85 @@ The scheduled "Squarely listings" task follows this every morning. It finds prop
 2. **Plan today.**
    - ArtifactData `get` with the page URL, collection `data/users/me`, doc_id `markets`, out_dir `$RUN/index`. Note its `version`. If there's no such document, this is the first run across Canada; use `-` for `$INDEX`. Otherwise `$INDEX` is the saved file (`find "$RUN/index" -name '*.json'`).
    - ArtifactData `get` with doc_id `bedrock`, out_dir `$RUN/settings`. If it's missing, defaults apply. Call the saved file `$SETTINGS`.
-   - `node "$TOOL" plan "$INDEX" --count 3` prints today's cities, one per line: the city key, its document name, the name to search with, and its typical house price. Thunder Bay is always first.
+   - `node "$TOOL" plan "$INDEX" --count 4` prints today's cities, one per line: the city key, its document name, the name to search with, and its typical house price. Thunder Bay is always first.
 
 3. **For each of today's cities**, in order (`$CITY` is its key, `$DOC` its document name, `$NAME` the name to search with, such as `Calgary, AB`):
 
    a. **Read what's saved.** ArtifactData `get` with collection `data/users/me`, doc_id `$DOC`, out_dir `$RUN/$CITY/prev`. Note its `version`. If there's no such document, this city's first run: use `-` for `$PREV`.
 
-   b. **Search** with WebSearch in `standard` mode. Run **every** query on the list, even when earlier ones turned up plenty: each one reaches listings the others miss. If a query returns fewer than three listings, run it once more in `extended` mode. A single result page often names several properties; record each one that has its own listing link.
-      - Thunder Bay, all twenty-four:
+   b. **Search** with WebSearch in `standard` mode. The goal is **every listing for sale in the city, from every site**: the owner wants nothing missed. Run **every** query on the list, even when earlier ones turned up plenty: each one reaches listings the others miss, and different sites carry different listings (private sales and small brokerages are often on only one). If a query returns fewer than three listings, run it once more in `extended` mode. A single result page often names several properties; record each one that has its own listing link. Keep a count of the searches you run.
+
+      **Expect this to take a while**: about 60 searches for Thunder Bay and 40 for each other city, plus the address and tax checks below. That is the job; don't cut it short. A run that skips searches misses listings.
+
+      - Thunder Bay:
         1. Thunder Bay ON duplex for sale
         2. Thunder Bay ON triplex for sale
         3. Thunder Bay ON fourplex OR 4-plex for sale
         4. Thunder Bay ON apartment building OR multi-residential for sale
         5. Thunder Bay ON income property for sale
         6. Thunder Bay ON house with basement apartment OR secondary suite OR in-law suite for sale
-        7. Thunder Bay ON house for sale under $250,000
-        8. Thunder Bay ON house for sale $250,000 to $350,000
-        9. Thunder Bay ON house for sale $350,000 to $450,000
-        10. Thunder Bay ON house for sale $450,000 to $600,000
-        11. Thunder Bay ON house for sale over $600,000
-        12. Thunder Bay ON bungalow for sale
-        13. Thunder Bay ON condo OR townhouse for sale
-        14. Port Arthur Thunder Bay house for sale
-        15. Fort William OR Westfort Thunder Bay house for sale
-        16. Current River OR Northwood Thunder Bay house for sale
-        17. Intercity OR County Park OR Vickers Heights Thunder Bay house for sale
-        18. Shuniah OR Neebing OR Oliver Paipoonge house for sale
-        19. Thunder Bay ON new listing this week house for sale
-        20. Thunder Bay ON price reduced house for sale
-        21. site:realtor.ca Thunder Bay house for sale
-        22. site:rew.ca Thunder Bay house for sale
-        23. site:zolo.ca OR site:royallepage.ca Thunder Bay house for sale
-        24. site:onepercentrealty.com OR site:remax.ca Thunder Bay house for sale
-      - Every other city, all fourteen (`$NAME` as printed; `$PRICE` is its typical house price, rounded; `$LOW` is 60% of it and `$HIGH` 140%):
+        7. Thunder Bay ON house for sale under $200,000
+        8. Thunder Bay ON house for sale $200,000 to $275,000
+        9. Thunder Bay ON house for sale $275,000 to $350,000
+        10. Thunder Bay ON house for sale $350,000 to $425,000
+        11. Thunder Bay ON house for sale $425,000 to $500,000
+        12. Thunder Bay ON house for sale $500,000 to $650,000
+        13. Thunder Bay ON house for sale over $650,000
+        14. Thunder Bay ON bungalow for sale
+        15. Thunder Bay ON two storey house for sale
+        16. Thunder Bay ON condo for sale
+        17. Thunder Bay ON townhouse OR semi-detached for sale
+        18. Thunder Bay ON fixer upper OR handyman special OR as is for sale
+        19. Thunder Bay ON estate sale house
+        20. Port Arthur Thunder Bay house for sale
+        21. Fort William Thunder Bay house for sale
+        22. Westfort Thunder Bay house for sale
+        23. Current River Thunder Bay house for sale
+        24. Northwood Thunder Bay house for sale
+        25. Intercity OR Vickers Heights Thunder Bay house for sale
+        26. County Park OR Parkdale Thunder Bay house for sale
+        27. Shuniah OR Neebing OR Oliver Paipoonge house for sale
+        28. Thunder Bay ON new listing this week house for sale
+        29. Thunder Bay ON price reduced house for sale
+        30. Thunder Bay ON open house this weekend
+        31. Thunder Bay for sale by owner house
+        Then one search per site, each `site:<site> Thunder Bay house for sale`, for every site here: realtor.ca, rew.ca, zolo.ca, housesigma.com, zoocasa.com, point2homes.com, wahi.com, redfin.ca, remax.ca, royallepage.ca, c21.ca, coldwellbanker.ca, exprealty.ca, onepercentrealty.com, squareyards.ca, honestdoor.com, propertyguys.com, kijiji.ca. Then the same for `Thunder Bay duplex OR triplex for sale` on realtor.ca, zolo.ca, housesigma.com and remax.ca. Finally `Thunder Bay real estate brokerage listings` and one `site:` search on each local brokerage site those results name.
+      - Every other city (`$NAME` as printed; `$PRICE` is its typical house price, rounded; `$P1` to `$P4` are 50%, 75%, 125% and 160% of it):
         1. `$NAME` duplex for sale
         2. `$NAME` triplex OR fourplex for sale
-        3. `$NAME` income property OR multi-residential for sale
-        4. `$NAME` house with basement suite OR secondary suite OR in-law suite for sale
-        5. `$NAME` house for sale under `$LOW`
-        6. `$NAME` house for sale `$LOW` to `$PRICE`
-        7. `$NAME` house for sale `$PRICE` to `$HIGH`
-        8. `$NAME` bungalow for sale
-        9. `$NAME` townhouse OR condo for sale
-        10. `$NAME` new listing house for sale
-        11. `$NAME` price reduced house for sale
-        12. site:realtor.ca `$NAME` house for sale
-        13. site:rew.ca `$NAME` house for sale
-        14. site:zolo.ca OR site:royallepage.ca `$NAME` house for sale
+        3. `$NAME` income property OR multi-residential OR apartment building for sale
+        4. `$NAME` house with basement suite OR secondary suite OR legal suite for sale
+        5. `$NAME` house for sale under `$P1`
+        6. `$NAME` house for sale `$P1` to `$P2`
+        7. `$NAME` house for sale `$P2` to `$PRICE`
+        8. `$NAME` house for sale `$PRICE` to `$P3`
+        9. `$NAME` house for sale `$P3` to `$P4`
+        10. `$NAME` house for sale over `$P4`
+        11. `$NAME` bungalow for sale
+        12. `$NAME` condo for sale
+        13. `$NAME` townhouse OR semi-detached for sale
+        14. `$NAME` fixer upper OR handyman special OR as is for sale
+        15. `$NAME` new listing house for sale
+        16. `$NAME` price reduced house for sale
+        17. `$NAME` for sale by owner house
+        Then one search per site, each `site:<site> $NAME house for sale`, for every site here: realtor.ca, rew.ca, zolo.ca, housesigma.com, zoocasa.com, point2homes.com, wahi.com, redfin.ca, remax.ca, royallepage.ca, c21.ca, coldwellbanker.ca, exprealty.ca, onepercentrealty.com, squareyards.ca, honestdoor.com, propertyguys.com (in Québec also centris.ca and duproprio.com). Then `site:realtor.ca $NAME duplex OR triplex for sale` and `site:zolo.ca $NAME duplex OR triplex for sale`.
 
-      Then confirm saved listings: search the address (with the city) of every saved listing whose `lastSeen` is three or more days old, oldest first, up to 15 for Thunder Bay and 8 for other cities. If a result still shows its listing page for sale, include it in `found.json` like any other. If it shows the property sold, include it with status `sold`; if there's no for-sale page for it any more, include it with status `gone`.
+      Then confirm saved listings: search the address (with the city) of every saved listing whose `lastSeen` is three or more days old, oldest first, up to 25 for Thunder Bay and 15 for other cities. If a result still shows its listing page for sale, include it in `found.json` like any other. If it shows the property sold, include it with status `sold`; if there's no for-sale page for it any more, include it with status `gone`.
 
-      Then fill missing taxes: for listings (saved or found today) with no `taxes`, up to 10 for Thunder Bay and 5 for other cities, buildings with the most units first, then the highest price, search `"<address>" <city> property taxes` and, if that turns up nothing, `site:realtor.ca "<address>" <city>`. When a result states the annual property tax for that address, include the listing in `found.json` with its `url`, `price` and `taxes`. Never guess a tax figure: leave it out when no page states it. Squarely shows no cash flow for a listing until its real tax bill is known, so every bill found here puts another listing's numbers on the site.
+      Then **find the tax bills**: every listing without `taxes` is shown with no monthly numbers until its real bill is known, so this matters as much as finding listings. For listings (saved or found today) with no `taxes`, up to 30 for Thunder Bay and 20 for other cities, buildings with the most units first, then the highest price, run these until one states the annual property tax for that address:
+        1. `"<address>" <city> property taxes`
+        2. `site:zolo.ca "<address>" <city>` (Zolo pages usually state the taxes)
+        3. `site:housesigma.com "<address>" <city>`
+        4. `site:realtor.ca "<address>" <city>`
+        5. `<MLS number> taxes`, if the listing has one
+      When a result states the annual property tax for that address, include the listing in `found.json` with its `url`, `price` and `taxes`. Never guess, estimate or work out a tax figure (not from an assessment, not from a mill rate): leave it out when no page states it.
 
    c. **Write `$RUN/$CITY/found.json`**: a JSON array with one object for each listing found today in that city, including ones already saved, so their dates and prices update. Fields below.
 
-   d. **Merge.** Thunder Bay is searched daily, so a listing not confirmed for 7 days drops off; other cities come round about every two weeks, so give them 16:
+   d. **Merge.** Thunder Bay is searched daily, so a listing not confirmed for 7 days drops off; other cities come round about every nine days, so give them 12:
 
       ```bash
-      node "$TOOL" merge "$PREV" "$RUN/$CITY/found.json" --city "$CITY" --today "$TODAY" --keep-days <7 for thunder-bay, 16 otherwise> --note "<one line, e.g. 24 searches, 2 thin>" > "$RUN/$CITY/next.json"
+      node "$TOOL" merge "$PREV" "$RUN/$CITY/found.json" --city "$CITY" --today "$TODAY" --keep-days <7 for thunder-bay, 12 otherwise> --note "<one line: searches run, e.g. 62 searches, 3 thin, 9 tax bills found>" > "$RUN/$CITY/next.json"
       ```
 
    e. **Save.** ArtifactData `set` with collection `data/users/me`, doc_id `$DOC`, file_path `$RUN/$CITY/next.json`, and `if_version` set to the version from step a (leave it out only on that city's first run). If the save fails because the version changed, re-read it (step a), then redo steps d and e once.
@@ -104,6 +125,7 @@ The scheduled "Squarely listings" task follows this every morning. It finds prop
 5. **Report.** Your final message becomes the phone notification, so keep it short.
    - With standouts: "N listing(s) beat your targets today", then one line each with the city, address, price, cash flow per door, "(rents estimated)" where the score script says so, and the link.
    - Without: "No standouts today. Checked <cities>: X listings, Y new, Z price drops."
+   - Always add one line: "<N> searches, <T> tax bills found."
    - If searching or saving failed for a city, say which plainly.
 
 ### Listing fields

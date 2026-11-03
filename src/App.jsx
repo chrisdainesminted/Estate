@@ -955,6 +955,12 @@ export default function App() {
                 plan={lib.settings.brrrr}
                 onPlan={(patch) => lib.updateSettings('brrrr', patch)}
                 onOpen={openBrrrr}
+                onTax={(id, value) => {
+                  const taxes = { ...market.taxes };
+                  if (value > 0) taxes[id] = value;
+                  else delete taxes[id];
+                  lib.updateSettings('market', homePatch({ taxes }, market));
+                }}
               />
             )}
 

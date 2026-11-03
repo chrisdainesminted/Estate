@@ -16,7 +16,7 @@ const KIND = { 1: 'House', 2: 'Duplex', 3: 'Triplex', 4: 'Fourplex' };
 const SHORT_TYPE = { single: 'Singles' };
 const RENT_TEXT = { stated: 'Rents as listed', mixed: 'Some rents estimated', estimated: 'Rents estimated' };
 const STALE_AFTER = 36 * 3600 * 1000;
-const ROTATION_STALE_AFTER = 16 * 86400 * 1000;
+const ROTATION_STALE_AFTER = 12 * 86400 * 1000;
 // The best few show first; the rest are a tap away.
 const FIRST_PAGE = 10;
 
@@ -584,7 +584,7 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
   const countOf = (key) => active.filter((l) => typeOf(unitsOf(l)) === key && !hiddenSet.has(l.id)).length;
   const run = feed?.lastRun;
   const place = cityByKey(city);
-  // Thunder Bay is searched every morning; the other cities take turns, about every two weeks.
+  // Thunder Bay is searched every morning; the other cities take turns, about every nine days.
   const stale = run && Date.now() - run.at > (city === 'thunder-bay' ? STALE_AFTER : ROTATION_STALE_AFTER);
   const freshCount = visible.filter((s) => isNew(s.listing, feed)).length;
   const counted = lensTargets(targets, market.lens);
@@ -630,8 +630,8 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
       )}
       {status === 'empty' && (
         <Notice title={`${place.name} hasn’t been searched yet`}>
-          The morning run searches Thunder Bay every day and a few more cities each morning in turn, so every city gets fresh listings about every two weeks. {place.name}{' '}
-          should have its first listings within two weeks. Pick another city above to see what’s already in.
+          The morning run searches Thunder Bay every day and a few more cities each morning in turn, so every city gets fresh listings about every nine days. {place.name}{' '}
+          should have its first listings within about nine days. Pick another city above to see what’s already in.
         </Notice>
       )}
       {status === 'error' && (

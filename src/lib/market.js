@@ -256,6 +256,11 @@ const SITE_NAMES = {
   'point2homes.com': 'Point2',
   'redfin.ca': 'Redfin',
   'housesigma.com': 'HouseSigma',
+  'exprealty.ca': 'eXp Realty',
+  'propertyguys.com': 'PropertyGuys',
+  'kijiji.ca': 'Kijiji',
+  'centris.ca': 'Centris',
+  'duproprio.com': 'DuProprio',
 };
 
 /** A short name for the site a listing link goes to, from the link itself. */
