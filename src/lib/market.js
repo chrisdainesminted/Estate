@@ -43,7 +43,7 @@ export function localMarket(market, cityKey = HOME_MARKET) {
   const home = cityByKey(HOME_MARKET);
   const rentRatio = city.rent / home.rent;
   const taxRatio = city.taxPct / home.taxPct;
-  // Where CMHC's survey has the city, each bedroom count moves by its own ratio, so untouched rents are CMHC's own.
+  // Where we have the city's asking rents, each bedroom count moves by its own ratio, so untouched rents are its own.
   const surveyed = CITY_RENTS[city.key];
   const rentRatios = Object.fromEntries(Object.keys(m.rents).map((b) => [b, surveyed ? surveyed.rents[b] / DEFAULT_MARKET.rents[b] : rentRatio]));
   return {
@@ -51,7 +51,8 @@ export function localMarket(market, cityKey = HOME_MARKET) {
     city: city.key,
     rentRatio,
     rentRatios,
-    rentsSource: surveyed ? 'cmhc' : 'scaled',
+    rentsSource: surveyed ? 'asking' : 'scaled',
+    rentsAs: surveyed?.as ?? CITY_RENTS['thunder-bay'].as,
     taxRatio,
     rents: Object.fromEntries(Object.entries(m.rents).map(([b, r]) => [b, Math.round(r * rentRatios[b])])),
     taxPct: Math.round(m.taxPct * taxRatio * 1000) / 1000,
@@ -60,7 +61,7 @@ export function localMarket(market, cityKey = HOME_MARKET) {
 
 /** A change made to the local assumptions, put back in Thunder Bay terms for saving. */
 export function homePatch(patch, local) {
-  const { city, rentRatio, rentRatios, rentsSource, taxRatio, ...out } = patch; // eslint-disable-line no-unused-vars
+  const { city, rentRatio, rentRatios, rentsSource, rentsAs, taxRatio, ...out } = patch; // eslint-disable-line no-unused-vars
   if (patch.rents && local?.rentRatio) out.rents = Object.fromEntries(Object.entries(patch.rents).map(([b, r]) => [b, Number(r) / (local.rentRatios?.[b] ?? local.rentRatio)]));
   if (patch.taxPct != null && local?.taxRatio) out.taxPct = Number(patch.taxPct) / local.taxRatio;
   return out;
@@ -97,45 +98,66 @@ export const INSURANCE_MIN = 1500;
  * Everyone can change them; these are published figures, not guesses.
  */
 export const MARKET_SOURCES = {
-  checked: '2026-11-02',
-  rate: { what: 'Canada-wide average 5-year fixed uninsured (conventional) mortgage rate, September 25, 2026', source: 'nesto', url: 'https://www.nesto.ca/mortgage-rates/fixed/5-year/' },
+  checked: '2026-11-03',
+  rate: {
+    what: 'RBC’s 5-year fixed closed special offer for an uninsured mortgage (20% or more down, as a rental needs), October 2026. With mortgage insurance (under 20% down on a home you live in) it’s 4.84%',
+    source: 'RBC Royal Bank',
+    url: 'https://www.rbcroyalbank.com/mortgages/mortgage-rates.html',
+  },
   dscrRate: { what: 'Low end of B-lender DSCR loan rates (7.49% to 8.49%), August 21, 2026, from one broker’s published rates', source: 'LendCity', url: 'https://lendcity.ca/rates/' },
   rents: {
-    what: 'Average rents by bedrooms in each city with daily listings, October 2025 survey (its 3+ bedroom figure is used for 4+). The average includes long-time tenants, so a new lease often rents for more.',
-    source: 'CMHC Rental Market Survey',
-    url: 'https://www03.cmhc-schl.gc.ca/hmip-pimh/en/TableMapChart/Table?TableId=2.2.11&GeographyId=2240&GeographyTypeId=3&DisplayAs=Table',
+    what: 'Average asking rents for units listed for rent now, by bedrooms: Thunder Bay as of September 2026, the other cities as of March 2026, the latest Rentals.ca publishes for each. Statistics Canada’s asking-rent figures come from the same listings. The 3-bedroom figure is used for 4+. Rentals.ca gives no studio average, so a studio is the 1-bedroom figure less the gap CMHC’s survey finds between the two (an estimate)',
+    source: 'Rentals.ca',
+    url: 'https://rentals.ca/thunder-bay',
   },
 };
 /**
- * CMHC's average rents by bedrooms, October 2025 Rental Market Survey, for
- * each city with daily listings (3+ bedrooms used for 4+). Thunder Bay's
- * are DEFAULT_MARKET.rents; other cities fall back to scaling by their
- * typical rent.
+ * Average asking rents by bedrooms (Rentals.ca), for each city with daily
+ * listings. A studio is the 1-bedroom asking rent times the city's studio
+ * to 1-bedroom ratio in CMHC's October 2025 survey (the five cities'
+ * average where CMHC's figures aren't on hand). Thunder Bay's are
+ * DEFAULT_MARKET.rents; cities not here scale Thunder Bay's by typical rent.
  */
-const cmhc = (b0, b1, b2, b3) => ({ 0: b0, 1: b1, 2: b2, 3: b3, 4: b3 });
-const PORTAL = 'https://www03.cmhc-schl.gc.ca/hmip-pimh/en/TableMapChart/TableMatchingCriteria?GeographyType=MetropolitanMajorArea&CategoryLevel1=Primary+Rental+Market&CategoryLevel2=Average+Rent+%28%24%29&ColumnField=2&RowField=TIMESERIES&GeographyId=';
+const STUDIO_RATIO = 0.873;
+const asking = (b1, b2, b3, studio = STUDIO_RATIO) => ({ 0: Math.round((b1 * studio) / 10) * 10, 1: b1, 2: b2, 3: b3, 4: b3 });
 export const CITY_RENTS = {
-  'thunder-bay': { rents: cmhc(976, 1173, 1493, 1794), url: 'https://www03.cmhc-schl.gc.ca/hmip-pimh/en/TableMapChart/Table?TableId=2.2.11&GeographyId=2240&GeographyTypeId=3&DisplayAs=Table' },
-  calgary: { rents: cmhc(1438, 1581, 1908, 2118), url: `${PORTAL}0140` },
-  kelowna: { rents: cmhc(1394, 1597, 2098, 2713), url: `${PORTAL}0670` },
-  vancouver: { rents: cmhc(1667, 1807, 2364, 2820), url: `${PORTAL}2410` },
-  victoria: { rents: cmhc(1349, 1625, 2120, 2886), url: 'https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/market-reports/rental-market-reports-major-centres' },
+  'thunder-bay': { rents: asking(1584, 2035, 2218, 976 / 1173), as: '2026-09', url: 'https://rentals.ca/thunder-bay' },
+  calgary: { rents: asking(1532, 1848, 2243, 1438 / 1581), as: '2026-03', url: 'https://rentals.ca/calgary' },
+  edmonton: { rents: asking(1288, 1634, 1993), as: '2026-03', url: 'https://rentals.ca/edmonton' },
+  kelowna: { rents: asking(1743, 2217, 2910, 1394 / 1597), as: '2026-03', url: 'https://rentals.ca/kelowna' },
+  vancouver: { rents: asking(2400, 3355, 3911, 1667 / 1807), as: '2026-03', url: 'https://rentals.ca/vancouver' },
+  victoria: { rents: asking(1975, 2584, 3375, 1349 / 1625), as: '2026-03', url: 'https://rentals.ca/victoria' },
+  regina: { rents: asking(1285, 1530, 1973), as: '2026-03', url: 'https://rentals.ca/regina' },
+  saskatoon: { rents: asking(1347, 1580, 1998), as: '2026-03', url: 'https://rentals.ca/saskatoon' },
+  winnipeg: { rents: asking(1445, 1786, 2075), as: '2026-03', url: 'https://rentals.ca/winnipeg' },
 };
 
-// The starting figures before they were sourced: saved settings still holding them move to the sourced ones.
-const OLD_DEFAULTS = { rate: 4.9, dscrRate: 6, rents: { 0: 1050, 1: 1350, 2: 1700, 3: 2000, 4: 2300 } };
-const DEFAULTS_VERSION = 2;
+// Earlier starting figures, oldest first: saved settings still holding one move to today's sourced figure.
+const OLD_DEFAULTS = [
+  { rate: 4.9, dscrRate: 6, rents: { 0: 1050, 1: 1350, 2: 1700, 3: 2000, 4: 2300 } },
+  // CMHC's average rents (long-time tenants included) and the B-lender loan as the default.
+  { rate: 5.12, lens: 'dscr', rents: { 0: 976, 1: 1173, 2: 1493, 3: 1794, 4: 1794 } },
+];
+const DEFAULTS_VERSION = 3;
+// The average rents saved deals were filled in with before asking rents, by city: those move to today's.
+const OLD_CITY_RENTS = {
+  'thunder-bay': [976, 1173, 1493, 1794],
+  calgary: [1438, 1581, 1908, 2118],
+  kelowna: [1394, 1597, 2098, 2713],
+  vancouver: [1667, 1807, 2364, 2820],
+  victoria: [1349, 1625, 2120, 2886],
+};
 
 export const DEFAULT_MARKET = {
   // How listings are counted: 'dscr', with a DSCR loan, where the lender
   // qualifies the property on its rent; or 'own', your own money as a 20%
   // down payment with a regular mortgage at `rate`.
-  lens: 'dscr',
+  lens: 'own',
   // In Canada, loans qualified on the rent come from alternative (B)
   // lenders: usually 20-25% down, at a rate above a regular mortgage's.
   dscrDownPct: 25, // DSCR programs lend up to 75-80% of the value
   dscrRate: 7.49, // see MARKET_SOURCES
-  rate: 5.12, // regular mortgage: 5-year fixed, uninsured; see MARKET_SOURCES
+  rate: 5.14, // regular mortgage: RBC's 5-year fixed, uninsured; see MARKET_SOURCES
   amortYears: 30,
   closingPct: 1, // legal, title, inspection; land transfer tax is added on top
   insurancePerUnit: 800, // $ a year per unit, at least INSURANCE_MIN
@@ -146,7 +168,7 @@ export const DEFAULT_MARKET = {
   maintPct: 6,
   vacancyPct: 4,
   capexPct: 7,
-  rents: { 0: 976, 1: 1173, 2: 1493, 3: 1794, 4: 1794 }, // $/mo by bedrooms (4 = 4+), Thunder Bay; see MARKET_SOURCES
+  rents: CITY_RENTS['thunder-bay'].rents, // $/mo asking rent by bedrooms (4 = 4+), Thunder Bay; see MARKET_SOURCES
   defaults: DEFAULTS_VERSION,
   types: ['single', 'small', 'large'],
   hidden: [],
@@ -157,8 +179,13 @@ export function normalizeMarket(m) {
   if (m && m.defaults !== DEFAULTS_VERSION) {
     const old = m;
     m = { ...m, defaults: DEFAULTS_VERSION, rents: { ...(m.rents ?? {}) } };
-    for (const k of ['rate', 'dscrRate']) if (Number(old[k]) === OLD_DEFAULTS[k]) m[k] = DEFAULT_MARKET[k];
-    for (const [b, r] of Object.entries(OLD_DEFAULTS.rents)) if (Number(old.rents?.[b]) === r) m.rents[b] = DEFAULT_MARKET.rents[b];
+    for (const was of OLD_DEFAULTS) {
+      for (const k of ['rate', 'dscrRate']) if (was[k] != null && Number(old[k]) === was[k]) m[k] = DEFAULT_MARKET[k];
+      // Listings counted with the B-lender loan by default now count 20% down at a bank's rate.
+      if (was.lens && old.lens === was.lens) m.lens = DEFAULT_MARKET.lens;
+      for (const [b, r] of Object.entries(was.rents)) if (Number(old.rents?.[b]) === r) m.rents[b] = DEFAULT_MARKET.rents[b];
+    }
+    // Rents typed in a fraction of a dollar off the old figures were saved scaled from a city: keep them.
   }
   const rents = { ...DEFAULT_MARKET.rents };
   for (const k of Object.keys(rents)) if (Number(m?.rents?.[k]) > 0) rents[k] = Number(m.rents[k]);
@@ -373,6 +400,27 @@ export function listingToDeal(listing, market, lens) {
   return (lens ?? m.lens) === 'own'
     ? ownMoney({ ...deal, rate: m.rate, refiRate: m.rate })
     : { ...deal, downPct: m.dscrDownPct, rate: m.dscrRate, refiRate: m.dscrRate };
+}
+
+/**
+ * A deal made from a listing before today's figures: one still on the
+ * B-lender loan default (7.49% with 25% down) moves to 20% down at the
+ * bank rate, and rents it estimated from the old average-rent table move to
+ * today's asking rents. Anything you changed by hand stays as you left it.
+ */
+export function refreshListingDeal(d) {
+  if (!d?.listingId || d.country !== 'ca') return d;
+  let out = d;
+  if (Number(d.rate) === 7.49 && Number(d.downPct) === 25) {
+    out = ownMoney({ ...out, rate: DEFAULT_MARKET.rate, refiRate: Number(d.refiRate) === 7.49 ? DEFAULT_MARKET.rate : d.refiRate });
+  }
+  const old = OLD_CITY_RENTS[d.city];
+  const now = CITY_RENTS[d.city]?.rents;
+  if (old && now && /Rents estimated from your rent table/.test(d.notes || '')) {
+    const b = old.indexOf(Number(d.rentPerUnit));
+    if (b >= 0) out = { ...out, rentPerUnit: now[b] };
+  }
+  return out;
 }
 
 /** Price cut in the most recent move, or 0. */

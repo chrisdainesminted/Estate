@@ -158,7 +158,7 @@ export default function BrrrrView({ feedState, indexState, city, onCity, market,
                         <Line l="Refinance costs" v={money(-r.refiCost)} />
                         <Line l="Cash back to you" v={money(r.cashBack)} strong />
                         <Line l="Equity you keep" v={money(r.equity)} />
-                        <Line l={`Rent${r.rentSource === 'stated' ? '' : ' (typical CMHC rent, estimate)'}`} v={`${money(r.rent)}/mo`} />
+                        <Line l={`Rent${r.rentSource === 'stated' ? '' : ' (average asking rent, estimate)'}`} v={`${money(r.rent)}/mo`} />
                         <Line l="Mortgage payment after" v={`${money(r.payment)}/mo`} />
                         <Line l="Cash flow after" v={r.cashFlow == null ? 'Needs the tax bill' : `${money(r.cashFlow, { signed: true })}/mo`} strong />
                         {onTax && (r.cashFlow == null || taxSource(r.listing, market) === 'you') && (

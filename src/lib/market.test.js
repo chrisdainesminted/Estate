@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_TARGETS, allCash, analyzeDeal, maxOffer } from './finance.js';
 import { DEFAULT_DEAL } from './presets.js';
 import {
+  refreshListingDeal,
   DEFAULT_MARKET,
   LISTING_CITIES,
   alertMatches,
@@ -133,7 +134,7 @@ describe('listingRent', () => {
 
 describe('listingToDeal', () => {
   it('underwrites a listing under Ontario rules with the listing assumptions', () => {
-    const d = listingToDeal(cleanListing(triplex), { ...DEFAULT_MARKET, dscrDownPct: 30 });
+    const d = listingToDeal(cleanListing(triplex), { ...DEFAULT_MARKET, lens: 'dscr', dscrDownPct: 30 });
     expect(d.country).toBe('ca');
     expect(d.downPct).toBe(30);
     expect(d.units).toBe(3);
@@ -148,12 +149,13 @@ describe('listingToDeal', () => {
 
   it('finances it the way the chosen view counts it', () => {
     const l = cleanListing(triplex);
-    const dscr = listingToDeal(l, DEFAULT_MARKET);
+    const dscr = listingToDeal(l, { ...DEFAULT_MARKET, lens: 'dscr' });
     expect([dscr.downPct, dscr.rate, dscr.reserveMonths]).toEqual([DEFAULT_MARKET.dscrDownPct, DEFAULT_MARKET.dscrRate, DEFAULT_DEAL.reserveMonths]);
     // Your own 20% down, with the regular mortgage and no lender's reserves.
     const own = listingToDeal(l, { ...DEFAULT_MARKET, lens: 'own' });
     expect([own.downPct, own.rate, own.reserveMonths, own.ioYears]).toEqual([20, DEFAULT_MARKET.rate, 0, 0]);
-    expect(listingToDeal(l, DEFAULT_MARKET, 'own')).toEqual(own);
+    expect(listingToDeal(l, { ...DEFAULT_MARKET, lens: 'dscr' }, 'own')).toEqual(own);
+    expect(listingToDeal(l, DEFAULT_MARKET)).toEqual(own);
     // Everything about the property itself is the same either way.
     for (const k of ['price', 'units', 'rentPerUnit', 'taxesAnnual', 'insuranceAnnual', 'hoaMonthly', 'closingPct', 'termYears']) expect(own[k]).toBe(dscr[k]);
   });
@@ -241,7 +243,7 @@ describe('scoreListing and rankListings', () => {
     // Cash flows well, but short of a strict 2.00 DSCR target.
     const strict = { ...targets, dscr: 2, cashFlowPerDoor: 50, coc: 2 };
     const l = cleanListing({ address: '40 Thin St', price: 260000, units: 2, rents: [1350, 1350], taxes: 2600, url: page('40-thin-street') });
-    const asDscr = scoreListing(l, DEFAULT_MARKET, strict);
+    const asDscr = scoreListing(l, { ...DEFAULT_MARKET, lens: 'dscr' }, strict);
     const asOwn = scoreListing(l, { ...DEFAULT_MARKET, lens: 'own' }, strict);
     expect(asDscr.lens).toBe('dscr');
     expect(asOwn.lens).toBe('own');
@@ -490,14 +492,39 @@ describe('sourced starting figures', () => {
   });
 });
 
-describe('CMHC rents by city', () => {
-  it('uses each surveyed city’s own rents, and keeps a person’s change in proportion', () => {
+describe('asking rents by city', () => {
+  it('uses each city’s own asking rents, and keeps a person’s change in proportion', () => {
+    expect(DEFAULT_MARKET.rents[1]).toBe(1584);
+    expect(DEFAULT_MARKET.rents[2]).toBe(2035);
+    expect(DEFAULT_MARKET.rents[4]).toBe(DEFAULT_MARKET.rents[3]);
     const yyc = localMarket(DEFAULT_MARKET, 'calgary');
-    expect(yyc.rents[1]).toBe(1581);
-    expect(yyc.rents[3]).toBe(2118);
-    expect(yyc.rentsSource).toBe('cmhc');
+    expect(yyc.rents[1]).toBe(1532);
+    expect(yyc.rents[3]).toBe(2243);
+    expect(yyc.rentsSource).toBe('asking');
     const saved = homePatch({ rents: { ...yyc.rents, 2: 2000 } }, yyc);
     expect(localMarket({ ...DEFAULT_MARKET, rents: { ...DEFAULT_MARKET.rents, ...saved.rents } }, 'calgary').rents[2]).toBe(2000);
     expect(localMarket(DEFAULT_MARKET, 'toronto').rentsSource).toBe('scaled');
+  });
+  it('counts listings with 20% down at the bank rate by default', () => {
+    expect(DEFAULT_MARKET.lens).toBe('own');
+    expect(DEFAULT_MARKET.rate).toBe(5.14);
+  });
+  it('moves saved settings off the old starting figures, and keeps your own', () => {
+    const old = normalizeMarket({ defaults: 2, lens: 'dscr', rate: 5.12, rents: { 0: 976, 1: 1173, 2: 1600, 3: 1794, 4: 1794 } });
+    expect(old.lens).toBe('own');
+    expect(old.rate).toBe(5.14);
+    expect(old.rents[1]).toBe(1584);
+    expect(old.rents[2]).toBe(1600);
+    const mine = normalizeMarket({ defaults: 2, lens: 'own', rate: 4.6 });
+    expect(mine.rate).toBe(4.6);
+  });
+  it('refreshes deals made from listings under the old figures', () => {
+    const d = { ...DEFAULT_DEAL, listingId: 'x', country: 'ca', city: 'thunder-bay', rate: 7.49, refiRate: 7.49, downPct: 25, rentPerUnit: 1173, notes: 'Rents estimated from your rent table.' };
+    const r = refreshListingDeal(d);
+    expect([r.rate, r.refiRate, r.downPct, r.rentPerUnit]).toEqual([5.14, 5.14, 20, 1584]);
+    const own = { ...d, rate: 6.2, rentPerUnit: 1450 };
+    expect(refreshListingDeal(own)).toMatchObject({ rate: 6.2, rentPerUnit: 1450 });
+    const plain = { ...d, listingId: undefined };
+    expect(refreshListingDeal(plain)).toBe(plain);
   });
 });

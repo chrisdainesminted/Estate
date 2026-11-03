@@ -147,7 +147,7 @@ export default function HomesForMe({ feedState, indexState, city, onCity, market
                       </div>
                     </div>
                     {units > 1 && rentSource !== 'stated' && taxKnown && (
-                      <p className="text-xs text-zinc-500 sm:col-span-2 dark:text-zinc-400">Rent from the other unit{units > 2 ? 's' : ''} is a typical CMHC rent for {place.name} (estimate): the listing doesn’t say.</p>
+                      <p className="text-xs text-zinc-500 sm:col-span-2 dark:text-zinc-400">Rent from the other unit{units > 2 ? 's' : ''} is the average asking rent in {place.name} (estimate): the listing doesn’t say.</p>
                     )}
                   </li>
                 );

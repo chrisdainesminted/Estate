@@ -179,7 +179,7 @@ export default function Methods() {
             their own page are kept; sold, conditional and expired ones are dropped, and a listing not seen again for a week or so leaves the list.
           </p>
           <p>
-            Where a listing doesn’t state rents, Squarely estimates them from a rent table by bedroom count, scaled to each city by its average rent. A home is tagged{' '}
+            Where a listing doesn’t state rents, Squarely uses the average asking rent for that bedroom count in that city (what units listed for rent now are asking, from Rentals.ca), marked as an estimate; cities without those figures scale Thunder Bay’s by their typical rent. Listings are counted with 20% down at a big bank’s 5-year fixed rate. A home is tagged{' '}
             <em>under the going rate</em> when its price per door is at least 15% below the median of similar homes (houses, 2–4 units or 5+ units) on that city’s list.
           </p>
         </div>
@@ -210,7 +210,17 @@ export default function Methods() {
             <a className={a} href="https://www.cmhc-schl.gc.ca/consumers/home-buying/mortgage-loan-insurance-for-consumers" target="_blank" rel="noopener noreferrer">
               CMHC: mortgage loan insurance
             </a>{' '}
-            and its rental market survey for average rents
+            and its rental market survey (the gap between studio and 1-bedroom rents)
+          </li>
+          <li>
+            <a className={a} href="https://rentals.ca/national-rent-report" target="_blank" rel="noopener noreferrer">
+              Rentals.ca: average asking rents by city and bedrooms
+            </a>
+          </li>
+          <li>
+            <a className={a} href="https://www.rbcroyalbank.com/mortgages/mortgage-rates.html" target="_blank" rel="noopener noreferrer">
+              RBC Royal Bank: current mortgage rates
+            </a>
           </li>
           <li>
             <a className={a} href="https://www.osfi-bsif.gc.ca/en/supervision/financial-institutions/banks/minimum-qualifying-rate-uninsured-mortgages" target="_blank" rel="noopener noreferrer">

@@ -6,7 +6,7 @@ import { accountLink, accountRef } from '../lib/account.js';
 import { cleanAlert } from '../../worker/account.js';
 import { DEFAULT_TARGETS, DEFAULT_TAX, OWN_DOWN_PCT } from '../lib/finance.js';
 import { DEFAULT_PLAN } from '../lib/growth.js';
-import { DEFAULT_MARKET, normalizeMarket } from '../lib/market.js';
+import { DEFAULT_MARKET, normalizeMarket, refreshListingDeal } from '../lib/market.js';
 import { DEFAULT_PROFILE, normalizeProfile } from '../lib/firstHome.js';
 import { DEFAULT_SUITE, normalizeSuite } from '../lib/suites.js';
 import { DEFAULT_BUILD, normalizeBuild } from '../lib/build.js';
@@ -81,7 +81,7 @@ function normalize(saved, activeId) {
   const kept = saved.deals.filter((d) => !d.example);
   const deals = (kept.length ? kept : [blankDeal()]).map((d) => {
     const { slot, ...rest } = d; // v1 stored color slots on deals
-    return { ...DEFAULT_DEAL, ...rest, id: d.id || makeDeal().id };
+    return refreshListingDeal({ ...DEFAULT_DEAL, ...rest, id: d.id || makeDeal().id });
   });
   const ids = new Set(deals.map((d) => d.id));
   let compare = Array.isArray(saved.compare) ? saved.compare.filter((c) => ids.has(c.id) && c.slot >= 0 && c.slot < MAX_COMPARE) : null;

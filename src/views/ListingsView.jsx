@@ -498,7 +498,7 @@ function Assumptions({ market, onMarket }) {
               <a href={name === 'Rents' ? (CITY_RENTS[market.city]?.url ?? src.url) : src.url} target="_blank" rel="noopener noreferrer" className="font-medium text-emerald-700 hover:underline dark:text-emerald-400">
                 {src.source}
               </a>
-              {name === 'Rents' && market.rentsSource === 'scaled' ? ` CMHC has no figures here yet, so these are Thunder Bay’s scaled to ${cityByKey(market.city).name} by its typical rent.` : ''}
+              {name === 'Rents' && market.rentsSource === 'scaled' ? ` No asking-rent figures for ${cityByKey(market.city).name} yet, so these are Thunder Bay’s scaled by its typical rent (estimates).` : ''}
             </li>
           ))}
         </ul>
