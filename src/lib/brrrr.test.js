@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { afterRepairValue, brrrrFor, isCondo, needsWork, normalizeBrrrr, rankBrrrr } from './brrrr.js';
+import { afterRepairValue, brrrrFor, distanceKm, isCondo, needsWork, normalizeBrrrr, rankBrrrr } from './brrrr.js';
 import { DEFAULT_MARKET, localMarket } from './market.js';
 
 const L = (id, price, extra = {}) => ({ id, address: `${id.charCodeAt(0)} Main Street`, url: `https://www.realtor.ca/real-estate/${price}/${id.charCodeAt(0)}-main-street-thunder-bay`, price, units: 1, beds: [3], taxes: 3000, status: 'active', ...extra });
@@ -12,6 +12,16 @@ describe('value once fixed up', () => {
     expect(v.value).toBe(305000); // b, c, d, e: within a bedroom; not the 6-bedroom
     expect(v.count).toBe(4);
     expect(v.byBeds).toBe(true);
+  });
+  it('compares with similar homes nearby when it knows where they are', () => {
+    // a, b, c, d sit within a few hundred metres; e is across town.
+    const points = { a: [48.38, -89.25], b: [48.381, -89.251], c: [48.382, -89.249], d: [48.379, -89.252], e: [48.45, -89.2] };
+    const v = afterRepairValue(street[0], street, points);
+    expect(v.radiusKm).toBe(1);
+    expect(v.count).toBe(3);
+    expect(v.value).toBe(300000); // b, c, d; not e
+    expect(afterRepairValue(street[0], street).radiusKm).toBeNull();
+    expect(distanceKm([48.38, -89.25], [48.45, -89.2])).toBeGreaterThan(8);
   });
   it('compares a condo unit only with condos', () => {
     expect(isCondo({ address: '303-235 Leland Avenue S' })).toBe(true);

@@ -97,7 +97,7 @@ const NAV = [
   ['Find a home', '/homes/'],
   ['Find a lender', '/lenders/'],
   ['Your account', '/account/'],
-  ['List a home', '/app/?view=landlord'],
+  ['Sell free', '/sell/'],
   ['How it works', '#how'],
   ['Questions', '#faq'],
 ];
@@ -553,7 +553,7 @@ function Paths() {
 
 function Pricing() {
   const free = ['Your buying plan, checklists and next steps', 'Homes for you, every morning', 'What your home is worth, and what you’d walk away with', 'Materials lists from rooms you type in', 'Deal analysis, listings and calculators'];
-  const plus = ['Blueprints read for you: upload a plan, get the materials list', 'Daily emails when a price drops or a new home fits you', 'Pricing report for your home, as a PDF', 'Deal memos and materials lists as PDFs'];
+  const plus = ['Blueprints read for you: upload a plan, get the materials list', 'Daily emails when a price drops or a new home fits you', 'Pricing report for your home, as a PDF', 'Deal memos and materials lists as PDFs', 'Ask Squarely: questions answered from your own numbers'];
   return (
     <section id="pricing" aria-labelledby="pricing-title" className="scroll-mt-16 border-b border-hairline">
       <div className={`${shell} ${section}`}>

@@ -74,6 +74,8 @@ import { normalizeProfile } from './lib/firstHome.js';
 import { myPlan, nextStep as nextStepFor } from './lib/journey.js';
 import { sellNextStep } from './lib/selling.js';
 import NextStep from './components/NextStep.jsx';
+import AskSquarely from './components/AskSquarely.jsx';
+import { askContext } from './lib/ask.js';
 import { PlusProvider, usePlusState } from './components/Plus.jsx';
 import { guessCity } from './lib/canada.js';
 
@@ -445,7 +447,8 @@ export default function App() {
 
   // "Your next step" atop the first-time buyer's pages.
   const homeRate = normalizeMarket(lib.settings.market).rate;
-  const step = useMemo(() => nextStepFor({ profile: lib.settings.home, ready: lib.settings.ready, plan: myPlan({ profile: lib.settings.home, ratePct: homeRate }) }), [lib.settings.home, lib.settings.ready, homeRate]);
+  const homePlan = useMemo(() => myPlan({ profile: lib.settings.home, ratePct: homeRate }), [lib.settings.home, homeRate]);
+  const step = useMemo(() => nextStepFor({ profile: lib.settings.home, ready: lib.settings.ready, plan: homePlan }), [lib.settings.home, lib.settings.ready, homePlan]);
   const goToStep = useCallback(
     (st) => {
       setView(st.view);
@@ -986,7 +989,10 @@ export default function App() {
                   <h2 className="text-[22px] font-semibold tracking-tight text-zinc-950 dark:text-white">List it on Squarely</h2>
                   <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
                     Sell privately with your own listing page: photos, the details buyers ask about, and messages straight to you. It lives in a free Squarely workspace: open Listings
-                    and choose For sale. No commission to Squarely.
+                    and choose For sale. No commission to Squarely.{' '}
+                    <a href={`${HOME_PAGE.replace(/\/$/, '')}/sell/`} className="font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+                      How selling yourself works
+                    </a>
                   </p>
                 </div>
                 <LandlordView homeCity={homeCity} initialTab="listings" />
@@ -1145,6 +1151,19 @@ export default function App() {
             </p>
           </footer>
         </main>
+        <AskSquarely
+          mode={mode}
+          account={lib.account}
+          context={askContext({
+            mode: MODES.find((m) => m.value === mode)?.label ?? mode,
+            view: VIEWS.find((v) => v.value === view)?.label ?? view,
+            profile: homeProfile,
+            plan: homePlan,
+            deal: mode === 'invest' ? active : null,
+            analysis: mode === 'invest' ? base?.a : null,
+            sell: lib.settings.sell,
+          })}
+        />
         {!isDesktop && <Dock views={groupViews} view={view} onView={setView} result={dockResult} onEdit={() => setSheetOpen(true)} />}
       </div>
 

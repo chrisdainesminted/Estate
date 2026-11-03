@@ -6,6 +6,7 @@ import { money, percent } from '../lib/format.js';
 import { siteName, taxSource } from '../lib/market.js';
 import { Button, Card, CardHeader, NumberField, SkeletonCard, ViewHeader, signedClass } from '../components/ui.jsx';
 import { CityPicker } from './ListingsView.jsx';
+import { useListingPoints } from '../hooks/useListingPoints.js';
 
 const TONE = {
   good: 'bg-emerald-600/10 text-emerald-800 ring-emerald-600/25 dark:text-emerald-300 dark:ring-emerald-400/30',
@@ -31,7 +32,10 @@ export default function BrrrrView({ feedState, indexState, city, onCity, market,
   const [open, setOpen] = useState(null);
   const [showAll, setShowAll] = useState(false);
   const place = cityByKey(city);
-  const { ranked, unranked } = useMemo(() => rankBrrrr(feed?.listings ?? [], market, plan, city, { hidden: market.hidden }), [feed, market, plan, city]);
+  // Where each listing is, so it's compared with similar homes on nearby streets first.
+  const points = useListingPoints(feed?.listings, `${place.name.replace(/^Elsewhere in /, '')}, ${place.province}`);
+  const { ranked, unranked } = useMemo(() => rankBrrrr(feed?.listings ?? [], market, plan, city, { hidden: market.hidden, points }), [feed, market, plan, city, points]);
+  const nearby = ranked.filter((r) => r.arv.radiusKm != null).length;
   const shown = showAll ? ranked : ranked.slice(0, 15);
   const setRehab = (id, v) => onPlan({ rehabs: { ...plan.rehabs, [id]: v } });
   const clearRehab = (id) => {
@@ -76,7 +80,10 @@ export default function BrrrrView({ feedState, indexState, city, onCity, market,
 
       {ranked.length > 0 && (
         <Card>
-          <CardHeader title={`${ranked.length} homes ranked`} subtitle={`At ${market.rate}% for the purchase and the refinance, ${market.amortYears}-year amortization.`} />
+          <CardHeader
+            title={`${ranked.length} homes ranked`}
+            subtitle={`At ${market.rate}% for the purchase and the refinance, ${market.amortYears}-year amortization. ${nearby ? `${nearby} compared with homes within a few km; ` : ''}${nearby < ranked.length ? `${nearby ? 'the rest' : 'all'} with similar homes across ${place.name}${points.size < (feed?.listings?.length ?? 0) && nearby ? ' while the map finds the rest' : ''}.` : ''}`}
+          />
           <ol className="divide-y divide-hairline border-t border-hairline">
             {shown.map((r) => {
               const g = GRADES[r.grade];
@@ -97,7 +104,8 @@ export default function BrrrrView({ feedState, indexState, city, onCity, market,
                       </div>
                       <p className="mt-1 truncate text-[15px] font-semibold text-zinc-950 dark:text-white">{r.listing.address}</p>
                       <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">
-                        {money(r.price)}, {percent(r.discount, 0)} under the {money(r.arv.value)} middle of {r.arv.count} similar {r.arv.condo ? 'condos' : (KIND[r.units] ?? `${r.units}-unit`).toLowerCase() + 's'} for sale
+                        {money(r.price)}, {percent(r.discount, 0)} under the {money(r.arv.value)} middle of {r.arv.count} similar {r.arv.condo ? 'condos' : (KIND[r.units] ?? `${r.units}-unit`).toLowerCase() + 's'} for sale{' '}
+                        {r.arv.radiusKm != null ? `within ${r.arv.radiusKm} km` : `in ${place.name}`}
                         {r.arv.byBeds ? '' : ' (any size)'}.
                       </p>
                     </div>
@@ -189,7 +197,7 @@ export default function BrrrrView({ feedState, indexState, city, onCity, market,
         <h3 className="font-semibold text-zinc-950 dark:text-white">How the rank works</h3>
         <ul className="mt-2 grid gap-1.5 text-zinc-600 dark:text-zinc-400">
           <li>
-            <strong className="text-zinc-900 dark:text-zinc-100">Likely value once fixed:</strong> the middle asking price of similar homes for sale in the same city (same number of units, within a bedroom, condos only against condos). Asking prices, not sales: an appraiser decides the real value at the refinance.
+            <strong className="text-zinc-900 dark:text-zinc-100">Likely value once fixed:</strong> the middle asking price of similar homes for sale nearby (same number of units, within a bedroom, condos only against condos): within 1 km if there are three, then 2 km, then 4 km, then the whole city. Asking prices, not sales: an appraiser decides the real value at the refinance.
           </li>
           <li>
             <strong className="text-zinc-900 dark:text-zinc-100">Value added</strong> is that value less everything you spend: price, closing, land transfer tax, rehab, and holding costs while it’s empty. Up to 60 points.

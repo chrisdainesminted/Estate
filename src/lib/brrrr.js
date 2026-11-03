@@ -50,6 +50,8 @@ export function bedsOf(listing) {
 const CONDO = /\b(condo(minium)?|apartment|strata)\b/i;
 export const isCondo = (l) => /^\s*(unit\s*|suite\s*|#\s*)?\d+[a-z]?\s*-\s*\d+/i.test(String(l?.address ?? '')) || CONDO.test(`${l?.highlights ?? ''} ${l?.type ?? ''}`);
 
+const pointOf = (points, id) => (points instanceof Map ? points.get(id) : points?.[id]) ?? null;
+
 const median = (xs) => {
   const s = [...xs].sort((a, b) => a - b);
   if (!s.length) return 0;
@@ -61,21 +63,51 @@ const median = (xs) => {
 const FIXER = /\b(handyman|tlc|fixer|needs (some )?(work|updating|tlc|love)|as[- ]is|investor (special|alert)|estate sale|bring your (ideas|tools)|potential|renovat(e|ion) (needed|required)|sweat equity|vacant)\b/i;
 export const needsWork = (listing) => FIXER.test(`${listing?.highlights ?? ''} ${listing?.description ?? ''}`);
 
+/** Kilometres between two [lat, lng] points. */
+export function distanceKm(a, b) {
+  const rad = (d) => (d * Math.PI) / 180;
+  const dLat = rad(b[0] - a[0]);
+  const dLng = rad(b[1] - a[1]);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a[0])) * Math.cos(rad(b[0])) * Math.sin(dLng / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(h));
+}
+
+// How far to look for similar homes: the nearest ring with at least three wins.
+export const RINGS_KM = [1, 2, 4];
+
 /**
  * What a listing is likely worth once fixed up: the middle asking price of
- * similar homes for sale in the same city (the same number of units, and
- * within a bedroom where listings say), not counting the home itself.
- * Needs at least three; null otherwise.
+ * similar homes for sale nearby (the same number of units, and within a
+ * bedroom where listings say), not counting the home itself. With map
+ * points, the nearest of 1, 2 or 4 km holding at least three similar homes;
+ * without them, or with too few close by, the whole city. Null with fewer
+ * than three anywhere.
  */
-export function afterRepairValue(listing, listings) {
+export function afterRepairValue(listing, listings, points) {
   const units = Math.min(unitsOf(listing), 5);
   const beds = bedsOf(listing);
   const condo = isCondo(listing);
   const others = listings.filter((l) => l.id !== listing.id && (l.status ?? 'active') === 'active' && num(l.price) > 0 && Math.min(unitsOf(l), 5) === units && isCondo(l) === condo);
   const close = beds != null ? others.filter((l) => bedsOf(l) != null && Math.abs(bedsOf(l) - beds) <= 1) : [];
-  const comps = close.length >= 3 ? close : others;
-  if (comps.length < 3) return null;
-  return { value: Math.round(median(comps.map((l) => num(l.price))) / 1000) * 1000, count: comps.length, byBeds: comps === close, condo, comps: comps.map((l) => l.id) };
+  const pool = close.length >= 3 ? close : others;
+  if (pool.length < 3) return null;
+  const here = pointOf(points, listing.id);
+  let comps = pool;
+  let radiusKm = null;
+  if (here) {
+    for (const km of RINGS_KM) {
+      const near = pool.filter((l) => {
+        const p = pointOf(points, l.id);
+        return p && distanceKm(here, p) <= km;
+      });
+      if (near.length >= 3) {
+        comps = near;
+        radiusKm = km;
+        break;
+      }
+    }
+  }
+  return { value: Math.round(median(comps.map((l) => num(l.price))) / 1000) * 1000, count: comps.length, byBeds: pool === close, condo, radiusKm, comps: comps.map((l) => l.id) };
 }
 
 /**
@@ -83,11 +115,11 @@ export function afterRepairValue(listing, listings) {
  * assumptions (rate, costs, rents); `plan` the BRRRR settings. Null when
  * there's no tax bill (no guessing) or nothing similar to compare it with.
  */
-export function brrrrFor(listing, listings, market, plan = DEFAULT_BRRRR, city = 'thunder-bay') {
+export function brrrrFor(listing, listings, market, plan = DEFAULT_BRRRR, city = 'thunder-bay', points) {
   const m = normalizeMarket(market);
   const p = normalizeBrrrr(plan);
   const taxes = listingTaxes(listing, m);
-  const arv = afterRepairValue(listing, listings);
+  const arv = afterRepairValue(listing, listings, points);
   if (!arv) return { listing, arv, missing: 'comps' };
   // Without the tax bill the monthly numbers stay unknown (no guessing); the value side still ranks.
   const taxKnown = taxes != null;
@@ -168,10 +200,10 @@ export const GRADES = {
 };
 
 /** Every listing ranked for BRRRR, best first; ones with nothing similar to compare against last. */
-export function rankBrrrr(listings, market, plan, city, { hidden = [] } = {}) {
+export function rankBrrrr(listings, market, plan, city, { hidden = [], points } = {}) {
   const hide = new Set(hidden);
   const active = (listings ?? []).filter((l) => (l.status ?? 'active') === 'active' && num(l.price) > 0 && listingPageUrl(l.url, l.address));
-  const all = active.filter((l) => !hide.has(l.id)).map((l) => brrrrFor(l, active, market, plan, city));
+  const all = active.filter((l) => !hide.has(l.id)).map((l) => brrrrFor(l, active, market, plan, city, points));
   const ranked = all.filter((r) => !r.missing).sort((a, b) => b.score - a.score || b.created - a.created);
   ranked.forEach((r, i) => (r.rank = i + 1));
   return { ranked, unranked: all.filter((r) => r.missing) };

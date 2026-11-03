@@ -13,6 +13,7 @@ export const PLUS_FEATURES = [
   { key: 'alerts', text: 'Daily emails when a listing drops its price or a new one fits you' },
   { key: 'report', text: 'Pricing report for your home, as a PDF to share' },
   { key: 'pdf', text: 'Deal memos and materials lists as PDFs' },
+  { key: 'ask', text: 'Ask Squarely: questions answered from your own numbers' },
 ];
 
 const PlusContext = createContext({ active: false, ready: true, available: false, start: async () => {}, manage: async () => {} });

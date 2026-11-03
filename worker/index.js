@@ -29,6 +29,7 @@ import { cityByKey } from '../src/lib/canada.js';
 import { monthlyBill } from './pricing.js';
 import { stripeClient, verifyWebhook } from './stripe.js';
 import { MAX_PLAN_BYTES, readBlueprint } from './blueprint.js';
+import { askSquarely } from './ask.js';
 
 const MAX_BODY = 32 * 1024;
 const MAX_PHOTO = 1_500_000;
@@ -471,6 +472,12 @@ export class Account extends DurableObject {
           a.useDaily('blueprint', 20);
           return readBlueprint(this.env.ANTHROPIC_API_KEY, req.body ?? {});
         }
+        case 'ask': {
+          if (!a.isPlus) throw new StoreError(402, 'Ask Squarely on the website is part of Squarely Plus.');
+          if (!this.env.ANTHROPIC_API_KEY) throw new StoreError(501, 'Ask Squarely isn’t switched on for this site yet.');
+          a.useDaily('ask', 40);
+          return askSquarely(this.env.ANTHROPIC_API_KEY, req.body ?? {});
+        }
         case 'setLoginEmail':
           a.setLoginEmail(req.email);
           return { ok: true };
@@ -637,7 +644,7 @@ async function api(request, env, url) {
     const key = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
     const sub = parts.slice(2).join('/');
     // A whole library, or a plan as base64, is bigger than an ordinary request.
-    const limit = sub === 'blueprint' ? Math.ceil(MAX_PLAN_BYTES * 1.4) : sub === '' ? 2_000_000 : MAX_BODY;
+    const limit = sub === 'blueprint' ? Math.ceil(MAX_PLAN_BYTES * 1.4) : sub === '' ? 2_000_000 : sub === 'ask' ? 64 * 1024 : MAX_BODY;
     const body = method === 'GET' || method === 'DELETE' ? null : await readBody(request, limit);
     const op =
       sub === '' && method === 'GET' ? 'read'
@@ -651,6 +658,7 @@ async function api(request, env, url) {
       : sub === 'plus' && method === 'POST' ? 'plusStart'
       : sub === 'plus/manage' && method === 'POST' ? 'plusManage'
       : sub === 'blueprint' && method === 'POST' ? 'blueprint'
+      : sub === 'ask' && method === 'POST' ? 'ask'
       : null;
     if (!op) return json({ error: 'Not found.' }, 404);
     return answer(await env.ACCOUNT.get(env.ACCOUNT.idFromName(id)).call({ op, id, key, body, name: sub.slice(2), origin: url.origin }));
