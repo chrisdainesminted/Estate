@@ -6,7 +6,8 @@ export function LogoMark({ className = 'size-7' }) {
   return (
     <svg
       viewBox="0 0 48 48"
-      className={`${className} fill-emerald-700 stroke-emerald-700 dark:fill-emerald-400 dark:stroke-emerald-400 print:fill-emerald-700 print:stroke-emerald-700`}
+      // The brand green, with a soft glow on dark backgrounds.
+      className={`${className} fill-[#00E198] stroke-[#00E198] dark:drop-shadow-[0_0_6px_rgba(0,225,152,0.45)] print:drop-shadow-none`}
       aria-hidden
     >
       {brackets.map((pts) => (

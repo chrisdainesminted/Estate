@@ -4,7 +4,10 @@
 import { verdict } from './dscr.js';
 import { money, percent, ratio } from './format.js';
 import { UNIT_TYPES } from './presets.js';
-import { MARK } from './brand.js';
+import { MARK, bracketPoints } from './brand.js';
+
+// The mark's green as RGB.
+const MARK_RGB = [0, 225, 152];
 
 const PAGE = { w: 612, h: 792, m: 40 };
 const INK = [24, 24, 27];
@@ -43,13 +46,13 @@ export async function buildMemoPdf({ deal, a, rows, sale, refi, offer }) {
 
   // Header: brand mark, deal name, terms, verdict.
   // The mark (src/lib/brand.js), its 48-unit square drawn 16 pt wide.
-  doc.setFillColor(...BRAND);
-  doc.setDrawColor(...BRAND);
+  doc.setFillColor(...MARK_RGB);
+  doc.setDrawColor(...MARK_RGB);
   doc.setLineWidth(MARK.stroke / 3);
   doc.setLineCap('round');
   doc.setLineJoin('round');
-  MARK.brackets.forEach((pts) => {
-    const [[x0, y0], ...rest] = pts.map(([x, y]) => [m + x / 3, m + y / 3]);
+  MARK.brackets.forEach((bracket) => {
+    const [[x0, y0], ...rest] = bracketPoints(bracket).map(([x, y]) => [m + x / 3, m + y / 3]);
     doc.lines(rest.map(([x, y], i) => [x - (i ? rest[i - 1][0] : x0), y - (i ? rest[i - 1][1] : y0)]), x0, y0, [1, 1], 'S');
   });
   const q = MARK.square;

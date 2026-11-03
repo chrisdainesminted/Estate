@@ -3,7 +3,10 @@
 // flow, and the most you should pay. Plain words, no lender jargon. jsPDF
 // is loaded on demand so it never weighs down the app.
 
-import { MARK } from './brand.js';
+import { MARK, bracketPoints } from './brand.js';
+
+// The mark's green as RGB.
+const MARK_RGB = [0, 225, 152];
 import { feesLabel } from './condo.js';
 import { analyzeDeal, maxOffer, paybackYears, projectDeal, saleAnalysis } from './finance.js';
 import { money, percent } from './format.js';
@@ -85,13 +88,13 @@ export async function buildDealSheetPdf({ deal, a, rows, sale, offer }) {
   };
 
   // ---- Header: the mark, the name, where it is.
-  doc.setFillColor(...BRAND);
-  doc.setDrawColor(...BRAND);
+  doc.setFillColor(...MARK_RGB);
+  doc.setDrawColor(...MARK_RGB);
   doc.setLineWidth(MARK.stroke / 3);
   doc.setLineCap('round');
   doc.setLineJoin('round');
-  MARK.brackets.forEach((pts) => {
-    const [[x0, y0], ...rest] = pts.map(([x, y]) => [m + x / 3, m + y / 3]);
+  MARK.brackets.forEach((bracket) => {
+    const [[x0, y0], ...rest] = bracketPoints(bracket).map(([x, y]) => [m + x / 3, m + y / 3]);
     doc.lines(rest.map(([x, y], i) => [x - (i ? rest[i - 1][0] : x0), y - (i ? rest[i - 1][1] : y0)]), x0, y0, [1, 1], 'S');
   });
   const q = MARK.square;
