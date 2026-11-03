@@ -15,7 +15,7 @@ const field = 'field w-full px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100
  * private link, and get listing alerts by email. No password; the link is
  * the key, so it's shown with a plain warning.
  */
-export default function AccountSheet({ open, onClose, hosted, account, onAccount, alerts, onRemoveAlert }) {
+export default function AccountSheet({ open, onClose, hosted, account, onAccount, alerts, onRemoveAlert , pro, onView }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -170,6 +170,8 @@ export default function AccountSheet({ open, onClose, hosted, account, onAccount
             {error}
           </p>
         )}
+
+        {pro && onView && <ProSection pro={pro} onView={onView} />}
       </div>
     </Sheet>
   );
@@ -198,6 +200,36 @@ function PlusSection() {
           <PlusOffer />
         </div>
       )}
+    </section>
+  );
+}
+
+/** Pro: below-market finds and the Plus tools, one tap away. */
+function ProSection({ pro, onView }) {
+  const plus = usePlus();
+  const links = [
+    ['brrrr', 'BRRRR ranking'],
+    ['build', 'Blueprint to materials list'],
+    ['sell', 'Pricing report'],
+  ];
+  return (
+    <section className="border-t border-hairline pt-5">
+      <h3 className="flex items-center gap-2 text-base font-semibold text-zinc-950 dark:text-white">
+        Pro <PlusTag />
+      </h3>
+      <p className="mt-1 text-zinc-600 dark:text-zinc-400">
+        {pro.distressed} distressed listing{pro.distressed === 1 ? '' : 's'} and {pro.taxSales} open tax sale{pro.taxSales === 1 ? '' : 's'} in {pro.city} right now: lender, estate and court sales, and the city’s tax sales, with the numbers run.
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button variant="primary" onClick={() => onView('pro')}>
+          {plus.active ? 'See Pro deals' : 'Preview Pro deals'}
+        </Button>
+        {links.map(([v, label]) => (
+          <Button key={v} variant="ghost" onClick={() => onView(v)}>
+            {label}
+          </Button>
+        ))}
+      </div>
     </section>
   );
 }

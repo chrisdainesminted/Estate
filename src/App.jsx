@@ -70,10 +70,12 @@ import { SectionGroup, SectionsContext, useSectionsState } from './components/Se
 import Dock from './components/Dock.jsx';
 import Logo, { LogoMark } from './components/Logo.jsx';
 import { useToast } from './components/toast.jsx';
-import { Button, SkeletonCard, signedClass } from './components/ui.jsx';
+import { Button, Segmented, SkeletonCard, signedClass } from './components/ui.jsx';
 import { normalizeProfile } from './lib/firstHome.js';
 import { myPlan, nextStep as nextStepFor } from './lib/journey.js';
 import { sellNextStep } from './lib/selling.js';
+import { distressOf } from './lib/distress.js';
+import { cityByKey } from './lib/canada.js';
 import NextStep from './components/NextStep.jsx';
 import AskSquarely from './components/AskSquarely.jsx';
 import { askContext } from './lib/ask.js';
@@ -188,7 +190,8 @@ const VIEWS = [
     label: 'BRRRR',
     icon: Repeat,
     group: 'invest',
-    basic: true,
+    // A switch on the Listings tab, not a tab of its own.
+    parent: 'listings',
     keywords: 'brrrr brrr buy rehab rent refinance repeat fixer under market value arv renovation flip',
     about: 'Homes ranked for buy, rehab, rent, refinance, repeat: priced furthest under the homes like them once the work is paid for.',
   },
@@ -197,7 +200,8 @@ const VIEWS = [
     label: 'Pro',
     icon: Gem,
     group: 'invest',
-    basic: true,
+    // Opened from the account menu, not a tab.
+    hidden: true,
     keywords: 'pro plus distressed power of sale foreclosure tax sale bank owned estate sale receivership below market deals',
     about: 'Squarely Plus: below-market properties (lender, estate and court sales, and city tax sales) with the numbers run, and every Plus tool.',
   },
@@ -221,7 +225,8 @@ const MODES = [
 ];
 const groupOf = (view) => VIEWS.find((v) => v.value === view)?.group ?? 'buy';
 const MODE_KEY = 'bedrock-mode-view:';
-const BASIC_VIEWS = new Set(VIEWS.filter((v) => v.basic).map((v) => v.value));
+// Switches inside a tab, and views opened from menus, never unfold More.
+const BASIC_VIEWS = new Set(VIEWS.filter((v) => v.basic || v.parent || v.hidden).map((v) => v.value));
 
 // Analyze sections the command palette can jump to. The detail sections fold
 // down to one line; jumping to one opens it.
@@ -557,6 +562,14 @@ export default function App() {
   const market = useMemo(() => localMarket(baseMarket, listCity), [baseMarket, listCity]);
   const marketFeed = useMarket(listCity);
   const taxSales = useTaxSales();
+  // For the Pro section of the account menu: what's below market in the listings city now.
+  const proCounts = useMemo(
+    () => ({
+      distressed: (marketFeed.feed?.listings ?? []).filter((l) => (l.status ?? 'active') === 'active' && distressOf(l)).length,
+      taxSales: taxSales.feed?.cities?.[listCity]?.sales?.length ?? 0,
+    }),
+    [marketFeed.feed, taxSales.feed, listCity],
+  );
 
   // Portfolio, Compare and Plan wait behind More until you have two deals of your own or own a property.
   const ownDeals = deals.filter((d) => !d.example);
@@ -564,8 +577,10 @@ export default function App() {
   // Buying, selling or investing: each mode has its own tabs, and remembers the last one open.
   const mode = groupOf(view);
   const investing = mode === 'invest';
-  const groupViews = VIEWS.filter((v) => v.group === mode);
+  const groupViews = VIEWS.filter((v) => v.group === mode && !v.parent && !v.hidden);
   const tabs = investing && !tabsUnlocked ? groupViews.filter((v) => v.basic) : groupViews;
+  // A view shown as a switch inside another tab lights up that tab.
+  const tabView = VIEWS.find((v) => v.value === view)?.parent ?? view;
   useEffect(() => {
     try {
       localStorage.setItem(MODE_KEY + mode, view);
@@ -839,7 +854,7 @@ export default function App() {
             {/* From lg up the views are text tabs here; phones and tablets get them along the bottom (Dock). */}
             <nav aria-label="Views" className="thin-scroll hidden min-w-0 flex-1 self-stretch overflow-x-auto lg:flex">
               {tabs.map((v) => (
-                <button key={v.value} type="button" aria-current={v.value === view ? 'page' : undefined} onClick={() => setView(v.value)} className={tabClass(v.value === view)}>
+                <button key={v.value} type="button" aria-current={v.value === tabView ? 'page' : undefined} onClick={() => setView(v.value)} className={tabClass(v.value === tabView)}>
                   {v.label}
                 </button>
               ))}
@@ -957,6 +972,19 @@ export default function App() {
                 onAnalyze={liveInListing}
                 onView={setView}
                 nextStep={step?.view === 'homes' ? null : nextStepCard}
+              />
+            )}
+
+            {(view === 'listings' || view === 'brrrr') && (
+              <Segmented
+                stretch
+                label="Listings or BRRRR ranking"
+                value={view}
+                onChange={setView}
+                options={[
+                  { value: 'listings', label: 'All listings' },
+                  { value: 'brrrr', label: 'BRRRR ranking' },
+                ]}
               />
             )}
 
@@ -1190,7 +1218,7 @@ export default function App() {
             sell: lib.settings.sell,
           })}
         />
-        {!isDesktop && <Dock views={groupViews} view={view} onView={setView} result={dockResult} onEdit={() => setSheetOpen(true)} />}
+        {!isDesktop && <Dock views={groupViews} view={tabView} onView={setView} result={dockResult} onEdit={() => setSheetOpen(true)} />}
       </div>
 
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} commands={commands} />}
@@ -1218,6 +1246,8 @@ export default function App() {
             onAccount={lib.setAccount}
             alerts={lib.settings.alerts}
             onRemoveAlert={(id) => lib.replaceAlerts(lib.settings.alerts.filter((a) => a.id !== id))}
+            pro={{ distressed: proCounts.distressed, taxSales: proCounts.taxSales, city: cityByKey(listCity).name }}
+            onView={(v) => (setAccountOpen(false), setView(v))}
           />
         </Suspense>
       )}
