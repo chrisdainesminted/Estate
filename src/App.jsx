@@ -34,6 +34,7 @@ import {
   Hammer,
   Tag,
   Signpost,
+  Repeat,
 } from 'lucide-react';
 import { useDeals } from './hooks/useDeals.js';
 import { accountCall } from './lib/account.js';
@@ -86,6 +87,7 @@ const HomeView = lazy(() => import('./views/HomeView.jsx'));
 const HomesForMe = lazy(() => import('./views/HomesForMe.jsx'));
 const GetReady = lazy(() => import('./views/GetReady.jsx'));
 const BuildView = lazy(() => import('./views/BuildView.jsx'));
+const BrrrrView = lazy(() => import('./views/BrrrrView.jsx'));
 const SellWorth = lazy(() => import('./views/SellView.jsx').then((m) => ({ default: m.SellWorth })));
 const SellReady = lazy(() => import('./views/SellView.jsx').then((m) => ({ default: m.SellReady })));
 const LandlordView = lazy(() => import('./views/landlord/LandlordView.jsx'));
@@ -120,6 +122,14 @@ const VIEWS = [
     basic: true,
     keywords: 'listings for sale afford fits stretch budget first home',
     about: 'Today’s listings you could live in, each with what it would cost you a month and the cash to close, marked fits, stretch or not yet.',
+  },
+  {
+    value: 'brrrr',
+    label: 'BRRRR',
+    icon: Repeat,
+    group: 'buy',
+    keywords: 'brrrr brrr buy rehab rent refinance repeat fixer under market value arv renovation flip',
+    about: 'Homes ranked for buy, rehab, rent, refinance, repeat: priced furthest under the homes like them once the work is paid for.',
   },
   {
     value: 'build',
@@ -587,6 +597,28 @@ export default function App() {
     },
     [deals, market, withUndo, lib, setView],
   );
+  // From BRRRR: save the listing as a deal with the rehab, the value once fixed and the refinance filled in.
+  const openBrrrr = useCallback(
+    (r) => {
+      const plan = lib.settings.brrrr;
+      const deal = {
+        ...listingToDeal(r.listing, market, 'own'),
+        downPct: plan.downPct,
+        rehabCost: r.rehab,
+        arv: r.arv.value,
+        refiEnabled: true,
+        refiYear: 1,
+        refiLtv: plan.refiPct,
+        refiRate: market.rate,
+        refiCostPct: plan.refiCostPct,
+      };
+      withUndo(`Added “${r.listing.address}” as a BRRRR deal`, () => lib.insertDeal(deal));
+      setView('analyze');
+      window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    },
+    [lib, market, withUndo, setView],
+  );
+
   // From Homes for me: save the listing as a deal and show what living in it would cost, on My plan.
   const liveInListing = useCallback(
     (listing) => {
@@ -909,6 +941,19 @@ export default function App() {
                 onAnalyze={liveInListing}
                 onView={setView}
                 nextStep={step?.view === 'homes' ? null : nextStepCard}
+              />
+            )}
+
+            {view === 'brrrr' && (
+              <BrrrrView
+                feedState={marketFeed}
+                indexState={marketIndex}
+                city={listCity}
+                onCity={(listingCity) => lib.updateSettings('market', { listingCity })}
+                market={market}
+                plan={lib.settings.brrrr}
+                onPlan={(patch) => lib.updateSettings('brrrr', patch)}
+                onOpen={openBrrrr}
               />
             )}
 
