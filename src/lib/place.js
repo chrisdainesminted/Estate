@@ -6,7 +6,7 @@
 
 import { CITIES, cityByKey } from './canada.js';
 import { dealPlace } from './finance.js';
-import { localMarket, normalizeMarket } from './market.js';
+import { CITY_VACANCY, localMarket, normalizeMarket } from './market.js';
 import { DEFAULT_DEAL } from './presets.js';
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
@@ -83,6 +83,12 @@ export function moveToCity(deal, to, market) {
   if (b != null && newRents[b] !== num(deal.rentPerUnit)) {
     patch.rentPerUnit = newRents[b];
     changed.push('market rent');
+  }
+  // A starting vacancy figure, or the old city's surveyed rate: the new city's, where it's surveyed.
+  const vac = num(deal.vacancyPct);
+  if (CITY_VACANCY[next] != null && ([4, 5].includes(vac) || vac === CITY_VACANCY[from]) && vac !== CITY_VACANCY[next]) {
+    patch.vacancyPct = CITY_VACANCY[next];
+    changed.push('vacancy rate');
   }
   return { patch, changed };
 }

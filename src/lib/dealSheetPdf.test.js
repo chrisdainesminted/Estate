@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildDealSheetPdf, dealSheetFilename, headline, offerLine } from './dealSheetPdf.js';
+import { buildDealSheetPdf, dealSheetFilename, headline, offerLine, sheetItem } from './dealSheetPdf.js';
 import { DEFAULT_TARGETS, analyzeDeal, maxOffer, projectDeal, saleAnalysis } from './finance.js';
 import { DEFAULT_DEAL } from './presets.js';
 
@@ -16,6 +16,12 @@ describe('deal sheet', () => {
     });
     expect(offerLine({ price: 0, feasible: false }).value).toBe('No price works');
     expect(offerLine(null)).toBeNull();
+  });
+  it('counts the deal as self-managed, so the page adds up without a management fee', () => {
+    const item = sheetItem({ ...deal, mgmtPct: 8 }, DEFAULT_TARGETS);
+    expect(item.deal.mgmtPct).toBe(0);
+    expect(item.a.opex.management).toBe(0);
+    expect(item.a.netCashFlow).toBeGreaterThan(analyzeDeal({ ...deal, mgmtPct: 8 }).netCashFlow);
   });
   it('makes a one-page PDF named for the deal', async () => {
     const rows = projectDeal(deal, 10);

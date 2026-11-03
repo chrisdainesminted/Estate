@@ -5,7 +5,7 @@
 
 import { MARK } from './brand.js';
 import { feesLabel } from './condo.js';
-import { paybackYears } from './finance.js';
+import { analyzeDeal, maxOffer, paybackYears, projectDeal, saleAnalysis } from './finance.js';
 import { money, percent } from './format.js';
 import { placeLabel } from './place.js';
 import { UNIT_TYPES } from './presets.js';
@@ -45,6 +45,17 @@ export function offerLine(offer) {
   const lim = offer.limits?.find((l) => l.key === offer.binding);
   const vs = offer.vsAsking >= 0 ? `${money(offer.vsAsking)} above asking` : `${money(-offer.vsAsking)} below asking`;
   return { value: money(offer.price), note: `${vs}${lim ? `. Above this it misses your ${lim.label.toLowerCase()} target` : ''}.` };
+}
+
+/**
+ * The deal as the sheet shows it: self-managed, so no property management
+ * fee, with everything (monthly, ten years, the most to pay) worked out
+ * that way so the page adds up.
+ */
+export function sheetItem(deal, targets) {
+  const d = { ...deal, mgmtPct: 0 };
+  const rows = projectDeal(d, 10);
+  return { deal: d, a: analyzeDeal(d), rows, sale: saleAnalysis(d, rows), offer: maxOffer(d, targets) };
 }
 
 export async function buildDealSheetPdf({ deal, a, rows, sale, offer }) {
@@ -162,9 +173,10 @@ export async function buildDealSheetPdf({ deal, a, rows, sale, offer }) {
     ['Property tax', neg(a.taxes), 'neg'],
     ['Insurance', neg(a.insurance), 'neg'],
     ...(a.hoa > 0 ? [[feesLabel(deal), neg(a.hoa), 'neg']] : []),
-    [`Property management (${num(deal.mgmtPct)}%)`, neg(opex.management), 'neg'],
+    // Self-managed: a management fee shows only if the deal still carries one.
+    ...(opex.management > 0 ? [[`Property management (${num(deal.mgmtPct)}%)`, neg(opex.management), 'neg']] : []),
     [`Repairs & upkeep (${num(deal.maintPct)}%)`, neg(opex.maintenance), 'neg'],
-    [`Empty months (${num(deal.vacancyPct)}%)`, neg(opex.vacancy), 'neg'],
+    [`Vacancy rate (${num(deal.vacancyPct)}%)`, neg(opex.vacancy), 'neg'],
     [`Big repairs saved for (${num(deal.capexPct)}%)`, neg(opex.capex), 'neg'],
     ['Left for you each month', money(a.netCashFlow, { signed: true }), 'total'],
   ];
@@ -243,7 +255,7 @@ export async function buildDealSheetPdf({ deal, a, rows, sale, offer }) {
   // ---- What it assumes.
   y = Math.max(y + 10, PAGE.h - m - 30);
   rule(m, y - 10, m + W);
-  const note = `Assumes the home's value grows ${num(deal.appreciationPct)}% a year, rent ${num(deal.rentGrowthPct)}% and tax and insurance ${num(deal.expenseGrowthPct)}%. Running costs are shares of the rent. Estimates for your own planning, not lending, tax or investment advice. Confirm the tax bill, rent and insurance before you buy.`;
+  const note = `Assumes the home's value grows ${num(deal.appreciationPct)}% a year, rent ${num(deal.rentGrowthPct)}% and tax and insurance ${num(deal.expenseGrowthPct)}%. Self-managed: no property management fee. Repairs, vacancy and big repairs are shares of the rent${deal.city === 'thunder-bay' ? '; vacancy is Thunder Bay\'s average (CMHC, October 2025)' : ''}. Estimates for your own planning, not lending, tax or investment advice. Confirm the tax bill, rent and insurance before you buy.`;
   wrap(note, m, y, W, { size: 7.5, color: MUTED });
 
   doc.setProperties({ title: sheetTitle(deal), creator: 'Squarely' });

@@ -46,7 +46,7 @@ import { useMarket, useMarketIndex, useTaxSales } from './hooks/useMarket.js';
 import { OWN_DOWN_PCT, analyzeDeal, applyAdjustments, isNeutralAdjustment, maxOffer, ownMoney, projectDeal, refiAnalysis, saleAnalysis } from './lib/finance.js';
 import { money, percent, ratio } from './lib/format.js';
 import { DEFAULT_DEAL, MAX_COMPARE, switchRules } from './lib/presets.js';
-import { LISTING_CITIES, homePatch, listingCity, listingTaxes, listingToDeal, localMarket, normalizeMarket, rankListings } from './lib/market.js';
+import { CITY_VACANCY, LISTING_CITIES, homePatch, listingCity, listingTaxes, listingToDeal, localMarket, normalizeMarket, rankListings } from './lib/market.js';
 import { quickDeal } from './lib/quick.js';
 import { readShared, sameDeal } from './lib/share.js';
 import { whatIfSummary } from './lib/explain.js';
@@ -526,7 +526,7 @@ export default function App() {
   // A property you already own: a new deal marked owned, opened to fill in.
   const addOwned = useCallback(() => {
     const m = lib.settings.market;
-    lib.insertDeal({ ...switchRules(DEFAULT_DEAL, 'ca'), name: 'My property', city: homeCity, status: 'owned', yearsOwned: 0, downPct: OWN_DOWN_PCT, rate: m.rate, refiRate: m.rate, termYears: m.amortYears });
+    lib.insertDeal({ ...switchRules(DEFAULT_DEAL, 'ca'), name: 'My property', city: homeCity, status: 'owned', yearsOwned: 0, vacancyPct: CITY_VACANCY[homeCity] ?? DEFAULT_DEAL.vacancyPct, downPct: OWN_DOWN_PCT, rate: m.rate, refiRate: m.rate, termYears: m.amortYears });
     setView('analyze');
     if (!isDesktop) setSheetOpen(true);
     toast({ tone: 'info', text: 'Fill in what you paid, your mortgage and the rent. It’s in your portfolio and your profile’s equity.' });
@@ -1330,7 +1330,7 @@ export default function App() {
       )}
       {shareOpen && (
         <Suspense fallback={null}>
-          <ShareSheet deal={active} item={current} hosted={HOSTED} onClose={() => setShareOpen(false)} />
+          <ShareSheet deal={active} item={current} targets={targets} hosted={HOSTED} onClose={() => setShareOpen(false)} />
         </Suspense>
       )}
       <DealMemo item={current} />

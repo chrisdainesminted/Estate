@@ -105,6 +105,11 @@ export const MARKET_SOURCES = {
     url: 'https://www.rbcroyalbank.com/mortgages/mortgage-rates.html',
   },
   dscrRate: { what: 'Low end of B-lender DSCR loan rates (7.49% to 8.49%), August 21, 2026, from one broker’s published rates', source: 'LendCity', url: 'https://lendcity.ca/rates/' },
+  vacancy: {
+    what: 'Thunder Bay’s rental vacancy rate, October 2025: 3.9% of units empty',
+    source: 'CMHC Rental Market Survey',
+    url: 'https://www03.cmhc-schl.gc.ca/hmip-pimh/en/TableMapChart/TableCategory?geographyType=CensusSubDivision&geographyId=3558004&categoryLevel1=Primary+Rental+Market&categoryLevel2=Summary+Statistics',
+  },
   rents: {
     what: 'Average asking rents for units listed for rent now, by bedrooms: Thunder Bay as of September 2026, the other cities as of March 2026, the latest Rentals.ca publishes for each. Statistics Canada’s asking-rent figures come from the same listings. The 3-bedroom figure is used for 4+. Rentals.ca gives no studio average, so a studio is the 1-bedroom figure less the gap CMHC’s survey finds between the two (an estimate)',
     source: 'Rentals.ca',
@@ -137,8 +142,14 @@ const OLD_DEFAULTS = [
   { rate: 4.9, dscrRate: 6, rents: { 0: 1050, 1: 1350, 2: 1700, 3: 2000, 4: 2300 } },
   // CMHC's average rents (long-time tenants included) and the B-lender loan as the default.
   { rate: 5.12, lens: 'dscr', rents: { 0: 976, 1: 1173, 2: 1493, 3: 1794, 4: 1794 } },
+  // A round 4% vacancy before Thunder Bay's surveyed rate.
+  { vacancyPct: 4, rents: {} },
 ];
-const DEFAULTS_VERSION = 3;
+const DEFAULTS_VERSION = 4;
+/** Each city's rental vacancy rate (% of units empty), where CMHC's survey has it: see MARKET_SOURCES. */
+export const CITY_VACANCY = { 'thunder-bay': 3.9 };
+// The vacancy figures deals were filled in with before the surveyed rate.
+const OLD_VACANCY = [4, 5];
 // The average rents saved deals were filled in with before asking rents, by city: those move to today's.
 const OLD_CITY_RENTS = {
   'thunder-bay': [976, 1173, 1493, 1794],
@@ -166,7 +177,7 @@ export const DEFAULT_MARKET = {
   taxes: {}, // yearly tax bills you typed in for listings that don't state one, by listing id
   mgmtPct: 8,
   maintPct: 6,
-  vacancyPct: 4,
+  vacancyPct: CITY_VACANCY['thunder-bay'], // Thunder Bay's surveyed rate; see MARKET_SOURCES
   capexPct: 7,
   rents: CITY_RENTS['thunder-bay'].rents, // $/mo asking rent by bedrooms (4 = 4+), Thunder Bay; see MARKET_SOURCES
   defaults: DEFAULTS_VERSION,
@@ -180,7 +191,7 @@ export function normalizeMarket(m) {
     const old = m;
     m = { ...m, defaults: DEFAULTS_VERSION, rents: { ...(m.rents ?? {}) } };
     for (const was of OLD_DEFAULTS) {
-      for (const k of ['rate', 'dscrRate']) if (was[k] != null && Number(old[k]) === was[k]) m[k] = DEFAULT_MARKET[k];
+      for (const k of ['rate', 'dscrRate', 'vacancyPct']) if (was[k] != null && Number(old[k]) === was[k]) m[k] = DEFAULT_MARKET[k];
       // Listings counted with the B-lender loan by default now count 20% down at a bank's rate.
       if (was.lens && old.lens === was.lens) m.lens = DEFAULT_MARKET.lens;
       for (const [b, r] of Object.entries(was.rents)) if (Number(old.rents?.[b]) === r) m.rents[b] = DEFAULT_MARKET.rents[b];
@@ -409,8 +420,12 @@ export function listingToDeal(listing, market, lens) {
  * today's asking rents. Anything you changed by hand stays as you left it.
  */
 export function refreshListingDeal(d) {
-  if (!d?.listingId || d.country !== 'ca') return d;
+  if (d?.country !== 'ca') return d;
   let out = d;
+  // A Canadian deal on a starting vacancy figure, in a city CMHC surveys: the city's surveyed rate.
+  const vac = CITY_VACANCY[d.city];
+  if (vac != null && OLD_VACANCY.includes(Number(d.vacancyPct))) out = { ...out, vacancyPct: vac };
+  if (!d.listingId) return out;
   if (Number(d.rate) === 7.49 && Number(d.downPct) === 25) {
     out = ownMoney({ ...out, rate: DEFAULT_MARKET.rate, refiRate: Number(d.refiRate) === 7.49 ? DEFAULT_MARKET.rate : d.refiRate });
   }

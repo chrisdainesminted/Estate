@@ -491,6 +491,7 @@ function Assumptions({ market, onMarket }) {
           {[
             ['Regular mortgage rate', MARKET_SOURCES.rate],
             ['DSCR loan rate', MARKET_SOURCES.dscrRate],
+            ['Vacancy', MARKET_SOURCES.vacancy],
             ['Rents', MARKET_SOURCES.rents],
           ].map(([name, src]) => (
             <li key={name}>

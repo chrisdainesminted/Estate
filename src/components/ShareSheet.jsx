@@ -6,9 +6,9 @@ import Sheet from './Sheet.jsx';
 import { Button } from './ui.jsx';
 
 /** The one-page deal sheet as a PDF: built on demand, so jsPDF loads only when asked for. */
-async function makeSheet(item) {
-  const { buildDealSheetPdf, dealSheetFilename } = await import('../lib/dealSheetPdf.js');
-  return { blob: await buildDealSheetPdf(item), filename: dealSheetFilename(item.deal) };
+async function makeSheet(deal, targets) {
+  const { buildDealSheetPdf, dealSheetFilename, sheetItem } = await import('../lib/dealSheetPdf.js');
+  return { blob: await buildDealSheetPdf(sheetItem(deal, targets)), filename: dealSheetFilename(deal) };
 }
 
 /**
@@ -16,7 +16,7 @@ async function makeSheet(item) {
  * the cash it takes, what's left, ten years of cash flow and the most to
  * pay), or a link to the public site that carries its numbers.
  */
-export default function ShareSheet({ deal, item, hosted = false, onClose }) {
+export default function ShareSheet({ deal, item, targets, hosted = false, onClose }) {
   const [pdf, setPdf] = useState('');
   const details = hasDetails(deal);
   const [withDetails, setWithDetails] = useState(true);
@@ -44,7 +44,7 @@ export default function ShareSheet({ deal, item, hosted = false, onClose }) {
           <section className="space-y-3 border-b border-hairline pb-5">
             <h3 className="text-sm font-semibold text-zinc-950 dark:text-white">Print or save as a PDF</h3>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              One clean page: what it costs each month, the down payment and cash to close, what’s left for you, cash flow over 10 years and the most you should pay.
+              One clean page: what it costs each month, the down payment and cash to close, what’s left for you, cash flow over 10 years and the most you should pay. Counted as self-managed, with no property management fee.
             </p>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -53,7 +53,7 @@ export default function ShareSheet({ deal, item, hosted = false, onClose }) {
                 onClick={async () => {
                   setPdf('busy');
                   try {
-                    const { blob, filename } = await makeSheet(item);
+                    const { blob, filename } = await makeSheet(item.deal, targets);
                     const r = await saveFile(filename, blob);
                     setPdf(r === 'saved' ? 'saved' : '');
                   } catch (e) {
@@ -71,7 +71,7 @@ export default function ShareSheet({ deal, item, hosted = false, onClose }) {
                     const tab = window.open('', '_blank');
                     setPdf('busy');
                     try {
-                      const { blob } = await makeSheet(item);
+                      const { blob } = await makeSheet(item.deal, targets);
                       const url = URL.createObjectURL(blob);
                       if (tab) tab.location.href = url;
                       else window.location.href = url;

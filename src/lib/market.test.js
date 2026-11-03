@@ -518,13 +518,22 @@ describe('asking rents by city', () => {
     const mine = normalizeMarket({ defaults: 2, lens: 'own', rate: 4.6 });
     expect(mine.rate).toBe(4.6);
   });
+  it('uses Thunder Bay’s surveyed vacancy rate', () => {
+    expect(DEFAULT_MARKET.vacancyPct).toBe(3.9);
+    expect(normalizeMarket({ defaults: 3, vacancyPct: 4 }).vacancyPct).toBe(3.9);
+    expect(normalizeMarket({ defaults: 3, vacancyPct: 6 }).vacancyPct).toBe(6);
+    const own = { ...DEFAULT_DEAL, country: 'ca', city: 'thunder-bay', vacancyPct: 5 };
+    expect(refreshListingDeal(own).vacancyPct).toBe(3.9);
+    expect(refreshListingDeal({ ...own, vacancyPct: 7 }).vacancyPct).toBe(7);
+    expect(refreshListingDeal({ ...own, city: 'toronto' }).vacancyPct).toBe(5);
+  });
   it('refreshes deals made from listings under the old figures', () => {
     const d = { ...DEFAULT_DEAL, listingId: 'x', country: 'ca', city: 'thunder-bay', rate: 7.49, refiRate: 7.49, downPct: 25, rentPerUnit: 1173, notes: 'Rents estimated from your rent table.' };
     const r = refreshListingDeal(d);
     expect([r.rate, r.refiRate, r.downPct, r.rentPerUnit]).toEqual([5.14, 5.14, 20, 1584]);
     const own = { ...d, rate: 6.2, rentPerUnit: 1450 };
     expect(refreshListingDeal(own)).toMatchObject({ rate: 6.2, rentPerUnit: 1450 });
-    const plain = { ...d, listingId: undefined };
+    const plain = { ...d, listingId: undefined, vacancyPct: 7 };
     expect(refreshListingDeal(plain)).toBe(plain);
   });
 });
