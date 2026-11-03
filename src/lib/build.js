@@ -8,9 +8,9 @@ const num = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : 0)
 const up = (v) => Math.ceil(v - 1e-9);
 
 export const PROJECTS = [
-  { key: 'new', label: 'New build or addition', words: 'framing, sheathing, insulation, drywall, paint, floors and trim' },
-  { key: 'basement', label: 'Finish a basement', words: 'framing against the foundation, insulation, drywall, paint, floors and trim' },
-  { key: 'reno', label: 'Renovate rooms', words: 'drywall, paint, floors and trim, with the walls already standing' },
+  { key: 'new', label: 'New build or addition', short: 'New build', words: 'framing, sheathing, insulation, drywall, paint, floors and trim' },
+  { key: 'basement', label: 'Finish a basement', short: 'Basement', words: 'framing against the foundation, insulation, drywall, paint, floors and trim' },
+  { key: 'reno', label: 'Renovate rooms', short: 'Renovate', words: 'drywall, paint, floors and trim, with the walls already standing' },
 ];
 
 export const FLOORS = [

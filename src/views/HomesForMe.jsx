@@ -78,12 +78,13 @@ export default function HomesForMe({ feedState, indexState, city, onCity, market
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Segmented
+              stretch
               label="Show"
               value={show}
               onChange={setShow}
               options={[
                 { value: 'all', label: `All ${withTax.length}` },
-                { value: 'fits', label: `Fits you ${count('fits')}` },
+                { value: 'fits', label: `Fits ${count('fits')}` },
                 { value: 'stretch', label: `Stretch ${count('stretch')}` },
                 { value: 'notYet', label: `Not yet ${count('notYet')}` },
               ]}

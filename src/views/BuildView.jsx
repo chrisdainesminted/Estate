@@ -5,6 +5,7 @@ import { accountCall } from '../lib/account.js';
 import { saveFile } from '../lib/runtime.js';
 import { Button, Card, CardHeader, NumberField, Segmented, ViewHeader } from '../components/ui.jsx';
 import { PlusGate, PlusTag, usePlus } from '../components/Plus.jsx';
+import { useMediaQuery } from '../hooks/useMediaQuery.js';
 
 const cell = 'field w-full px-2 py-1.5 text-sm tabular-nums';
 
@@ -25,6 +26,7 @@ const toBase64 = (file) =>
  */
 export default function BuildView({ build, onBuild, account, nextStep }) {
   const plus = usePlus();
+  const isPhone = useMediaQuery('(max-width: 639px)');
   const [reading, setReading] = useState(false);
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
@@ -87,8 +89,11 @@ export default function BuildView({ build, onBuild, account, nextStep }) {
       <Card>
         <CardHeader title="1. What are you doing?" />
         <div className="space-y-2 px-5 pb-5">
-          <Segmented label="Project" value={build.project} onChange={(project) => onBuild({ project })} options={PROJECTS.map((p) => ({ value: p.key, label: p.label }))} />
-          <p className="text-xs text-zinc-600 dark:text-zinc-400">Counts {PROJECTS.find((p) => p.key === build.project).words}.</p>
+          {/* Short names on phones so all three fit; the line below says what the chosen one counts. */}
+          <Segmented stretch label="Project" value={build.project} onChange={(project) => onBuild({ project })} options={PROJECTS.map((p) => ({ value: p.key, label: isPhone ? p.short : p.label }))} />
+          <p className="text-xs text-zinc-600 dark:text-zinc-400">
+            {PROJECTS.find((p) => p.key === build.project).label}: counts {PROJECTS.find((p) => p.key === build.project).words}.
+          </p>
         </div>
       </Card>
 

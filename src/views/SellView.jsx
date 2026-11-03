@@ -11,8 +11,8 @@ import { CityPicker } from './ListingsView.jsx';
 
 const KINDS = ['House', 'Duplex', 'Triplex', 'Fourplex', '5+ units'];
 const yesNo = [
-  { value: 'agent', label: 'With an agent' },
-  { value: 'private', label: 'Privately' },
+  { value: 'agent', label: 'Agent' },
+  { value: 'private', label: 'Private' },
 ];
 
 /**
@@ -151,7 +151,7 @@ export function SellWorth({ sell, onSell, feedState, indexState, city, onCity, n
             <NumberField id="sell-price" label="Selling price" prefix="$" value={price} onChange={(v) => onSell({ price: v })} step={5000} decimals={0} hint={sell.price == null ? 'The estimate above' : undefined} />
             <div>
               <span className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">Selling</span>
-              <Segmented size="sm" label="Selling" value={sell.privateSale ? 'private' : 'agent'} onChange={(v) => onSell({ privateSale: v === 'private' })} options={yesNo} />
+              <Segmented stretch size="sm" label="Selling with an agent or privately" value={sell.privateSale ? 'private' : 'agent'} onChange={(v) => onSell({ privateSale: v === 'private' })} options={yesNo} />
             </div>
             {!sell.privateSale && <NumberField id="sell-commission" label="Commission, both agents" suffix="%" value={sell.commissionPct} onChange={(v) => onSell({ commissionPct: v })} step={0.25} decimals={2} hint="It’s negotiable: ask" />}
             <NumberField id="sell-mortgage" label="Mortgage left" prefix="$" value={sell.mortgage} onChange={(v) => onSell({ mortgage: v })} step={1000} decimals={0} />
@@ -160,7 +160,7 @@ export function SellWorth({ sell, onSell, feedState, indexState, city, onCity, n
                 <NumberField id="sell-rate" label="Its rate" suffix="%" value={sell.ratePct} onChange={(v) => onSell({ ratePct: v })} step={0.05} decimals={2} />
                 <div>
                   <span className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">Rate type</span>
-                  <Segmented size="sm" label="Rate type" value={sell.fixed ? 'fixed' : 'variable'} onChange={(v) => onSell({ fixed: v === 'fixed' })} options={[{ value: 'fixed', label: 'Fixed' }, { value: 'variable', label: 'Variable' }]} />
+                  <Segmented stretch size="sm" label="Rate type" value={sell.fixed ? 'fixed' : 'variable'} onChange={(v) => onSell({ fixed: v === 'fixed' })} options={[{ value: 'fixed', label: 'Fixed' }, { value: 'variable', label: 'Variable' }]} />
                 </div>
                 <NumberField id="sell-penalty" label="Penalty from your lender" prefix="$" value={sell.penalty ?? undefined} onChange={(v) => onSell({ penalty: v })} step={100} decimals={0} hint="From your payout statement; blank estimates it" />
               </>
