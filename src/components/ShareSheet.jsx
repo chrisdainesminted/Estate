@@ -1,11 +1,23 @@
 import { useMemo, useState } from 'react';
-import { Check, Copy, Share2 } from 'lucide-react';
+import { Check, Copy, FileDown, Printer, Share2 } from 'lucide-react';
 import { hasDetails, shareLink } from '../lib/share.js';
+import { saveFile } from '../lib/runtime.js';
 import Sheet from './Sheet.jsx';
 import { Button } from './ui.jsx';
 
-/** Share a deal: a link to the public site that carries its numbers. */
-export default function ShareSheet({ deal, onClose }) {
+/** The one-page deal sheet as a PDF: built on demand, so jsPDF loads only when asked for. */
+async function makeSheet(item) {
+  const { buildDealSheetPdf, dealSheetFilename } = await import('../lib/dealSheetPdf.js');
+  return { blob: await buildDealSheetPdf(item), filename: dealSheetFilename(item.deal) };
+}
+
+/**
+ * Share a deal: a clean one-page PDF to print or send (the monthly costs,
+ * the cash it takes, what's left, ten years of cash flow and the most to
+ * pay), or a link to the public site that carries its numbers.
+ */
+export default function ShareSheet({ deal, item, hosted = false, onClose }) {
+  const [pdf, setPdf] = useState('');
   const details = hasDetails(deal);
   const [withDetails, setWithDetails] = useState(true);
   const [status, setStatus] = useState('');
@@ -28,6 +40,59 @@ export default function ShareSheet({ deal, onClose }) {
   return (
     <Sheet open onClose={onClose} title="Share this deal" desktop>
       <div className="space-y-4 pb-4">
+        {item && (
+          <section className="space-y-3 border-b border-hairline pb-5">
+            <h3 className="text-sm font-semibold text-zinc-950 dark:text-white">Print or save as a PDF</h3>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              One clean page: what it costs each month, the down payment and cash to close, what’s left for you, cash flow over 10 years and the most you should pay.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="primary"
+                disabled={pdf === 'busy'}
+                onClick={async () => {
+                  setPdf('busy');
+                  try {
+                    const { blob, filename } = await makeSheet(item);
+                    const r = await saveFile(filename, blob);
+                    setPdf(r === 'saved' ? 'saved' : '');
+                  } catch (e) {
+                    setPdf(e?.message || 'error');
+                  }
+                }}
+              >
+                <FileDown className="size-4" aria-hidden /> {pdf === 'busy' ? 'Making it…' : 'Save PDF'}
+              </Button>
+              {!hosted && (
+                <Button
+                  disabled={pdf === 'busy'}
+                  onClick={async () => {
+                    // Open the PDF in a new tab, where the browser's own Print button prints it as it looks.
+                    const tab = window.open('', '_blank');
+                    setPdf('busy');
+                    try {
+                      const { blob } = await makeSheet(item);
+                      const url = URL.createObjectURL(blob);
+                      if (tab) tab.location.href = url;
+                      else window.location.href = url;
+                      setTimeout(() => URL.revokeObjectURL(url), 60000);
+                      setPdf('opened');
+                    } catch (e) {
+                      tab?.close();
+                      setPdf(e?.message || 'error');
+                    }
+                  }}
+                >
+                  <Printer className="size-4" aria-hidden /> Print
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400" aria-live="polite">
+              {pdf === 'saved' ? 'Saved. Print it or attach it to an email.' : pdf === 'opened' ? 'Opened in a new tab: use Print there.' : pdf && pdf !== 'busy' ? (pdf === 'error' ? 'Couldn’t make the PDF. Try again.' : pdf) : ''}
+            </p>
+          </section>
+        )}
+        <h3 className="text-sm font-semibold text-zinc-950 dark:text-white">Share a link</h3>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           Anyone with this link sees “{deal.name}” with these numbers, and can save a copy of their own. Your other deals aren’t included.
         </p>
