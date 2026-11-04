@@ -284,41 +284,23 @@ body::before {
 
 /* ---------- Website surfaces ---------- */
 
-/* Behind the homepage hero: a soft accent glow over a fine grid that fades out at the edges. */
+/* Behind the homepage hero: soft green light, strongest behind the calculator card (top right), with a fainter glow lower left. No pattern. */
 .hero-backdrop {
   position: absolute;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-}
-.hero-backdrop::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 30%, transparent 75%);
-}
-.hero-backdrop::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: -18rem;
-  width: 64rem;
-  height: 36rem;
-  transform: translateX(-30%);
-  background: radial-gradient(closest-side, var(--glow), transparent);
-  filter: blur(8px);
+  background:
+    radial-gradient(42rem 26rem at 78% 18%, var(--glow), transparent 70%),
+    radial-gradient(36rem 22rem at 8% 70%, var(--glow-soft), transparent 70%);
 }
 :root {
-  --grid-line: rgb(9 9 11 / 0.05);
-  --glow: rgb(16 185 129 / 0.16);
+  --glow: rgb(0 225 152 / 0.12);
+  --glow-soft: rgb(0 225 152 / 0.05);
 }
 html.dark {
-  --grid-line: rgb(255 255 255 / 0.045);
-  --glow: rgb(52 211 153 / 0.14);
+  --glow: rgb(0 225 152 / 0.16);
+  --glow-soft: rgb(0 225 152 / 0.07);
 }
 
 /* A panel that sits a step above the page: a hairline that brightens at the top edge, and a deep soft shadow. */
