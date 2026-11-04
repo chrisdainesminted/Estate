@@ -1,19 +1,13 @@
-import { MARK, bracketPath } from '../lib/brand.js';
+import { MARK } from '../lib/brand.js';
 
-/** The mark alone, in the accent green. */
+/** The mark alone: two overlapping rounded squares in the brand green, the back one lighter. */
 export function LogoMark({ className = 'size-7' }) {
-  const { stroke, brackets, square: q } = MARK;
+  const { stroke, squares, backOpacity, color } = MARK;
   return (
-    <svg
-      viewBox="0 0 48 48"
-      // The brand green, flat: no glow.
-      className={`${className} fill-[#00E198] stroke-[#00E198]`}
-      aria-hidden
-    >
-      {brackets.map((pts) => (
-        <path key={pts[0].join()} d={bracketPath(pts)} fill="none" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" />
+    <svg viewBox="0 0 48 48" className={className} aria-hidden>
+      {squares.map((q, i) => (
+        <rect key={i} x={q.x} y={q.y} width={q.size} height={q.size} rx={q.r} fill="none" stroke={color} strokeWidth={stroke} strokeOpacity={i === 0 ? backOpacity : 1} />
       ))}
-      <rect x={q.x} y={q.y} width={q.size} height={q.size} rx={q.r} stroke="none" />
     </svg>
   );
 }

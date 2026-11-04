@@ -3,10 +3,7 @@
 // flow, and the most you should pay. Plain words, no lender jargon. jsPDF
 // is loaded on demand so it never weighs down the app.
 
-import { MARK, bracketPoints } from './brand.js';
-
-// The mark's green as RGB.
-const MARK_RGB = [0, 225, 152];
+import { drawMarkPdf } from './brand.js';
 import { feesLabel } from './condo.js';
 import { analyzeDeal, maxOffer, paybackYears, projectDeal, saleAnalysis } from './finance.js';
 import { money, percent } from './format.js';
@@ -88,19 +85,7 @@ export async function buildDealSheetPdf({ deal, a, rows, sale, offer }) {
   };
 
   // ---- Header: the mark, the name, where it is.
-  doc.setFillColor(...MARK_RGB);
-  doc.setDrawColor(...MARK_RGB);
-  doc.setLineWidth(MARK.stroke / 3);
-  doc.setLineCap('round');
-  doc.setLineJoin('round');
-  MARK.brackets.forEach((bracket) => {
-    const [[x0, y0], ...rest] = bracketPoints(bracket).map(([x, y]) => [m + x / 3, m + y / 3]);
-    doc.lines(rest.map(([x, y], i) => [x - (i ? rest[i - 1][0] : x0), y - (i ? rest[i - 1][1] : y0)]), x0, y0, [1, 1], 'S');
-  });
-  const q = MARK.square;
-  doc.roundedRect(m + q.x / 3, m + q.y / 3, q.size / 3, q.size / 3, q.r / 3, q.r / 3, 'F');
-  doc.setLineCap('butt');
-  doc.setLineJoin('miter');
+  drawMarkPdf(doc, m, m - 1, 17);
   text('Squarely', m + 22, m + 11.5, { size: 10, bold: true });
   text(new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' }), m + W, m + 11.5, { size: 8.5, color: MUTED, align: 'right' });
 

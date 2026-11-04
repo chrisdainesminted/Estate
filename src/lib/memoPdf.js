@@ -4,10 +4,7 @@
 import { verdict } from './dscr.js';
 import { money, percent, ratio } from './format.js';
 import { UNIT_TYPES } from './presets.js';
-import { MARK, bracketPoints } from './brand.js';
-
-// The mark's green as RGB.
-const MARK_RGB = [0, 225, 152];
+import { drawMarkPdf } from './brand.js';
 
 const PAGE = { w: 612, h: 792, m: 40 };
 const INK = [24, 24, 27];
@@ -46,19 +43,7 @@ export async function buildMemoPdf({ deal, a, rows, sale, refi, offer }) {
 
   // Header: brand mark, deal name, terms, verdict.
   // The mark (src/lib/brand.js), its 48-unit square drawn 16 pt wide.
-  doc.setFillColor(...MARK_RGB);
-  doc.setDrawColor(...MARK_RGB);
-  doc.setLineWidth(MARK.stroke / 3);
-  doc.setLineCap('round');
-  doc.setLineJoin('round');
-  MARK.brackets.forEach((bracket) => {
-    const [[x0, y0], ...rest] = bracketPoints(bracket).map(([x, y]) => [m + x / 3, m + y / 3]);
-    doc.lines(rest.map(([x, y], i) => [x - (i ? rest[i - 1][0] : x0), y - (i ? rest[i - 1][1] : y0)]), x0, y0, [1, 1], 'S');
-  });
-  const q = MARK.square;
-  doc.roundedRect(m + q.x / 3, m + q.y / 3, q.size / 3, q.size / 3, q.r / 3, q.r / 3, 'F');
-  doc.setLineCap('butt');
-  doc.setLineJoin('miter');
+  drawMarkPdf(doc, m, m - 1, 17);
   text('Squarely  ·  Deal memo', m + 22, m + 11.5, { size: 9, bold: true });
   text(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), m + W, m + 11.5, { size: 8, color: MUTED, align: 'right' });
 

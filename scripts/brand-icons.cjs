@@ -8,7 +8,7 @@ const PUBLIC = path.join(__dirname, '..', 'public');
 // Filled in from src/lib/brand.js once it's loaded (it's an ES module).
 let MARK_SVG = () => '';
 const ONYX = '#0b0b0c';
-const GREEN = '#00E198';
+const GREEN = '#73FF6A';
 const FONT = '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">';
 const mark = (size, fill = GREEN) =>
   `<svg width="${size}" height="${size}" viewBox="0 0 48 48">${MARK_SVG(fill)}</svg>`;
@@ -38,7 +38,7 @@ const og = () => `<body style="margin:0;width:1200px;height:630px;background:${O
 
 // The favicon: the mark on an onyx tile, as public/favicon.svg draws it.
 const favicon = (size) =>
-  `<body style="margin:0;width:${size}px;height:${size}px;background:transparent"><svg width="${size}" height="${size}" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="${ONYX}"/><g transform="translate(7 7) scale(0.375)">${MARK_SVG(GREEN)}</g></svg></body>`;
+  `<body style="margin:0;width:${size}px;height:${size}px;background:transparent"><svg width="${size}" height="${size}" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="${ONYX}"/><g transform="translate(5 5) scale(0.4583)">${MARK_SVG(GREEN)}</g></svg></body>`;
 
 /** An .ico holding one PNG (every current browser reads PNG inside .ico). */
 function icoFrom(png, size) {
