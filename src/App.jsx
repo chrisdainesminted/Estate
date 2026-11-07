@@ -385,6 +385,8 @@ export default function App() {
   const [scope, setScope] = useState('active');
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  // Editing a property from Portfolio: its inputs in a side panel, without leaving Portfolio.
+  const [portfolioEdit, setPortfolioEdit] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   // The landlord tab to open on, when the profile sends you to rent, repairs or the inbox.
@@ -993,9 +995,9 @@ export default function App() {
                 dark={dark}
                 onOpen={openDeal}
                 onEdit={(id) => {
-                  // Open it with its numbers ready to change: the edit sheet on phones, the inputs at the top on wider screens.
-                  openDeal(id);
-                  if (!isDesktop) setSheetOpen(true);
+                  // Its numbers in a panel over Portfolio; the totals behind it update as you type.
+                  lib.setActive(id);
+                  setPortfolioEdit(true);
                 }}
                 onAddOwned={addOwned}
                 onMarkOwned={(id) => {
@@ -1274,6 +1276,14 @@ export default function App() {
                   />
                 </Suspense>
               </div>
+            </div>
+          )}
+
+          {view === 'portfolio' && portfolioEdit && (
+            <div className="contents">
+              <Sheet open desktop onClose={() => setPortfolioEdit(false)} title={`Edit “${active.name}”`}>
+                {inputs(true)}
+              </Sheet>
             </div>
           )}
 
