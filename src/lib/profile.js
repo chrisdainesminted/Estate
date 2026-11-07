@@ -2,7 +2,7 @@
 // flow), your tenants at a glance, and messages to them filled in and ready
 // to send from your own email or phone.
 
-import { estimateToday, portfolioSummary } from './finance.js';
+import { estimateToday, portfolioSummary, positionAt } from './finance.js';
 import { daysUntil, rentReminder, rentStatus, repairUpdate, today } from './landlord.js';
 import { money } from './format.js';
 
@@ -148,3 +148,21 @@ export const initials = (text) =>
     .slice(0, 2)
     .map((w) => w[0].toUpperCase())
     .join('') || 'S';
+
+/**
+ * Equity a year at a time from today for each owned property and in total:
+ * { total: [today, year 1, …], each: Map(id → [...]) }. Values grow and loans
+ * pay down the way each deal's own numbers say.
+ */
+export function projectedEquity(items, years = 10) {
+  const list = Array.isArray(items) ? items : [];
+  const each = new Map();
+  const total = Array(years + 1).fill(0);
+  for (const { deal } of list) {
+    const age = Math.round(Math.max(Number(deal.yearsOwned) || 0, 0) * 12);
+    const path = Array.from({ length: years + 1 }, (_, k) => Math.round(positionAt(deal, age + k * 12).equity));
+    each.set(deal.id, path);
+    path.forEach((v, k) => (total[k] += v));
+  }
+  return { total, each };
+}

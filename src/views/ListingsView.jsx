@@ -9,6 +9,7 @@ import { money, percent } from '../lib/format.js';
 import { sitePage } from '../lib/site.js';
 import { Button, Card, CardHeader, DscrChip, NumberField, Segmented, SelectField, SkeletonCard, ViewHeader, signedClass } from '../components/ui.jsx';
 import { InfoTip } from '../components/motion.jsx';
+import { ListingCard, ListingDetail, MoverBanner, TickerStrip, biggestMover } from './MarketCards.jsx';
 
 const ListingsMap = lazy(() => import('../components/ListingsMap.jsx'));
 
@@ -553,7 +554,10 @@ export function CityPicker({ city, index, onCity }) {
 export default function ListingsView({ feedState, indexState, city, onCity, market, baseMarket, alerts = [], onAlerts, targets, profile, importedIds, onMarket, onAnalyze, onHide, onUnhide }) {
   const { status, feed } = feedState;
   const [sort, setSort] = useState('perDoor');
-  const [layout, setLayout] = useState('list');
+  // Cards (with photos) by default, like a stock screener; the table and map stay a click away.
+  const [layout, setLayout] = useState('cards');
+  // The listing opened on its own page, by id.
+  const [openId, setOpenId] = useState(null);
   const [alerting, setAlerting] = useState(false);
   const [onlyMeets, setOnlyMeets] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
@@ -599,6 +603,13 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
   // A tax bill typed in from a listing's page; it only ever stands in until the listing's own figure is known.
   const setTax = (l, value) => onMarket({ taxes: { ...market.taxes, [l.id]: value } });
 
+  const openListing = (id) => {
+    setOpenId(id);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const opened = openId ? ranked.find((s) => s.listing.id === openId) : null;
+  const mover = useMemo(() => biggestMover(visible), [visible]);
+
   const toggleType = (key) => {
     const on = market.types.includes(key);
     if (on && market.types.length === 1) return; // keep at least one type
@@ -643,8 +654,24 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
         </Notice>
       )}
 
-      {status === 'ready' && (
+      {status === 'ready' && opened && (
+        <ListingDetail
+          s={opened}
+          place={place}
+          imported={importedIds.has(opened.listing.id)}
+          hidden={hiddenSet.has(opened.listing.id)}
+          onBack={() => setOpenId(null)}
+          onAnalyze={onAnalyze}
+          onHide={onHide}
+          onUnhide={onUnhide}
+          onTax={setTax}
+        />
+      )}
+
+      {status === 'ready' && !opened && (
         <>
+          <TickerStrip active={active.filter((l) => !hiddenSet.has(l.id))} items={visible} fresh={freshCount} place={place} market={market} city={city} />
+          <MoverBanner mover={mover} onOpen={openListing} />
           {stale && (
             <p className="rise flex items-start gap-2 rounded-md bg-amber-500/10 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-600/20 ring-inset dark:text-amber-100 dark:ring-amber-300/20">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
@@ -721,6 +748,7 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
                 value={layout}
                 onChange={setLayout}
                 options={[
+                  { value: 'cards', label: 'Cards' },
                   { value: 'list', label: 'List' },
                   { value: 'map', label: 'Map' },
                 ]}
@@ -751,6 +779,21 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
                 <ListingsMap items={shown} place={place} homes={homes} />
               </Suspense>
             </Card>
+          ) : layout === 'cards' && shown.length > 0 ? (
+            <div>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {(showAll ? shown : shown.slice(0, 12)).map((s) => (
+                  <ListingCard key={s.listing.id} s={s} feed={feed} below={belowMap.get(s.listing.id)} place={place} onOpen={openListing} />
+                ))}
+              </div>
+              {!showAll && shown.length > 12 && (
+                <div className="mt-4 text-center">
+                  <Button onClick={() => setShowAll(true)}>
+                    Show all {shown.length} listings <ChevronDown className="size-4" aria-hidden />
+                  </Button>
+                </div>
+              )}
+            </div>
           ) : shown.length > 0 ? (
             <Card className="overflow-hidden">
               <table className="w-full text-sm">

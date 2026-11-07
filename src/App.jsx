@@ -657,17 +657,20 @@ export default function App() {
   // A listing opens as a deal with the loan its view counts: a DSCR loan on
   // Analyze, or your own 20% down on Cash.
   const analyzeListing = useCallback(
-    (listing) => {
+    // `overrides`: an offer tried on the listing's page (price, down payment, rate), carried into the deal.
+    (listing, overrides) => {
       const tab = normalizeMarket(market).lens === 'own' ? 'cash' : 'analyze';
+      const offer = overrides && typeof overrides === 'object' && !overrides.nativeEvent ? overrides : null;
       const existing = deals.find((d) => d.listingId === listing.id);
       if (existing) {
         // Saved before Squarely stopped guessing taxes: once the real bill is known, it replaces an untouched guess.
         const real = listingTaxes(listing, market);
         const guess = Math.round(((Number(existing.price) || 0) * normalizeMarket(market).taxPct) / 100);
         if (real != null && real !== existing.taxesAnnual && [guess, guess * 2].includes(existing.taxesAnnual)) lib.updateDeal(existing.id, { taxesAnnual: real });
+        if (offer) lib.updateDeal(existing.id, offer);
         lib.setActive(existing.id);
       }
-      else withUndo(`Added “${listing.address}” to your deals`, () => lib.insertDeal(listingToDeal(listing, market)));
+      else withUndo(`Added “${listing.address}” to your deals`, () => lib.insertDeal({ ...listingToDeal(listing, market), ...(offer ?? {}) }));
       setView(tab);
       window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
     },

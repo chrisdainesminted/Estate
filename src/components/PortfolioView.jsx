@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRight, Briefcase, CheckCircle2, Pencil, XCircle } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { estimateToday, portfolioSummary } from '../lib/finance.js';
+import { dealPlace, estimateToday, portfolioSummary } from '../lib/finance.js';
 import { TONE_CLASSES, TONE_TEXT, verdict } from '../lib/dscr.js';
 import { chartTheme } from '../lib/chartTheme.js';
 import { compactMoney, money, percent, ratio } from '../lib/format.js';
 import { Button, Card, CardHeader, DscrChip, ExampleTag, LedgerHeading, LedgerLine, SelectField, Stat, SummaryCard, ViewHeader, signedClass } from './ui.jsx';
 import { CHART_ANIMATE, InfoTip, Num } from './motion.jsx';
 import { Section, SectionGroup } from './Section.jsx';
+import PortfolioHero, { Sparkline, projectedEquity } from './PortfolioHero.jsx';
+import HousePhoto from './HousePhoto.jsx';
 
 const POS = { light: '#059669', dark: '#34d399' };
 const NEG = { light: '#dc2626', dark: '#f87171' };
@@ -180,14 +182,15 @@ function ImpactCard({ owned, prospects, onOpen, onMarkOwned }) {
 }
 
 function PropertiesTable({ owned, onOpen, onEdit }) {
+  const paths = useMemo(() => projectedEquity(owned, 10).each, [owned]);
   return (
     <Card delay={240}>
       <CardHeader title="Properties" subtitle="Click a property to open its full analysis, or Edit to change its numbers." />
       <div className="thin-scroll overflow-x-auto">
-        <table className="w-full min-w-[820px] text-sm">
+        <table className="w-full min-w-[940px] text-sm">
           <thead>
             <tr className="caption">
-              {['Property', 'Doors', 'Rent /mo', 'PITIA', 'Net cash flow', 'DSCR', 'Cash-on-cash', 'Equity today', 'Verdict'].map((h, i) => (
+              {['Property', 'Doors', 'Rent /mo', 'PITIA', 'Net cash flow', 'DSCR', 'Cash-on-cash', 'Equity today', '10-yr equity', 'Verdict'].map((h, i) => (
                 <th key={h} className={`px-4 py-3 font-medium first:pl-6 last:pr-6 ${i === 0 ? 'text-left' : 'text-right'}`}>
                   {h}
                 </th>
@@ -203,6 +206,9 @@ function PropertiesTable({ owned, onOpen, onEdit }) {
               return (
                 <tr key={x.deal.id} className="border-t border-hairline transition hover:bg-well">
                   <td className="py-3 pr-4 pl-6">
+                    <div className="flex items-center gap-3">
+                      <HousePhoto address={x.deal.address || x.deal.name} place={dealPlace(x.deal)} className="h-11 w-14 shrink-0 rounded-lg" width={160} height={120} iconSize="size-4" />
+                      <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <button type="button" onClick={() => onOpen(x.deal.id)} className="text-left font-medium text-zinc-900 hover:text-emerald-700 dark:text-white dark:hover:text-emerald-300">
                         {x.deal.name}
@@ -216,6 +222,8 @@ function PropertiesTable({ owned, onOpen, onEdit }) {
                       Owned {Number(x.deal.yearsOwned) || 0} {Number(x.deal.yearsOwned) === 1 ? 'year' : 'years'}
                       {x.deal.example && <ExampleTag />}
                     </div>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-300">{x.a.units}</td>
                   <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-300">{money(x.a.grossRent)}</td>
@@ -226,6 +234,9 @@ function PropertiesTable({ owned, onOpen, onEdit }) {
                   </td>
                   <td className={`px-4 py-3 text-right ${signedClass(coc)}`}>{percent(coc)}</td>
                   <td className="px-4 py-3 text-right text-zinc-900 dark:text-white">{money(today.equity)}</td>
+                  <td className="px-4 py-3">
+                    <Sparkline values={paths.get(x.deal.id)} className="ml-auto h-8 w-24" />
+                  </td>
                   <td className="py-3 pr-6 pl-4 text-right">
                     <span className={`inline-flex rounded-[3px] px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap ring-1 ring-inset ${TONE_CLASSES[v.tone]}`}>{v.label}</span>
                   </td>
@@ -268,6 +279,8 @@ export default function PortfolioView({ owned, prospects, dark, onOpen, onEdit =
   return (
     <div className="space-y-6">
       <ViewHeader title="Portfolio">The properties you own, added up on today’s numbers.</ViewHeader>
+
+      <PortfolioHero owned={owned} prospects={prospects} summary={p} onOpen={onOpen} />
 
       <SummaryCard
         head={

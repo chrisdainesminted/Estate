@@ -204,7 +204,8 @@ export function normalizeMarket(m) {
     ...DEFAULT_MARKET,
     ...(m ?? {}),
     rents,
-    lens: m?.lens === 'own' ? 'own' : 'dscr',
+    // A saved choice wins; with none, the default (20% down at a bank's rate).
+    lens: m?.lens === 'dscr' || m?.lens === 'own' ? m.lens : DEFAULT_MARKET.lens,
     types: Array.isArray(m?.types) ? m.types.filter((t) => LISTING_TYPES.some((x) => x.key === t)) : DEFAULT_MARKET.types,
     hidden: Array.isArray(m?.hidden) ? m.hidden.filter((x) => typeof x === 'string') : [],
     taxes: Object.fromEntries(Object.entries(m?.taxes && typeof m.taxes === 'object' ? m.taxes : {}).filter(([id, v]) => id.length <= 200 && Number(v) > 0 && Number(v) < 1e7).map(([id, v]) => [id, Math.round(Number(v))])),

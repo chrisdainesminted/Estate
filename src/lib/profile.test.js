@@ -92,3 +92,18 @@ describe('initials', () => {
     expect(initials('')).toBe('S');
   });
 });
+
+describe('projectedEquity', () => {
+  it('adds up each property’s equity a year at a time from today', async () => {
+    const { projectedEquity } = await import('./profile.js');
+    const { analyzeDeal } = await import('./finance.js');
+    const { DEFAULT_DEAL } = await import('./presets.js');
+    const a = { ...DEFAULT_DEAL, id: 'a', price: 300000, downPct: 20, yearsOwned: 0 };
+    const b = { ...DEFAULT_DEAL, id: 'b', price: 400000, downPct: 25, yearsOwned: 2 };
+    const { total, each } = projectedEquity([a, b].map((deal) => ({ deal, a: analyzeDeal(deal) })), 10);
+    expect(total).toHaveLength(11);
+    expect(each.get('a')[0]).toBeCloseTo(60000, -3);
+    expect(total[10]).toBeGreaterThan(total[0]);
+    expect(total[3]).toBe(each.get('a')[3] + each.get('b')[3]);
+  });
+});

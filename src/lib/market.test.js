@@ -350,8 +350,10 @@ describe('normalizeMarket', () => {
   it('fills missing settings and ignores junk', () => {
     const m = normalizeMarket({ dscrDownPct: 30, lens: 'sideways', rents: { 2: 1800, 3: 'x' }, types: ['small', 'bogus'], hidden: [1, 'a'] });
     expect(m.dscrDownPct).toBe(30);
-    expect(m.lens).toBe('dscr');
-    expect(normalizeMarket({ lens: 'own' }).lens).toBe('own');
+    // Junk or no choice: the default, 20% down at a bank's rate; a real choice is kept.
+    expect(m.lens).toBe(DEFAULT_MARKET.lens);
+    expect(normalizeMarket({}).lens).toBe('own');
+    expect(normalizeMarket({ defaults: DEFAULT_MARKET.defaults, lens: 'dscr' }).lens).toBe('dscr');
     expect(m.rents[2]).toBe(1800);
     expect(m.rents[3]).toBe(DEFAULT_MARKET.rents[3]);
     expect(m.types).toEqual(['small']);

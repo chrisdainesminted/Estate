@@ -11,6 +11,8 @@
 // - RESEND_API_KEY and EMAIL_FROM: send email (sign-in codes). With both set,
 //   a listing appears in public search only once its owner confirms their email.
 // - ADMIN_KEY: opens the review page for reported listings (/homes/#admin).
+// - GOOGLE_MAPS_KEY (optional): a Google Maps browser key with the Street View Static and Maps Static
+//   APIs on, restricted to this site's address. Listings then show a Street View photo of the house.
 // - PLUS_EMAILS: login emails, comma-separated, that have Squarely Plus for
 //   good without paying (the owner's own account, say). A secret, so the
 //   addresses stay out of the code.
@@ -698,7 +700,9 @@ async function api(request, env, url) {
     const queries = [...new Set((Array.isArray(body.queries) ? body.queries : []).filter((q) => typeof q === 'string' && q.length > 3 && q.length <= 160))].slice(0, 80);
     return answer(await directory(env).call({ op: 'geocode', queries, ip }));
   }
-  if (parts[0] === 'config' && method === 'GET') return json({ verification: canEmail(env), review: Boolean(env.ADMIN_KEY), billing: canBill(env) });
+  // mapsKey: a Google Maps browser key (GOOGLE_MAPS_KEY), for Street View and satellite photos of listings. Browser keys are public by
+  // design; restrict it to this site's address in Google Cloud so it only works here.
+  if (parts[0] === 'config' && method === 'GET') return json({ verification: canEmail(env), review: Boolean(env.ADMIN_KEY), billing: canBill(env), mapsKey: String(env.GOOGLE_MAPS_KEY || '') });
   if (parts[0] === 'stripe' && parts[1] === 'webhook' && method === 'POST') return stripeWebhook(request, env);
 
   // The site owner's review of reported listings.
