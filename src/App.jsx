@@ -46,7 +46,7 @@ import { useMarket, useMarketIndex, useTaxSales } from './hooks/useMarket.js';
 import { OWN_DOWN_PCT, analyzeDeal, applyAdjustments, isNeutralAdjustment, maxOffer, ownMoney, projectDeal, refiAnalysis, saleAnalysis } from './lib/finance.js';
 import { money, percent, ratio } from './lib/format.js';
 import { DEFAULT_DEAL, MAX_COMPARE, switchRules } from './lib/presets.js';
-import { CITY_VACANCY, LISTING_CITIES, homePatch, listingCity, listingTaxes, listingToDeal, localMarket, normalizeMarket, rankListings } from './lib/market.js';
+import { LISTING_CITIES, homePatch, listingCity, listingTaxes, listingToDeal, localMarket, normalizeMarket, rankListings } from './lib/market.js';
 import { quickDeal } from './lib/quick.js';
 import { readShared, sameDeal } from './lib/share.js';
 import { whatIfSummary } from './lib/explain.js';
@@ -87,6 +87,7 @@ import { guessCity } from './lib/canada.js';
 // Views and charts load on demand so the first screen arrives quickly.
 const PortfolioView = lazy(() => import('./components/PortfolioView.jsx'));
 const Onboarding = lazy(() => import('./components/Onboarding.jsx'));
+const OwnedPropertySheet = lazy(() => import('./components/OwnedPropertySheet.jsx'));
 const PlanView = lazy(() => import('./components/PlanView.jsx'));
 const CompareView = lazy(() => import('./views/CompareView.jsx'));
 const ListingsView = lazy(() => import('./views/ListingsView.jsx'));
@@ -547,13 +548,16 @@ export default function App() {
   const openProfile = useCallback(() => (lib.account || HOSTED ? setView('profile') : goSignIn('profile')), [lib.account, setView]);
 
   // A property you already own: a new deal marked owned, opened to fill in.
-  const addOwned = useCallback(() => {
-    const m = lib.settings.market;
-    lib.insertDeal({ ...switchRules(DEFAULT_DEAL, 'ca'), name: 'My property', city: homeCity, status: 'owned', yearsOwned: 0, vacancyPct: CITY_VACANCY[homeCity] ?? DEFAULT_DEAL.vacancyPct, downPct: OWN_DOWN_PCT, rate: m.rate, refiRate: m.rate, termYears: m.amortYears });
-    setView('analyze');
-    if (!isDesktop) setSheetOpen(true);
-    toast({ tone: 'info', text: 'Fill in what you paid, your mortgage and the rent. It’s in your portfolio and your profile’s equity.' });
-  }, [lib, homeCity, setView, isDesktop, toast]);
+  // A property you already own: a form for what you know about it; the rest is worked out (see OwnedPropertySheet).
+  const [ownedOpen, setOwnedOpen] = useState(false);
+  const addOwned = useCallback(() => setOwnedOpen(true), []);
+  const saveOwned = useCallback(
+    (deal) => {
+      withUndo(`Added “${deal.name}” to your portfolio`, () => lib.insertDeal(deal));
+      setView('portfolio');
+    },
+    [lib, withUndo, setView],
+  );
 
   // The quick check: a new deal from a price, a type and a rent, with everything else typical.
   const quickCheck = useCallback(
@@ -993,6 +997,7 @@ export default function App() {
                   openDeal(id);
                   if (!isDesktop) setSheetOpen(true);
                 }}
+                onAddOwned={addOwned}
                 onMarkOwned={(id) => {
                   const d = deals.find((x) => x.id === id);
                   withUndo(`Moved “${d?.name}” to your portfolio`, () => lib.updateDeal(id, { status: 'owned', yearsOwned: 0 }));
@@ -1331,6 +1336,11 @@ export default function App() {
             moreHidden={isDesktop && investing && !tabsUnlocked}
             onShowAll={showAllTabs}
           />
+        </Suspense>
+      )}
+      {ownedOpen && (
+        <Suspense fallback={null}>
+          <OwnedPropertySheet open onClose={() => setOwnedOpen(false)} onSave={saveOwned} market={lib.settings.market} homeCity={homeCity} />
         </Suspense>
       )}
       {(needSetup || setupOpen) && (

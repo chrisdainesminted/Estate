@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ArrowRight, Briefcase, CheckCircle2, Pencil, XCircle } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Briefcase, CheckCircle2, Pencil, Plus, XCircle } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { dealPlace, estimateToday, portfolioSummary } from '../lib/finance.js';
 import { TONE_CLASSES, TONE_TEXT, verdict } from '../lib/dscr.js';
@@ -250,7 +250,7 @@ function PropertiesTable({ owned, onOpen, onEdit }) {
   );
 }
 
-export default function PortfolioView({ owned, prospects, dark, onOpen, onEdit = onOpen, onMarkOwned }) {
+export default function PortfolioView({ owned, prospects, dark, onOpen, onEdit = onOpen, onMarkOwned, onAddOwned }) {
   const p = useMemo(() => portfolioSummary(owned), [owned]);
 
   if (!owned.length) {
@@ -259,14 +259,17 @@ export default function PortfolioView({ owned, prospects, dark, onOpen, onEdit =
         <Briefcase className="mx-auto size-7 text-zinc-500 dark:text-zinc-400" aria-hidden />
         <h2 className="mt-4 text-xl font-semibold tracking-tight text-zinc-950 dark:text-white">No owned properties yet</h2>
         <p className="mx-auto mt-2 max-w-md text-sm text-zinc-600 dark:text-zinc-400">
-          Set a deal’s status to <strong>Owned</strong> in its inputs and it rolls up here: combined cash flow, global DSCR, equity, and what each new purchase
-          would do to the whole portfolio.
+          Add the homes you own with what you paid, your down payment, your mortgage payment and the rent. Squarely works out the rest and adds them up here: equity,
+          cash flow, what you owe and where it’s headed.
         </p>
-        {prospects[0] && (
-          <Button variant="primary" className="mt-6" onClick={() => onMarkOwned(prospects[0].deal.id)}>
-            Mark “{prospects[0].deal.name}” as owned
-          </Button>
-        )}
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          {onAddOwned && (
+            <Button variant="primary" onClick={onAddOwned}>
+              <Plus className="size-4" aria-hidden /> Add a property you own
+            </Button>
+          )}
+          {prospects[0] && <Button onClick={() => onMarkOwned(prospects[0].deal.id)}>Mark “{prospects[0].deal.name}” as owned</Button>}
+        </div>
       </Card>
     );
   }
@@ -278,7 +281,18 @@ export default function PortfolioView({ owned, prospects, dark, onOpen, onEdit =
 
   return (
     <div className="space-y-6">
-      <ViewHeader title="Portfolio">The properties you own, added up on today’s numbers.</ViewHeader>
+      <ViewHeader
+        title="Portfolio"
+        aside={
+          onAddOwned && (
+            <Button variant="primary" onClick={onAddOwned}>
+              <Plus className="size-4" aria-hidden /> Add a property
+            </Button>
+          )
+        }
+      >
+        The properties you own, added up on today’s numbers.
+      </ViewHeader>
 
       <PortfolioHero owned={owned} prospects={prospects} summary={p} onOpen={onOpen} />
 
