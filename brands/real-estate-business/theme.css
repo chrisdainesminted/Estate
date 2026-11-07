@@ -1,0 +1,139 @@
+/* Homeward: warm cream pages, brown accents, DM Sans headings over Manrope.
+   scripts/rebrand.mjs puts the @import lines at the top of src/index.css and
+   the rest at the end, so these win over the Squarely look. */
+@import '@fontsource-variable/dm-sans';
+@import '@fontsource-variable/manrope';
+
+@theme {
+  --font-sans: 'Manrope Variable', 'Manrope', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'DM Sans Variable', 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+
+  /* Softer corners: fields and buttons at 12px, cards at 24px. */
+  --radius-md: 12px;
+  --radius-lg: 12px;
+  --radius-xl: 18px;
+  --radius-2xl: 24px;
+  --radius-3xl: 28px;
+
+  --color-hairline: #ebe1d1;
+  --color-rule: #c9b79c;
+  --color-well: rgb(122 90 60 / 0.06);
+
+  /* Homeward brown at Tailwind's light-to-dark steps: every emerald-* class in the app takes it. */
+  --color-emerald-50: #faf4ea;
+  --color-emerald-100: #f2e9db;
+  --color-emerald-200: #e7d7bf;
+  --color-emerald-300: #d4bb97;
+  --color-emerald-400: #bd9c72;
+  --color-emerald-500: #a3855f;
+  --color-emerald-600: #7a5a3c;
+  --color-emerald-700: #6a4c31;
+  --color-emerald-800: #563d27;
+  --color-emerald-900: #45311f;
+  --color-emerald-950: #2e2015;
+
+  /* Warm greys in place of zinc, so text and lines sit on cream. */
+  --color-zinc-50: #faf6ef;
+  --color-zinc-100: #f2ece2;
+  --color-zinc-200: #e5dac8;
+  --color-zinc-300: #d3c4ad;
+  --color-zinc-400: #a8957d;
+  --color-zinc-600: #66543f;
+  --color-zinc-700: #574735;
+  --color-zinc-800: #463829;
+  --color-zinc-900: #3a2e22;
+  --color-zinc-950: #2b2219;
+}
+
+:root {
+  --page: #faf6ef;
+  --panel: #fffdf8;
+  --raised: #fffdf8;
+  --popover: #fffdf8;
+  --soft: #f2e9db;
+  --line-strong: #e0d3bf;
+  --accent: #7a5a3c;
+  --accent-ink: #fffdf8;
+  --focus-ring: rgb(122 90 60 / 0.22);
+  --track: rgb(58 46 34 / 0.12);
+  --color-zinc-500: #7d6a56;
+  --glow: rgb(163 133 95 / 0.14);
+  --glow-soft: rgb(163 133 95 / 0.06);
+}
+
+/* Evening: the same warmth, dimmed. Light is the default; the toggle still works. */
+html.dark {
+  --page: #1a1511;
+  --panel: #211b16;
+  --raised: #261f19;
+  --popover: #29221b;
+  --soft: #241d17;
+  --line-strong: #3d3329;
+  --accent: #d9b98f;
+  --accent-ink: #1a1511;
+  --focus-ring: rgb(217 185 143 / 0.25);
+  --track: rgb(255 240 220 / 0.12);
+  --color-hairline: #2f2720;
+  --color-rule: #574a3c;
+  --color-well: rgb(255 240 220 / 0.04);
+  --color-zinc-500: #a8957d;
+  --glow: rgb(217 185 143 / 0.1);
+  --glow-soft: rgb(217 185 143 / 0.04);
+}
+
+body {
+  font-family: var(--font-sans);
+  color: #3a2e22;
+}
+html.dark body {
+  color: #f2ece2;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display);
+}
+
+.field {
+  border-radius: 12px;
+}
+
+html.dark .elevated {
+  background: linear-gradient(180deg, #2a221c, var(--panel) 45%);
+  box-shadow:
+    0 1px 0 0 rgb(255 255 255 / 0.05) inset,
+    0 40px 80px -40px rgb(0 0 0 / 0.8);
+}
+.elevated {
+  box-shadow: 0 30px 60px -36px rgb(58 46 34 / 0.35);
+}
+.shot {
+  box-shadow:
+    0 0 0 1px var(--line-strong),
+    0 40px 80px -40px rgb(58 46 34 / 0.45);
+}
+html.dark .shot {
+  box-shadow:
+    0 0 0 1px var(--line-strong),
+    0 60px 120px -40px rgb(0 0 0 / 0.9);
+}
+
+/* The homepage's moving strip of phrases. */
+@keyframes hw-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.hw-marquee {
+  animation: hw-marquee 40s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hw-marquee {
+    animation: none;
+  }
+}

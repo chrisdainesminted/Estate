@@ -211,12 +211,23 @@ name (so its accounts and workspaces are its own), and the images that carry
 the name (from `brands/<slug>/public/`). The code stays one code base, so every
 change reaches both sites.
 
-Real Estate Business is set up this way. In Cloudflare, a second Worker
-(Workers & Pages → Create → Import a repository → this repository and branch),
-named `real-estate-business`, with:
+A brand can also bring its own look. `brands/<slug>/brand.json` gives its name
+(which wins over `--name`), a stylesheet whose colours and fonts are laid over
+the site's, colour swaps for the few places a colour is written out (PDFs, the
+logo), and whether it starts light. Files in `brands/<slug>/src/` replace the
+same files in `src/`, for a brand's own logo or homepage.
+
+The second Worker, `real-estate-business`, is set up this way and now runs as
+**Homeward**: its name, its "homeward." logo, warm cream and brown colours,
+DM Sans and Manrope, light by default, and its own homepage
+(`brands/real-estate-business/src/landing/Landing.jsx`). Every tool behind it
+(the app, listings, accounts, landlord tools) is the same as the main site's.
+In Cloudflare (Workers & Pages → Create → Import a repository → this
+repository and branch):
 
 - Build command: `node scripts/rebrand.mjs --name "Real Estate Business" --slug real-estate-business --host real-estate-business.signia83.workers.dev --force && npm run build`
 - Deploy command: `npx wrangler deploy`
 
-Its link preview is made with
-`BRAND_NAME="Real Estate Business" BRAND_OUT=brands/real-estate-business/public node scripts/brand-icons.cjs`.
+Its icons and link preview are made with
+`node brands/real-estate-business/icons.cjs`. The homepage there is its own
+file, so a change to the main homepage doesn't reach it on its own.

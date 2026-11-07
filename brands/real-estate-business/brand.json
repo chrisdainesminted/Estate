@@ -1,0 +1,19 @@
+{
+  "name": "Homeward",
+  "about": "Homeward's look: its name, logo, warm cream and brown colours, DM Sans and Manrope, light by default, and its own homepage. The tools are the same as the main site's.",
+  "lightByDefault": true,
+  "themeColor": "#faf6ef",
+  "css": "theme.css",
+  "colors": {
+    "#73ff6a": "#d9b98f",
+    "#73FF6A": "#7A5A3C",
+    "#4bd144": "#7a5a3c",
+    "#278122": "#7a5a3c",
+    "#052e16": "#2e2015",
+    "39, 129, 34": "122, 90, 60",
+    "115,255,106": "217,185,143",
+    "115 255 106": "163 133 95",
+    "115_255_106": "122_90_60",
+    "16_185_129": "122_90_60"
+  }
+}
