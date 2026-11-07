@@ -6,7 +6,7 @@ const PAGE = { w: 612, h: 792, m: 48 };
 const INK = [24, 24, 27];
 const MUTED = [113, 113, 122];
 const RULE = [212, 212, 216];
-const BRAND = [4, 120, 87];
+const BRAND = [39, 129, 34];
 
 const clean = (s) =>
   String(s ?? '')

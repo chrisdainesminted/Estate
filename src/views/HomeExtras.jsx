@@ -108,7 +108,7 @@ export function ReadyChecklist({ p, ready, onReady, ratePct, taxPct, rentEach, b
         <span className="text-xs text-zinc-500 dark:text-zinc-400">Saved with your numbers</span>
       </div>
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-(--track)" role="progressbar" aria-valuemin={0} aria-valuemax={steps.length} aria-valuenow={count} aria-label="Steps done">
-        <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-[width] duration-500" style={{ width: `${(count / steps.length) * 100}%` }} />
+        <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-300 transition-[width] duration-500" style={{ width: `${(count / steps.length) * 100}%` }} />
       </div>
       <ol className="mt-4 divide-y divide-hairline">
         {steps.map((s, i) => {

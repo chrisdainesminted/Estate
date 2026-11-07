@@ -15,7 +15,7 @@ const INK = [24, 24, 27];
 const SOFT = [82, 82, 91];
 const MUTED = [120, 120, 130];
 const RULE = [222, 222, 226];
-const BRAND = [4, 120, 87];
+const BRAND = [39, 129, 34];
 const RED = [185, 28, 28];
 const TINT = [236, 248, 243];
 

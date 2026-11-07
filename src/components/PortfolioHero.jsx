@@ -28,7 +28,7 @@ export function Sparkline({ values, className = 'h-8 w-28', color }) {
   const rising = values[values.length - 1] >= values[0];
   return (
     <svg viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden className={className}>
-      <path d={linePath(values, 100)} fill="none" stroke={color ?? (rising ? '#22c55e' : '#f87171')} strokeWidth="2" vectorEffect="non-scaling-stroke" className={rising ? 'dark:stroke-[#73ff6a]' : 'dark:stroke-[#ff8a80]'} />
+      <path d={linePath(values, 100)} fill="none" stroke={color ?? (rising ? '#4bd144' : '#f87171')} strokeWidth="2" vectorEffect="non-scaling-stroke" className={rising ? 'dark:stroke-[#73ff6a]' : 'dark:stroke-[#ff8a80]'} />
     </svg>
   );
 }

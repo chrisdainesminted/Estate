@@ -11,7 +11,7 @@ import { Section, SectionGroup } from './Section.jsx';
 import PortfolioHero, { Sparkline, projectedEquity } from './PortfolioHero.jsx';
 import HousePhoto from './HousePhoto.jsx';
 
-const POS = { light: '#059669', dark: '#34d399' };
+const POS = { light: '#32a72c', dark: '#73ff6a' };
 const NEG = { light: '#dc2626', dark: '#f87171' };
 
 function CashFlowTooltip({ active, payload }) {

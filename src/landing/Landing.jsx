@@ -7,7 +7,7 @@ import { cityByKey, guessCity } from '../lib/canada.js';
 import CitySelect from '../components/CitySelect.jsx';
 import SiteFooter from '../components/SiteFooter.jsx';
 import AccountLink from '../components/AccountLink.jsx';
-import { DEFAULT_MARKET, INDEX_DOC, feedDoc, listingCity, listingTaxes, listingToDeal, localMarket, unitsOf } from '../lib/market.js';
+import { DEFAULT_MARKET, INDEX_DOC, dedupeListings, feedDoc, listingCity, listingTaxes, listingToDeal, localMarket, unitsOf } from '../lib/market.js';
 import { money } from '../lib/format.js';
 
 /**
@@ -59,7 +59,10 @@ const isIndex = (f) => !!f?.cities;
 function useFeed(city) {
   const index = useData(INDEX_DOC, isIndex);
   const shown = listingCity(null, city, index || null);
-  return { feed: useData(feedDoc(shown), isFeed), shown, index };
+  const raw = useData(feedDoc(shown), isFeed);
+  // The same home found twice (its address written two ways) counts once.
+  const feed = useMemo(() => (raw ? { ...raw, listings: dedupeListings(raw.listings) } : raw), [raw]);
+  return { feed, shown, index };
 }
 
 const median = (xs) => {
@@ -170,7 +173,7 @@ const ROTATE = [
   'Find your next deal.',
 ];
 const GRADIENT =
-  'bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 bg-clip-text text-transparent dark:from-emerald-300 dark:via-emerald-400 dark:to-teal-300';
+  'bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 bg-clip-text text-transparent dark:from-emerald-300 dark:via-emerald-400 dark:to-emerald-200';
 
 const HOLD = 2600; // ms each phrase stays before the next spin
 const SPIN_MS = 750;
@@ -290,20 +293,20 @@ function Hero({ city, onCity }) {
         <Reveal className="relative mt-14 sm:mt-20">
           <figure className="shot overflow-hidden rounded-lg bg-(--panel) max-sm:hidden">
             <img
-              src="/landing/desktop-listings-2.webp"
+              src="/landing/desktop-listings-3.webp"
               width="1600"
               height="1000"
-              alt="Squarely’s Listings tab: homes for sale ranked by cash flow, each with what it would cost to live in, the lender’s DSCR and the return."
+              alt="Squarely’s Listings tab: homes for sale in Thunder Bay ranked by cash flow per door, each with what it would cost to live in, the lender’s DSCR and the return."
               className="block h-auto w-full"
               loading="lazy"
             />
           </figure>
           <figure className="shot mx-auto max-w-[300px] overflow-hidden rounded-[22px] bg-(--panel) sm:absolute sm:-bottom-10 sm:right-6 sm:w-[24%] sm:max-w-[250px] lg:-bottom-14 lg:right-10">
             <img
-              src="/landing/phone-home-2.webp"
+              src="/landing/phone-home-3.webp"
               width="780"
-              height="1688"
-              alt="Squarely on a phone, the Home tab: you could buy up to $293,000, with what renting out a unit adds."
+              height="1328"
+              alt="Squarely on a phone, My plan: you could buy up to $490,000 today, $401,000 on your own and $89,000 more with a rental unit."
               className="block h-auto w-full"
               loading="lazy"
             />
@@ -340,7 +343,7 @@ function Estimator({ city, onCity }) {
   const bar = (v, accent) => (
     <div className="mt-2 h-2 overflow-hidden rounded-full bg-(--track)">
       <div
-        className={`h-full rounded-full transition-[width] duration-500 ease-out ${accent ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : 'bg-zinc-400 dark:bg-zinc-500'}`}
+        className={`h-full rounded-full transition-[width] duration-500 ease-out ${accent ? 'bg-gradient-to-r from-emerald-500 to-emerald-300' : 'bg-zinc-400 dark:bg-zinc-500'}`}
         style={{ width: `${Math.max((v / top) * 100, 2)}%` }}
       />
     </div>
@@ -670,9 +673,9 @@ function Features() {
               <span className="mt-3 block text-xl font-semibold tracking-tight text-zinc-950 dark:text-white">Every listing, run through your numbers.</span>
               <span className="mt-2 block max-w-sm text-[15px] leading-relaxed text-zinc-600 dark:text-zinc-400">Homes for sale in 27 cities, with the cost to live in each.</span>
               <img
-                src="/landing/phone-listings-2.webp"
+                src="/landing/phone-listings-3.webp"
                 width="780"
-                height="1688"
+                height="1328"
                 loading="lazy"
                 alt="Squarely’s Listings tab on a phone, with each home’s cost to live in."
                 className="shot mx-auto mt-6 -mb-48 w-[56%] max-w-[15rem] rounded-[20px] transition duration-500 group-hover:-translate-y-2 sm:-mb-60 lg:mt-auto lg:-mb-72"

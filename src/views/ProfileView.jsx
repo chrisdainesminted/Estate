@@ -46,7 +46,7 @@ export default function ProfileView({ owned, prospects, hosted, account, syncTex
       <ViewHeader title="Your profile">Everything you own, your tenants and your settings in one place.</ViewHeader>
 
       <Card className="overflow-hidden">
-        <div className="grid gap-6 bg-[radial-gradient(120%_140%_at_100%_0%,rgba(16,185,129,0.14),transparent_60%)] px-5 py-6 sm:px-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-center">
+        <div className="grid gap-6 bg-[radial-gradient(120%_140%_at_100%_0%,rgba(115,255,106,0.14),transparent_60%)] px-5 py-6 sm:px-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-center">
           <div className="flex min-w-0 items-center gap-4">
             <span className="grid size-14 shrink-0 place-items-center rounded-full bg-emerald-600 text-lg font-semibold text-white ring-4 ring-emerald-600/15" aria-hidden>
               {initials(email || (hosted ? 'Claude' : 'Squarely'))}

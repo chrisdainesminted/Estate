@@ -9,7 +9,7 @@ import { money } from './format.js';
 const PAGE = { w: 612, h: 792, m: 48 };
 const INK = [24, 24, 27];
 const MUTED = [113, 113, 122];
-const ACCENT = [4, 120, 87];
+const ACCENT = [39, 129, 34];
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const clean = (s) => String(s ?? '').replace(/⁠/g, '').replace(/−/g, '-').replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
 const cad = (v) => clean(money(v, { cents: true }));

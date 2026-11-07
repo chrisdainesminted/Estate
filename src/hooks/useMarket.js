@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { capability } from '../lib/runtime.js';
-import { INDEX_DOC, feedDoc } from '../lib/market.js';
+import { INDEX_DOC, dedupeListings, feedDoc } from '../lib/market.js';
 
 /**
  * One document the morning run keeps. On the hosted Claude page it's the
@@ -55,7 +55,12 @@ const isFeed = (f) => Array.isArray(f?.listings);
 const isIndex = (f) => !!f?.cities && typeof f.cities === 'object';
 
 /** The daily listings feed for one city. */
-export const useMarket = (cityKey) => useRunDoc(feedDoc(cityKey), isFeed);
+export function useMarket(cityKey) {
+  const state = useRunDoc(feedDoc(cityKey), isFeed);
+  // The same home found twice (its address written two ways) shows once.
+  const feed = useMemo(() => (state.feed ? { ...state.feed, listings: dedupeListings(state.feed.listings) } : null), [state.feed]);
+  return { ...state, feed };
+}
 
 /** Every city's feed at a glance: { cities: { key: { date, count } } }. */
 export const useMarketIndex = () => useRunDoc(INDEX_DOC, isIndex);

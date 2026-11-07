@@ -506,6 +506,35 @@ export const SORTS = {
 };
 
 /** Active listings of the chosen types, scored and sorted (cash flow per door breaks ties). */
+// "216 Leith Street" and "216 Leith" are one house: street words, directions and punctuation don't count.
+const streetKey = (a) => String(a ?? '').toLowerCase().split(',')[0].replace(/\b(street|st|avenue|ave|road|rd|drive|dr|boulevard|blvd|crescent|cres|court|ct|place|pl|north|south|east|west|n|s|e|w)\b\.?/g, '').replace(/[^a-z0-9]/g, '');
+
+/**
+ * One entry per home: the same street address at the same price, found
+ * twice by the morning run (written two ways), is kept once, as the entry
+ * with the most known (a tax bill, the unit count, the fuller address).
+ */
+export function dedupeListings(listings) {
+  const list = Array.isArray(listings) ? listings : [];
+  const score = (l) => (l.taxes != null ? 4 : 0) + (l.units != null ? 2 : 0) + String(l.address ?? '').length / 1000;
+  const groups = new Map(); // key → index in out
+  const out = [];
+  for (const l of list) {
+    const street = streetKey(l.address);
+    const k = street ? `${street}|${Math.round(Number(l.price) || 0)}` : null;
+    if (!k || !groups.has(k)) {
+      if (k) groups.set(k, out.length);
+      out.push(l);
+      continue;
+    }
+    const i = groups.get(k);
+    const had = out[i];
+    const firstSeen = [had.firstSeen, l.firstSeen].filter(Boolean).sort()[0];
+    out[i] = { ...(score(l) > score(had) ? l : had), ...(firstSeen ? { firstSeen } : {}) };
+  }
+  return out;
+}
+
 export function rankListings(listings, market, targets, { types, hidden, showHidden = false, onlyMeets = false, sort = 'perDoor' } = {}) {
   const m = normalizeMarket(market);
   const want = new Set(types ?? m.types);

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_TARGETS, allCash, analyzeDeal, maxOffer } from './finance.js';
 import { DEFAULT_DEAL } from './presets.js';
 import {
+  dedupeListings,
   refreshListingDeal,
   DEFAULT_MARKET,
   LISTING_CITIES,
@@ -537,5 +538,17 @@ describe('asking rents by city', () => {
     expect(refreshListingDeal(own)).toMatchObject({ rate: 6.2, rentPerUnit: 1450 });
     const plain = { ...d, listingId: undefined, vacancyPct: 7 };
     expect(refreshListingDeal(plain)).toBe(plain);
+  });
+});
+
+describe('dedupeListings', () => {
+  it('keeps one entry for a home written two ways at the same price', () => {
+    const a = { id: '1', address: '216 Leith Street', price: 474900, units: 5, firstSeen: '2026-11-04' };
+    const b = { id: '2', address: '216 Leith', price: 474900, units: 5, taxes: 3007, firstSeen: '2026-11-02' };
+    const c = { id: '3', address: '216 Leith Street', price: 399000 };
+    const d = { id: '4', address: '42 Ontario Street', price: 279900 };
+    const r = dedupeListings([a, b, c, d]);
+    expect(r.map((l) => l.id)).toEqual(['2', '3', '4']);
+    expect(r[0].firstSeen).toBe('2026-11-02');
   });
 });

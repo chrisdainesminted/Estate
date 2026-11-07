@@ -49,7 +49,7 @@ export default function ListingsMap({ items, place, homes }) {
         bounds.push(p);
         const good = !s.needsTax && s.perDoor >= 0;
         const home = homes?.get(s.listing.id);
-        L.circleMarker(p, { radius: 8, weight: 2, color: good ? '#059669' : '#71717a', fillColor: good ? '#34d399' : '#a1a1aa', fillOpacity: 0.85 })
+        L.circleMarker(p, { radius: 8, weight: 2, color: good ? '#32a72c' : '#71717a', fillColor: good ? '#73ff6a' : '#a1a1aa', fillOpacity: 0.85 })
           .bindPopup(
             `<strong>${esc(s.listing.address)}</strong><br>${esc(money(s.a.price))} · ${esc(s.a.units)} unit${s.a.units === 1 ? '' : 's'}<br>` +
               (s.needsTax ? 'Tax not listed yet, so no cash flow shown' : `${esc(money(s.perDoor, { signed: true }))}/door a month${home ? `<br>Live in: ${esc(money(home.costToLive))}/mo` : ''}`) +

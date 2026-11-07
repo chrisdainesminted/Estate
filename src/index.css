@@ -19,6 +19,20 @@
   --color-hairline: #e4e4e7;
   --color-rule: #a1a1aa;
   --color-well: rgb(9 9 11 / 0.035);
+
+  /* Squarely green: the logo's hue (#73ff6a, oklch hue 142.4), at Tailwind's usual light-to-dark steps,
+     so every emerald-* class in the app matches the logo. */
+  --color-emerald-50: oklch(0.982 0.02 142.4);
+  --color-emerald-100: oklch(0.962 0.045 142.4);
+  --color-emerald-200: oklch(0.93 0.09 142.4);
+  --color-emerald-300: oklch(0.905 0.18 142.4);
+  --color-emerald-400: oklch(0.86 0.22 142.4);
+  --color-emerald-500: oklch(0.76 0.215 142.4);
+  --color-emerald-600: oklch(0.64 0.19 142.4);
+  --color-emerald-700: oklch(0.53 0.155 142.4);
+  --color-emerald-800: oklch(0.45 0.12 142.4);
+  --color-emerald-900: oklch(0.39 0.095 142.4);
+  --color-emerald-950: oklch(0.27 0.065 142.4);
 }
 
 /* ---------- Theme tokens ---------- */
@@ -30,9 +44,9 @@
   --raised: #ffffff;
   --popover: #ffffff;
   --line-strong: #d4d4d8;
-  --accent: #047857;
+  --accent: #278122;
   --accent-ink: #ffffff;
-  --focus-ring: rgb(4 120 87 / 0.2);
+  --focus-ring: rgb(39 129 34 / 0.22);
   --track: rgb(9 9 11 / 0.1);
   /* Secondary text runs a touch darker than stock zinc-500 so it keeps 4.5:1 on panels and wells. */
   --color-zinc-500: #67676f;
@@ -46,9 +60,9 @@ html.dark {
   --raised: #131315;
   --popover: #141416;
   --line-strong: #2c2c30;
-  --accent: #34d399;
+  --accent: #73ff6a;
   --accent-ink: #0b0b0c;
-  --focus-ring: rgb(52 211 153 / 0.25);
+  --focus-ring: rgb(115 255 106 / 0.25);
   --track: rgb(255 255 255 / 0.12);
   --color-hairline: #232326;
   --color-rule: #4a4a52;
@@ -295,12 +309,12 @@ body::before {
     radial-gradient(36rem 22rem at 8% 70%, var(--glow-soft), transparent 70%);
 }
 :root {
-  --glow: rgb(0 225 152 / 0.12);
-  --glow-soft: rgb(0 225 152 / 0.05);
+  --glow: rgb(115 255 106 / 0.12);
+  --glow-soft: rgb(115 255 106 / 0.05);
 }
 html.dark {
-  --glow: rgb(0 225 152 / 0.16);
-  --glow-soft: rgb(0 225 152 / 0.07);
+  --glow: rgb(115 255 106 / 0.16);
+  --glow-soft: rgb(115 255 106 / 0.07);
 }
 
 /* A panel that sits a step above the page: a hairline that brightens at the top edge, and a deep soft shadow. */

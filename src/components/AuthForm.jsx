@@ -160,7 +160,7 @@ export default function AuthForm({ start = 'signup', onDone, compact = false }) 
       <button
         type="submit"
         disabled={busy}
-        className="w-full rounded-md bg-(--accent) px-4 py-2.5 text-sm font-semibold text-(--accent-ink) shadow-[0_10px_30px_-12px_rgb(16_185_129/0.7)] transition hover:brightness-110 disabled:opacity-50"
+        className="w-full rounded-md bg-(--accent) px-4 py-2.5 text-sm font-semibold text-(--accent-ink) shadow-[0_10px_30px_-12px_rgb(115_255_106/0.45)] transition hover:brightness-110 disabled:opacity-50"
       >
         {busy ? (signup ? 'Creating your account…' : 'Signing in…') : signup ? 'Create my account' : 'Sign in'}
       </button>

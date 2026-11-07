@@ -6,7 +6,7 @@ import { money, ratio } from '../lib/format.js';
 import { Segmented } from './ui.jsx';
 import { Section } from './Section.jsx';
 
-const POS = [5, 150, 105]; // emerald-600
+const POS = [50, 167, 44]; // emerald-600 (logo green)
 const NEG = [220, 38, 38]; // red-600
 
 // Diverging fill for cash flow: green above $0, red below, stronger with size.
