@@ -1,6 +1,6 @@
 import { feesLabel, isCondoDeal } from '../lib/condo.js';
 import { placeLabel } from '../lib/place.js';
-import { ChevronDown, Copy, Share2, Trash2 } from 'lucide-react';
+import { ChevronDown, Copy, Plus, Share2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { UNIT_TYPES, switchRules } from '../lib/presets.js';
 import { money, percent } from '../lib/format.js';
@@ -10,7 +10,7 @@ import RentHelper from './RentHelper.jsx';
 import CitySelect from './CitySelect.jsx';
 import { dealPlace } from '../lib/finance.js';
 import { provinceName } from '../lib/canada.js';
-import { workPatch } from '../lib/ownedHome.js';
+import { workItemsOf, workPatch } from '../lib/ownedHome.js';
 
 /**
  * A group of inputs. The basics stay open; the rest fold down to one line
@@ -50,6 +50,59 @@ function Derived({ children }) {
 
 const iconBtn = 'rounded-md p-1.5 text-zinc-500 transition dark:text-zinc-400 hover:bg-well hover:text-zinc-700 dark:hover:text-zinc-200';
 const pct = (v) => `${Number((Number(v) || 0).toFixed(2))}%`;
+
+/** Each job done on an owned place, on its own line, with + to add another. The total is what you've put in. */
+function WorkList({ deal, onChange, idPrefix }) {
+  const items = workItemsOf(deal);
+  const save = (next) => onChange(workPatch({ price: deal.price, items: next, arv: deal.arv, arvAuto: deal.arvAuto }));
+  const setItem = (i, patch) => save(items.map((w, k) => (k === i ? { ...w, ...patch } : w)));
+  const total = items.reduce((t, w) => t + w.cost, 0);
+  return (
+    <div className="col-span-2 space-y-3">
+      {items.map((w, i) => (
+        <div key={w.id} className="rounded-lg p-3 ring-1 ring-(--line-strong) ring-inset">
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <label htmlFor={`${idPrefix}-what-${w.id}`} className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                What you did
+              </label>
+              <input
+                id={`${idPrefix}-what-${w.id}`}
+                value={w.what}
+                maxLength={200}
+                placeholder="New windows"
+                onChange={(e) => setItem(i, { what: e.target.value })}
+                className="field w-full px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100"
+              />
+            </div>
+            <button type="button" onClick={() => save(items.filter((_, k) => k !== i))} aria-label={`Remove ${w.what || 'this job'}`} className={`${iconBtn} mt-6`}>
+              <Trash2 className="size-4" aria-hidden />
+            </button>
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <NumberField id={`${idPrefix}-cost-${w.id}`} label="Cost" prefix="$" value={w.cost} onChange={(v) => setItem(i, { cost: v })} step={500} decimals={0} />
+            <div>
+              <label htmlFor={`${idPrefix}-when-${w.id}`} className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                When (optional)
+              </label>
+              <input id={`${idPrefix}-when-${w.id}`} type="month" value={w.when} onChange={(e) => setItem(i, { when: e.target.value })} className="field w-full px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100" />
+            </div>
+          </div>
+        </div>
+      ))}
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => save([...items, { what: '', cost: 0 }])}
+          className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-emerald-700 ring-1 ring-(--line-strong) ring-inset hover:bg-well dark:text-emerald-400"
+        >
+          <Plus className="size-4" aria-hidden /> Add work
+        </button>
+        {items.length > 0 && <span className="tabular text-sm text-zinc-600 dark:text-zinc-400">Total {money(total)}</span>}
+      </div>
+    </div>
+  );
+}
 
 /** The deal's inputs. `bare` drops the panel's own frame, for when the phone sheet already frames them. */
 export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onDelete, onShare, bare = false }) {
@@ -293,16 +346,7 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
           defaultOpen={Number(deal.rehabCost) > 0}
           summary={Number(deal.rehabCost) > 0 ? [`${money(Number(deal.rehabCost))} spent`, deal.workNotes].filter(Boolean).join(' · ') : 'None yet'}
         >
-          <NumberField
-            id={id('work')}
-            label="Spent on it"
-            prefix="$"
-            value={deal.rehabCost}
-            onChange={(v) => onChange(workPatch({ price: deal.price, work: v, notes: deal.workNotes, arv: deal.arv, arvAuto: deal.arvAuto }))}
-            step={1000}
-            decimals={0}
-            hint="Counts as money you put in"
-          />
+          <WorkList deal={deal} onChange={onChange} idPrefix={id('work')} />
           <NumberField
             id={id('work-value')}
             label="Worth right after"
@@ -313,20 +357,6 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
             decimals={0}
             hint={deal.arvAuto !== false ? 'Price plus the work, unless you change it' : `${money(Math.max(Number(deal.arv) - Number(deal.price) - Number(deal.rehabCost || 0), 0))} more than price plus the work`}
           />
-          <div className="col-span-2">
-            <label htmlFor={id('work-notes')} className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              What you did
-            </label>
-            <textarea
-              id={id('work-notes')}
-              rows={2}
-              maxLength={500}
-              placeholder="New kitchen, roof, basement suite"
-              value={deal.workNotes ?? ''}
-              onChange={(e) => onChange({ workNotes: e.target.value })}
-              className="field w-full px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100"
-            />
-          </div>
         </Section>
       )}
 

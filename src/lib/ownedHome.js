@@ -122,18 +122,41 @@ export function ownedDeal(form, market, today = new Date()) {
   };
 }
 
+const ITEM_ID = /^[A-Za-z0-9_-]{1,24}$/;
+const newId = () => `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
+/** One job done on the place: what, what it cost, and when ('YYYY-MM', optional). */
+export function cleanWorkItem(w) {
+  return {
+    id: typeof w?.id === 'string' && ITEM_ID.test(w.id) ? w.id : newId(),
+    what: String(w?.what ?? '').slice(0, 200),
+    cost: Math.max(num(w?.cost) ?? 0, 0),
+    when: /^\d{4}-\d{2}$/.test(String(w?.when ?? '')) ? w.when : '',
+  };
+}
+
+/** The jobs on a deal; one from before jobs were listed separately (a single amount and note) becomes the first. */
+export function workItemsOf(deal) {
+  if (Array.isArray(deal?.workItems)) return deal.workItems.map(cleanWorkItem);
+  const spent = Math.max(num(deal?.rehabCost) ?? 0, 0);
+  return spent > 0 || deal?.workNotes ? [cleanWorkItem({ id: 'w0', what: deal?.workNotes ?? '', cost: spent })] : [];
+}
+
 /**
- * The deal fields for work put into an owned place: what was spent
- * (`rehabCost`, so it counts as cash put in), what was done, and its value
- * right after (`arv`): the price plus the work unless they've said otherwise
- * (`arvAuto`).
+ * The deal fields for work put into an owned place: each job
+ * (`workItems`), their total (`rehabCost`, so it counts as cash put in), a
+ * one-line summary, and its value right after (`arv`): the price plus the
+ * work unless they've said otherwise (`arvAuto`). A single `work` amount
+ * with `notes` is one job.
  */
-export function workPatch({ price, work, notes, arv, arvAuto = true }) {
-  const spent = Math.max(num(work) ?? 0, 0);
+export function workPatch({ price, items, work, notes, arv, arvAuto = true }) {
+  const list = (items ?? (num(work) > 0 || notes ? [{ what: notes, cost: work }] : [])).slice(0, 50).map(cleanWorkItem);
+  const spent = list.reduce((t, w) => t + w.cost, 0);
   const auto = arvAuto !== false;
   return {
+    workItems: list,
     rehabCost: spent,
-    workNotes: String(notes ?? '').slice(0, 500),
+    workNotes: list.map((w) => w.what.trim()).filter(Boolean).join(', ').slice(0, 500),
     arvAuto: auto,
     arv: auto ? (spent > 0 ? Math.round((num(price) ?? 0) + spent) : 0) : Math.max(num(arv) ?? 0, 0),
   };

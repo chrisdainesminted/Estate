@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { growthPct, ownedDeal, rateFromPayment, yearsSince } from './ownedHome.js';
+import { growthPct, ownedDeal, rateFromPayment, workItemsOf, workPatch, yearsSince } from './ownedHome.js';
 import { estimateToday, loanRate, monthlyPI } from './finance.js';
 
 const today = new Date(2026, 10, 7); // November 2026
@@ -73,5 +73,20 @@ describe('work put into the place', () => {
   it('flags a payment that implies an unlikely rate', () => {
     expect(ownedDeal({ ...base, down: 40000, payment: 2000 }, {}, today).highRate).toBe(true);
     expect(ownedDeal(base, {}, today).highRate).toBe(false);
+  });
+});
+
+describe('separate jobs', () => {
+  it('adds up each job and keeps the value at price plus work', () => {
+    const p = workPatch({ price: 157000, items: [{ what: 'New windows', cost: 14500, when: '2025-10' }, { what: 'Roof', cost: 9000 }] });
+    expect(p).toMatchObject({ rehabCost: 23500, arv: 180500, workNotes: 'New windows, Roof' });
+    expect(p.workItems).toHaveLength(2);
+    expect(p.workItems[0]).toMatchObject({ what: 'New windows', cost: 14500, when: '2025-10' });
+    expect(workPatch({ price: 157000, items: [] })).toMatchObject({ rehabCost: 0, arv: 0 });
+    expect(workPatch({ price: 157000, items: [{ cost: 1000 }], arv: 200000, arvAuto: false }).arv).toBe(200000);
+  });
+  it('reads a single amount from before as the first job', () => {
+    expect(workItemsOf({ rehabCost: 14500, workNotes: 'New Windows' })).toEqual([{ id: 'w0', what: 'New Windows', cost: 14500, when: '' }]);
+    expect(workItemsOf({ rehabCost: 0 })).toEqual([]);
   });
 });
