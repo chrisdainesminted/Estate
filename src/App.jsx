@@ -1007,8 +1007,8 @@ export default function App() {
                 exports={exports}
                 dealName={current?.deal?.name}
                 onHelp={() => setHelpOpen(true)}
-                onSignOut={() => {
-                  signOut();
+                onSignOut={async () => {
+                  await signOut();
                   lib.setAccount(null);
                   setView('home');
                   toast({ tone: 'info', text: 'Signed out on this device. Your account and everything in it stay saved.' });

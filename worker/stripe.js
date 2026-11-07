@@ -41,14 +41,15 @@ export function stripeClient(secret, fetchImpl = fetch) {
   return {
     createCustomer: (ws, email, metadata) => must('POST', 'customers', { email: email || undefined, metadata: metadata ?? { workspace: ws } }),
     /** Squarely Plus: $12 a month, through Stripe Checkout. */
-    subscribeSession: ({ customer, account, successUrl, cancelUrl }) =>
+    // `metadata` names who it's for: { account } for an older Squarely account, { user } for a Supabase one.
+    subscribeSession: ({ customer, account, metadata = { account }, successUrl, cancelUrl }) =>
       must('POST', 'checkout/sessions', {
         mode: 'subscription',
         customer,
         client_reference_id: account,
         line_items: { 0: { quantity: 1, price_data: { currency: 'cad', unit_amount: PLUS_CENTS, recurring: { interval: 'month' }, product_data: { name: 'Squarely Plus' } } } },
-        subscription_data: { metadata: { account } },
-        metadata: { account },
+        subscription_data: { metadata },
+        metadata,
         allow_promotion_codes: 'true',
         success_url: successUrl,
         cancel_url: cancelUrl,

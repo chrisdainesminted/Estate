@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { accountCall, accountLink } from '../lib/account.js';
+import { accountCall, accountLink, sameLink } from '../lib/account.js';
 
 /**
  * The signed-in account on any page: its link, everything saved to it, and
@@ -24,7 +24,9 @@ export function useAccount() {
   dataRef.current = data;
 
   useEffect(() => {
-    const on = () => setLink(accountLink());
+    const on = () => setLink((cur) => (sameLink(cur, accountLink()) ? cur : accountLink()));
+    // A sign-in can land before this listens (an email link, read as the page opens): look once now too.
+    on();
     window.addEventListener('bedrock-account', on);
     window.addEventListener('storage', on);
     return () => {

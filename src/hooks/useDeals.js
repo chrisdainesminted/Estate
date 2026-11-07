@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { DEFAULT_DEAL, MAX_COMPARE, makeDeal, switchRules } from '../lib/presets.js';
 import { guessCity } from '../lib/canada.js';
 import { capability } from '../lib/runtime.js';
-import { accountLink, accountRef } from '../lib/account.js';
+import { accountLink, accountRef, sameLink } from '../lib/account.js';
 import { cleanAlert } from '../../worker/account.js';
 import { DEFAULT_TARGETS, DEFAULT_TAX, OWN_DOWN_PCT } from '../lib/finance.js';
 import { DEFAULT_PLAN } from '../lib/growth.js';
@@ -128,7 +128,9 @@ export function useDeals() {
   const [account, setAccount] = useState(accountLink);
   // Signing in or out anywhere on the page (or in another tab) switches the sync target.
   useEffect(() => {
-    const on = () => setAccount(accountLink());
+    const on = () => setAccount((cur) => (sameLink(cur, accountLink()) ? cur : accountLink()));
+    // A sign-in can land before this listens: look once now too.
+    on();
     window.addEventListener('bedrock-account', on);
     window.addEventListener('storage', on);
     return () => {

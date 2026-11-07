@@ -66,10 +66,10 @@ export default function AccountSheet({ open, onClose, hosted, account, onAccount
                 </a>{' '}
                 for saved homes, applications, rentals and workspaces.
               </p>
-              <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">Backup link (opens the account without a password; keep it private):</p>
+              {link && <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">Backup link (opens the account without a password; keep it private):</p>}
             </div>
-            <input readOnly value={link} aria-label="Your account link" onFocus={(e) => e.target.select()} className={`${field} font-mono text-xs`} />
-            <div className="flex flex-wrap gap-2">
+            {link && <input readOnly value={link} aria-label="Your account link" onFocus={(e) => e.target.select()} className={`${field} font-mono text-xs`} />}
+            {link && <div className="flex flex-wrap gap-2">
               <Button onClick={() => navigator.clipboard?.writeText(link).then(() => (setCopied(true), setTimeout(() => setCopied(false), 1500)))}>
                 <Copy className="size-4" aria-hidden /> {copied ? 'Copied' : 'Copy link'}
               </Button>
@@ -79,7 +79,7 @@ export default function AccountSheet({ open, onClose, hosted, account, onAccount
               >
                 <Mail className="size-4" aria-hidden /> Email it to myself
               </a>
-            </div>
+            </div>}
 
             <PlusSection />
 
@@ -145,17 +145,17 @@ export default function AccountSheet({ open, onClose, hosted, account, onAccount
             </section>
 
             <section className="flex flex-wrap gap-2 border-t border-hairline pt-5">
-              <Button variant="ghost" onClick={() => confirm('Sign out on this device? Your account stays; sign in again any time.') && (signOut(), onAccount(null))}>
+              <Button variant="ghost" onClick={() => confirm('Sign out on this device? Your account stays; sign in again any time.') && signOut().then(() => onAccount(null))}>
                 Sign out on this device
               </Button>
               <Button
                 variant="ghost"
                 className="text-red-700 dark:text-red-300"
                 onClick={() =>
-                  confirm('Delete your account? Everything saved to it is erased and the link stops working. This browser keeps its own copy.') &&
+                  confirm('Delete your account? Everything saved to it is erased, and your email and password stop working. This browser keeps its own copy.') &&
                   run(async () => {
                     await accountCall(account, '', { method: 'DELETE' });
-                    signOut();
+                    await signOut();
                     onAccount(null);
                   })
                 }

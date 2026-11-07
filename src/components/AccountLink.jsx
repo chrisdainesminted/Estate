@@ -7,6 +7,7 @@ export default function AccountLink({ className = '' }) {
   const [signedIn, setSignedIn] = useState(() => Boolean(accountLink()));
   useEffect(() => {
     const on = () => setSignedIn(Boolean(accountLink()));
+    on();
     window.addEventListener('bedrock-account', on);
     window.addEventListener('storage', on);
     return () => {

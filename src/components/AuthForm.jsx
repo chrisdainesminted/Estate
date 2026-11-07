@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import { forgotPassword, signIn, signUp } from '../lib/account.js';
+import { forgotPassword, linkError, signIn, signUp } from '../lib/account.js';
 
 const field = 'field w-full px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100';
 const label = 'mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400';
@@ -12,9 +12,25 @@ export default function AuthForm({ start = 'signup', onDone, compact = false }) 
   const [password, setPassword] = useState('');
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(linkError);
   const [sent, setSent] = useState('');
+  // Supabase wants the email confirmed first: the link it sends signs them in.
+  const [confirm, setConfirm] = useState('');
   const signup = mode === 'signup';
+
+  if (confirm) {
+    return (
+      <div className="space-y-4" role="status">
+        <p className="text-lg font-semibold text-zinc-950 dark:text-white">Check your email</p>
+        <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+          We sent a link to <span className="font-medium text-zinc-900 dark:text-white">{confirm}</span>. Open it to confirm your email and you’re in. It can take a minute; check spam too.
+        </p>
+        <button type="button" onClick={() => (setConfirm(''), setMode('signin'))} className="text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+          Already confirmed? Sign in
+        </button>
+      </div>
+    );
+  }
 
   if (mode === 'forgot') {
     return (
@@ -72,6 +88,11 @@ export default function AuthForm({ start = 'signup', onDone, compact = false }) 
     setError('');
     try {
       const link = await (signup ? signUp(email, password) : signIn(email, password));
+      if (link?.confirm) {
+        setConfirm(link.email);
+        setBusy(false);
+        return;
+      }
       onDone?.(link, mode);
     } catch (err) {
       setError(err.message === 'Failed to fetch' ? 'This works on the Squarely website.' : err.message);

@@ -19,6 +19,9 @@
 // - STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET: landlord billing (pricing.js).
 //   A daily job charges each landlord with a card once a month; the webhook
 //   at /api/stripe/webhook hears when a card is saved or a charge settles.
+// - SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY: accounts
+//   in Supabase (supabase.js). With all three set, people sign up and sign in
+//   with Supabase Auth and everything they save is kept in its database.
 
 import { DurableObject } from 'cloudflare:workers';
 import { COLLECTIONS } from './schema.js';
@@ -35,6 +38,7 @@ import { monthlyBill } from './pricing.js';
 import { stripeClient, verifyWebhook } from './stripe.js';
 import { MAX_PLAN_BYTES, readBlueprint } from './blueprint.js';
 import { askSquarely } from './ask.js';
+import { MeStore, compEmails, isUuid, plusOwner, supabaseDb, supabaseOn, supabasePublic, verifyUser } from './supabase.js';
 
 const MAX_BODY = 32 * 1024;
 const MAX_PHOTO = 1_500_000;
@@ -422,6 +426,9 @@ export class Account extends DurableObject {
       switch (req.op) {
         case 'read':
           return a.read();
+        case 'export':
+          // Everything, for moving this account to Supabase.
+          return { ...a.read(), plusRaw: a.plus(), lastSent: a.lastSent(), readySent: a.meta('readySent') || '' };
         case 'write': {
           // Turning the savings-month email on or off changes whether the daily run looks at this account.
           const reminder = (d) => `${d?.settings?.home?.remindReady === true}|${d?.settings?.home?.readyBy ?? ''}`;
@@ -524,46 +531,67 @@ export class Account extends DurableObject {
     await directory(this.env).setAlerting(id, Boolean(r.emailVerified && r.email && ((r.alerts.length && r.plus.active) || remind)));
   }
 
-  /** The day's alert email: listings new or cheaper since the last one, for each alert. */
+  /** The day's alert email (see sendDigest). */
   async digest(id, today, origin) {
     const a = this.store;
     if (!a.ready) return { sent: false };
-    const { data, alerts, email, emailVerified } = a.read();
-    if (!emailVerified || !email) return { sent: false };
-    const since = a.lastSent() || today;
-    const market = data?.settings?.market;
-    const profile = withGift(data?.settings?.home);
-    // The month the savings plan said they'd be ready: one email, once.
-    const note = readyReminder({ profile: data?.settings?.home, ratePct: normalizeMarket(market).rate, today, origin, sent: a.meta('readySent') || '' });
-    if (note) {
-      await sendEmail(this.env, email, note.subject, `${note.body}\n\nTo stop these emails, open Squarely and turn off email in your account.`);
-      a.setMeta('readySent', note.month);
-    }
-    if (!alerts.length || !a.isPlus) return { sent: Boolean(note) };
-    const feeds = new Map();
-    const sections = [];
-    for (const alert of alerts) {
-      if (!feeds.has(alert.city)) {
-        const res = await this.env.ASSETS.fetch(new Request(`${origin}/data/${feedDoc(alert.city)}.json`));
-        feeds.set(alert.city, res.ok ? await res.json().catch(() => null) : null);
-      }
-      const fresh = freshMatches(alertMatches(alert, feeds.get(alert.city), { market, profile, homeFor }), alert.since > since ? alert.since : since);
-      if (fresh.length) sections.push({ alert, fresh });
-    }
-    a.markSent(today);
-    if (!sections.length) return { sent: false };
-    const { cityByKey } = await import('../src/lib/canada.js');
-    const body = sections
-      .map(({ alert, fresh }) =>
-        [
-          `${alertName(alert, cityByKey(alert.city).name)}: ${fresh.length} new or cheaper`,
-          ...fresh.slice(0, 10).map(({ listing: l, costToLive, perDoor }) => `- ${l.address}, $${Math.round(l.price).toLocaleString('en-CA')}${costToLive != null ? `, about ${Math.round(costToLive).toLocaleString('en-CA')}/mo to live in` : ''}${perDoor == null ? ', tax not listed yet' : `, ${perDoor >= 0 ? '+' : '-'}${Math.abs(Math.round(perDoor)).toLocaleString('en-CA')}/door`}\n  ${l.url}`),
-        ].join('\n'),
-      )
-      .join('\n\n');
-    await sendEmail(this.env, email, `Squarely: ${sections.reduce((n, x) => n + x.fresh.length, 0)} homes match your alerts`, `${body}\n\nSee them all in Squarely: ${origin}/app/?view=listings\n\nTo stop these emails, open Squarely and turn off email alerts in your account.`);
-    return { sent: true };
+    const r = a.read();
+    if (!r.emailVerified || !r.email) return { sent: false };
+    const out = await sendDigest(
+      this.env,
+      { data: r.data, alerts: r.alerts, email: r.email, plus: a.isPlus, lastSent: a.lastSent(), readySent: a.meta('readySent') || '' },
+      today,
+      origin,
+      async (p) => {
+        if (p.readySent) a.setMeta('readySent', p.readySent);
+        if (p.lastSent) a.markSent(p.lastSent);
+      },
+    );
+    return { sent: out.sent };
   }
+}
+
+/**
+ * One person's email for the day: the savings-month note when it's due,
+ * and listings new or cheaper since the last email, for each alert (alerts
+ * are part of Plus). `remember` saves { readySent } and { lastSent } as
+ * soon as each is true, so nothing is sent twice.
+ */
+async function sendDigest(env, { data, alerts, email, plus, lastSent, readySent }, today, origin, remember) {
+  const since = lastSent || today;
+  const market = data?.settings?.market;
+  const profile = withGift(data?.settings?.home);
+  let sent = false;
+  // The month the savings plan said they'd be ready: one email, once.
+  const note = readyReminder({ profile: data?.settings?.home, ratePct: normalizeMarket(market).rate, today, origin, sent: readySent || '' });
+  if (note) {
+    await sendEmail(env, email, note.subject, `${note.body}\n\nTo stop these emails, open Squarely and turn off email in your account.`);
+    await remember({ readySent: note.month });
+    sent = true;
+  }
+  if (!alerts?.length || !plus) return { sent };
+  const feeds = new Map();
+  const sections = [];
+  for (const alert of alerts) {
+    if (!feeds.has(alert.city)) {
+      const res = await env.ASSETS.fetch(new Request(`${origin}/data/${feedDoc(alert.city)}.json`));
+      feeds.set(alert.city, res.ok ? await res.json().catch(() => null) : null);
+    }
+    const fresh = freshMatches(alertMatches(alert, feeds.get(alert.city), { market, profile, homeFor }), alert.since > since ? alert.since : since);
+    if (fresh.length) sections.push({ alert, fresh });
+  }
+  await remember({ lastSent: today });
+  if (!sections.length) return { sent };
+  const body = sections
+    .map(({ alert, fresh }) =>
+      [
+        `${alertName(alert, cityByKey(alert.city).name)}: ${fresh.length} new or cheaper`,
+        ...fresh.slice(0, 10).map(({ listing: l, costToLive, perDoor }) => `- ${l.address}, $${Math.round(l.price).toLocaleString('en-CA')}${costToLive != null ? `, about ${Math.round(costToLive).toLocaleString('en-CA')}/mo to live in` : ''}${perDoor == null ? ', tax not listed yet' : `, ${perDoor >= 0 ? '+' : '-'}${Math.abs(Math.round(perDoor)).toLocaleString('en-CA')}/door`}\n  ${l.url}`),
+      ].join('\n'),
+    )
+    .join('\n\n');
+  await sendEmail(env, email, `Squarely: ${sections.reduce((n, x) => n + x.fresh.length, 0)} homes match your alerts`, `${body}\n\nSee them all in Squarely: ${origin}/app/?view=listings\n\nTo stop these emails, open Squarely and turn off email alerts in your account.`);
+  return { sent: true };
 }
 
 async function readBody(request, max = MAX_BODY) {
@@ -594,8 +622,16 @@ async function api(request, env, url) {
     return json({ id, key }, 201);
   }
 
+  // Accounts in Supabase: everything with the person's access token.
+  if (parts[0] === 'me') {
+    if (!supabaseOn(env)) return json({ error: 'Not found.' }, 404);
+    return meApi(request, env, url, parts.slice(1).join('/'), method);
+  }
+  const moved = () => json({ error: 'Squarely accounts have moved. Make your account again with the same email; your saved deals come with you.' }, 410);
+
   // Accounts: create one, then everything else with its key.
   if (parts[0] === 'accounts' && parts.length === 1 && method === 'POST') {
+    if (supabaseOn(env)) return moved();
     const id = randomToken(12);
     const key = randomToken(24);
     const res = await env.ACCOUNT.get(env.ACCOUNT.idFromName(id)).call({ op: 'init', key });
@@ -626,6 +662,7 @@ async function api(request, env, url) {
     }
     if (parts[1] === 'reset') return answer(await directory(env).auth({ op: 'reset', email, token: body.token, password: body.password, ip }));
     if (parts[1] === 'signup') {
+      if (supabaseOn(env)) return moved();
       // Attach the account this browser already has, if it sends one that opens; otherwise start a new one.
       let account = null;
       if (body.account && ID.test(body.account.id ?? '') && typeof body.account.key === 'string') {
@@ -702,7 +739,7 @@ async function api(request, env, url) {
   }
   // mapsKey: a Google Maps browser key (GOOGLE_MAPS_KEY), for Street View and satellite photos of listings. Browser keys are public by
   // design; restrict it to this site's address in Google Cloud so it only works here.
-  if (parts[0] === 'config' && method === 'GET') return json({ verification: canEmail(env), review: Boolean(env.ADMIN_KEY), billing: canBill(env), mapsKey: String(env.GOOGLE_MAPS_KEY || '') });
+  if (parts[0] === 'config' && method === 'GET') return json({ verification: canEmail(env), review: Boolean(env.ADMIN_KEY), billing: canBill(env), mapsKey: String(env.GOOGLE_MAPS_KEY || ''), supabase: supabasePublic(env) });
   if (parts[0] === 'stripe' && parts[1] === 'webhook' && method === 'POST') return stripeWebhook(request, env);
 
   // The site owner's review of reported listings.
@@ -796,6 +833,77 @@ async function api(request, env, url) {
   return answer(await ws.call({ ...call, ws: wsId }));
 }
 
+/**
+ * /api/me: the signed-in person's account in Supabase, with the same
+ * requests and answers as /api/a/<id> (the older accounts), plus 'import'
+ * to bring one of those over.
+ */
+async function meApi(request, env, url, sub, method) {
+  const user = await verifyUser(env, (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, ''));
+  // A whole library, or a plan as base64, is bigger than an ordinary request.
+  const limit = sub === 'blueprint' ? Math.ceil(MAX_PLAN_BYTES * 1.4) : sub === '' ? 2_000_000 : sub === 'ask' ? 64 * 1024 : MAX_BODY;
+  const body = method === 'GET' || method === 'DELETE' ? null : await readBody(request, limit);
+  const me = new MeStore(supabaseDb(env), user, { comp: compEmails(env) });
+  const post = method === 'POST';
+  const section = /^s\/([a-z]+)$/.exec(sub);
+
+  if (sub === '' && method === 'GET') return json(await me.read());
+  if (sub === '' && method === 'PUT') return json(await me.write(body?.data, body?.updatedAt));
+  if (sub === '' && method === 'DELETE') return json(await me.wipe());
+  if (sub === 'alerts' && method === 'PUT') return json({ alerts: await me.setAlerts(body?.alerts) });
+  if (section && method === 'PUT') return json({ [section[1]]: await me.setSection(section[1], body?.value) });
+  if (sub === 'email' && post) {
+    if (!canEmail(env)) throw new StoreError(501, 'Email isn’t set up on this site yet; alerts show in the app for now.');
+    const { email, code } = await me.startEmail(body?.email);
+    await sendEmail(env, email, `Your Squarely code: ${code}`, `Your code is ${code}. Enter it in Squarely to get listing alerts by email. It expires in 15 minutes.\n\nIf you didn’t ask for this, ignore this email.`);
+    return json({ ok: true, email });
+  }
+  if (sub === 'email/check' && post) return json(await me.finishEmail(body?.code));
+  if (sub === 'email' && method === 'DELETE') return json(await me.dropEmail());
+  if (sub === 'plus' && post) {
+    if (!canBill(env)) throw new StoreError(501, 'Squarely Plus isn’t on sale on this site yet.');
+    if (await me.isPlus()) throw new StoreError(409, 'You already have Squarely Plus.');
+    const stripe = stripeClient(env.STRIPE_SECRET_KEY);
+    let { customer } = await me.plus();
+    if (!customer) {
+      customer = (await stripe.createCustomer(null, user.email, { user: user.id })).id;
+      await me.setPlus({ customer });
+    }
+    const back = `${url.origin}/app/`;
+    const session = await stripe.subscribeSession({ customer, account: user.id, metadata: { user: user.id }, successUrl: `${back}?plus=welcome`, cancelUrl: `${back}?plus=cancelled` });
+    return json({ url: session.url });
+  }
+  if (sub === 'plus/manage' && post) {
+    const { customer } = await me.plus();
+    if (!canBill(env) || !customer) throw new StoreError(404, 'There’s no subscription on this account.');
+    return json({ url: (await stripeClient(env.STRIPE_SECRET_KEY).portalSession(customer, `${url.origin}/app/`)).url });
+  }
+  if (sub === 'blueprint' && post) {
+    if (!(await me.isPlus())) throw new StoreError(402, 'Reading blueprints is part of Squarely Plus.');
+    if (!env.ANTHROPIC_API_KEY) throw new StoreError(501, 'Reading blueprints isn’t switched on for this site yet. Type the rooms in for now.');
+    await me.useDaily('blueprint', 20);
+    return json(await readBlueprint(env.ANTHROPIC_API_KEY, body ?? {}));
+  }
+  if (sub === 'ask' && post) {
+    if (!(await me.isPlus())) throw new StoreError(402, 'Ask Squarely on the website is part of Squarely Plus.');
+    if (!env.ANTHROPIC_API_KEY) throw new StoreError(501, 'Ask Squarely isn’t switched on for this site yet.');
+    await me.useDaily('ask', 40);
+    return json(await askSquarely(env.ANTHROPIC_API_KEY, body ?? {}));
+  }
+  if (sub === 'import' && post) {
+    // An account from before: its private link ({ id, key }), from this browser or from signing in with its old password.
+    const id = String(body?.id || '');
+    if (!ID.test(id) || typeof body?.key !== 'string') throw new StoreError(400, 'That isn’t an account link.');
+    const old = await env.ACCOUNT.get(env.ACCOUNT.idFromName(id)).call({ op: 'export', id, key: body.key });
+    if (old?.error) throw new StoreError(400, 'That older account didn’t open. It may have been deleted.');
+    const r = await me.importLegacy(id, old);
+    // Its emails now come from the new account only.
+    await directory(env).setAlerting(id, false);
+    return json(r);
+  }
+  return json({ error: 'Not found.' }, 404);
+}
+
 /** Stripe tells us when a card is saved and when a charge settles. */
 async function stripeWebhook(request, env) {
   if (!canBill(env)) return json({ error: 'Not set up.' }, 404);
@@ -805,18 +913,31 @@ async function stripeWebhook(request, env) {
   const obj = event.data?.object ?? {};
   // Squarely Plus: the subscription's state, kept on the account it was bought for.
   const accountId = obj.metadata?.account;
-  if (accountId && ID.test(accountId)) {
-    const acct = env.ACCOUNT.get(env.ACCOUNT.idFromName(accountId));
-    if (event.type === 'checkout.session.completed' && obj.mode === 'subscription') await acct.plusUpdate(accountId, { status: 'active', customer: obj.customer, subscription: obj.subscription });
+  const userId = obj.metadata?.user;
+  if ((accountId && ID.test(accountId)) || isUuid(userId)) {
+    let patch = null;
+    if (event.type === 'checkout.session.completed' && obj.mode === 'subscription') patch = { status: 'active', customer: obj.customer, subscription: obj.subscription };
     if (event.type.startsWith('customer.subscription.')) {
       const end = obj.current_period_end ?? obj.items?.data?.[0]?.current_period_end;
-      await acct.plusUpdate(accountId, {
+      patch = {
         status: event.type === 'customer.subscription.deleted' ? 'canceled' : obj.status,
         subscription: obj.id,
         customer: obj.customer,
         until: end ? end * 1000 : 0,
         cancelAt: obj.cancel_at_period_end && end ? end * 1000 : 0,
-      });
+      };
+    }
+    if (patch && accountId && ID.test(accountId)) await env.ACCOUNT.get(env.ACCOUNT.idFromName(accountId)).plusUpdate(accountId, patch);
+    if (patch && supabaseOn(env)) {
+      // Bought in Supabase, or on an older account that has since moved there.
+      const db = supabaseDb(env);
+      const owner = await plusOwner(db, { user: userId, account: accountId });
+      try {
+        if (owner) await new MeStore(db, { id: owner, email: '' }).setPlus(patch);
+      } catch (e) {
+        // The person deleted their account since: nothing to keep in step. Anything else, Stripe tries again.
+        if (!(e instanceof StoreError && e.status === 404)) throw e;
+      }
     }
     return json({ ok: true });
   }
@@ -868,6 +989,26 @@ async function sendTaxReminders(env) {
   }
 }
 
+/** Each day, at most 50 Supabase accounts' emails: alerts and the savings-month note. */
+async function sendSupabaseAlerts(env) {
+  if (!canEmail(env) || !supabaseOn(env)) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const origin = env.SITE_URL || 'https://bedrock.signia83.workers.dev';
+  const db = supabaseDb(env);
+  const comp = compEmails(env);
+  for (const row of (await db.rpc('squarely_due_alerts', { p_today: today, p_limit: 50 })) ?? []) {
+    const me = new MeStore(db, { id: row.user_id, email: row.login_email || '' }, { comp });
+    const remember = (p) => db.update('accounts', { user_id: `eq.${row.user_id}` }, { ...(p.readySent ? { ready_sent: p.readySent } : {}), ...(p.lastSent ? { last_sent: p.lastSent } : {}) });
+    try {
+      await sendDigest(env, { data: row.library, alerts: row.alerts, email: row.alert_email, plus: await me.isPlus(), lastSent: row.last_sent || '', readySent: row.ready_sent || '' }, today, origin, remember);
+    } catch (e) {
+      console.error('alerts failed', e?.message);
+    }
+    // Looked at today, whether or not anything went out: tomorrow it's someone else's turn first.
+    await remember({ lastSent: today }).catch(() => {});
+  }
+}
+
 /** Each day, at most 50 accounts' alert emails (only once email is set up). */
 async function sendAlerts(env) {
   if (!canEmail(env) || !env.ACCOUNT) return;
@@ -885,7 +1026,7 @@ async function sendAlerts(env) {
 
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(Promise.all([chargeMonth(env), sendAlerts(env), sendTaxReminders(env)]));
+    ctx.waitUntil(Promise.all([chargeMonth(env), sendAlerts(env), sendSupabaseAlerts(env), sendTaxReminders(env)]));
   },
 
   async fetch(request, env) {

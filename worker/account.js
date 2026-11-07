@@ -8,7 +8,7 @@
 import { StoreError, hashKey } from './store.js';
 import { APPLY_FIELDS, clean } from './schema.js';
 
-const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
+export const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
 const MAX_DATA = 1_500_000; // characters of saved library
 const MAX_ALERTS = 10;
 const CITY = /^[a-z-]{2,30}$/;
@@ -69,6 +69,11 @@ export function cleanAlert(a, i = 0) {
     minPerDoor: Number.isFinite(Number(a.minPerDoor)) && a.minPerDoor !== '' && a.minPerDoor != null ? Math.round(Number(a.minPerDoor)) : null,
     since: typeof a.since === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(a.since) ? a.since : new Date().toISOString().slice(0, 10),
   };
+}
+
+/** A paid-up subscription: active or on trial, or a failed renewal still inside the period already paid for. */
+export function plusActive(p, now = Date.now()) {
+  return ['active', 'trialing'].includes(p?.status) || (p?.status === 'past_due' && Number(p?.until) > now);
 }
 
 export class AccountStore {
@@ -219,11 +224,9 @@ export class AccountStore {
     return Boolean(login) && this.comp.has(login);
   }
 
-  /** Paid up: active or on trial, or a failed renewal still inside the period already paid for; or Plus for good. */
+  /** Paid up, or Plus for good. */
   get isPlus() {
-    if (this.compPlus) return true;
-    const p = this.plus();
-    return ['active', 'trialing'].includes(p.status) || (p.status === 'past_due' && Number(p.until) > this.now());
+    return this.compPlus || plusActive(this.plus(), this.now());
   }
 
   /** At most `max` uses of something costly a day (reading blueprints). */

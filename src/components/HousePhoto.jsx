@@ -1,21 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Home, Satellite } from 'lucide-react';
 import { photoPlace, photoUrl } from '../lib/photos.js';
+import { siteConfig } from '../lib/siteConfig.js';
 
 // The site's Google Maps browser key, asked for once per page load. None on
 // the Claude page or before the owner adds one: houses show a drawn
 // placeholder instead.
 let keyPromise = null;
 function loadKey() {
-  if (!keyPromise) {
-    keyPromise =
-      typeof fetch === 'function' && typeof window !== 'undefined' && /^https?:/.test(window.location.protocol)
-        ? fetch('/api/config')
-            .then((r) => (r.ok ? r.json() : {}))
-            .then((c) => String(c.mapsKey || ''))
-            .catch(() => '')
-        : Promise.resolve('');
-  }
+  if (!keyPromise) keyPromise = siteConfig().then((c) => String(c.mapsKey || ''));
   return keyPromise;
 }
 

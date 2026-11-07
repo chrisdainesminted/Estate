@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BellRing, Building2, Calculator, Copy, ExternalLink, FileText, Heart, Home, KeyRound, LogOut, Trash2, UserRound, Wallet } from 'lucide-react';
 import PageShell, { h1 } from './PageShell.jsx';
 import AuthForm from '../components/AuthForm.jsx';
 import { useAccount } from '../hooks/useAccount.js';
 import { safeNext } from '../lib/gate.js';
-import { accountCall, accountUrl, changePassword, resetPassword, signOut } from '../lib/account.js';
+import { accountCall, accountUrl, bringOverWithPassword, changePassword, linkError, onRecovery, readReset, resetPassword, signOut, usingSupabase } from '../lib/account.js';
 import { saveWorkspace } from '../lib/landlordApi.js';
 import { money } from '../lib/format.js';
 import { cityByKey } from '../lib/canada.js';
@@ -98,6 +98,62 @@ function RentalProfile({ profile, onSave }) {
   );
 }
 
+/** Squarely accounts from before Supabase: sign in to one with its old password once, and its deals and saves come here. */
+function BringOver() {
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState('');
+  const [pw, setPw] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  if (!open) {
+    return (
+      <div>
+        <p className="font-medium text-zinc-900 dark:text-white">Had a Squarely account before?</p>
+        <p className="mt-0.5 text-zinc-500 dark:text-zinc-400">Accounts moved to a new sign-in. Bring your old deals, saved homes and workspaces here.</p>
+        <button type="button" className={`${btn} mt-2`} onClick={() => setOpen(true)}>
+          Bring over my old account
+        </button>
+      </div>
+    );
+  }
+  return (
+    <form
+      className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setBusy(true);
+        setMsg('');
+        try {
+          await bringOverWithPassword(email, pw);
+          setMsg('Done. Your old account is here now.');
+          setTimeout(() => window.location.reload(), 900);
+        } catch (err) {
+          setMsg(err.message);
+        }
+        setBusy(false);
+      }}
+    >
+      <p className="text-zinc-600 sm:col-span-3 dark:text-zinc-400">Sign in with your old account’s email and password, once.</p>
+      <div>
+        <label htmlFor="old-email" className={label}>
+          Old account email
+        </label>
+        <input id="old-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={field} />
+      </div>
+      <div>
+        <label htmlFor="old-pw" className={label}>
+          Old password
+        </label>
+        <input id="old-pw" type="password" required autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} className={field} />
+      </div>
+      <button type="submit" disabled={busy} className={btn}>
+        {busy ? 'Bringing it over…' : 'Bring it over'}
+      </button>
+      {msg && <p className="text-zinc-600 sm:col-span-3 dark:text-zinc-400">{msg}</p>}
+    </form>
+  );
+}
+
 function Settings({ data, link }) {
   const [cur, setCur] = useState('');
   const [next, setNext] = useState('');
@@ -143,7 +199,8 @@ function Settings({ data, link }) {
           <AuthForm start="signup" compact onDone={() => window.location.reload()} />
         </div>
       )}
-      <div>
+      {usingSupabase() && <BringOver />}
+      {accountUrl(link) && <div>
         <p className="font-medium text-zinc-900 dark:text-white">Backup link</p>
         <p className="mt-0.5 text-zinc-500 dark:text-zinc-400">Opens your account without a password. Keep it somewhere safe and private.</p>
         <div className="mt-2 flex gap-2">
@@ -152,9 +209,9 @@ function Settings({ data, link }) {
             <Copy className="size-4" aria-hidden /> {copied ? 'Copied' : 'Copy'}
           </button>
         </div>
-      </div>
+      </div>}
       <div className="flex flex-wrap gap-2 border-t border-hairline pt-5">
-        <button type="button" className={btn} onClick={signOut}>
+        <button type="button" className={btn} onClick={() => signOut()}>
           <LogOut className="size-4" aria-hidden /> Sign out on this device
         </button>
         <button
@@ -163,7 +220,7 @@ function Settings({ data, link }) {
           onClick={async () => {
             if (!confirm('Delete your account? Everything saved to it is erased, and your email and password stop working. Landlord workspaces themselves are not deleted.')) return;
             await accountCall(link, '', { method: 'DELETE' });
-            signOut();
+            await signOut();
           }}
         >
           <Trash2 className="size-4" aria-hidden /> Delete account
@@ -171,12 +228,6 @@ function Settings({ data, link }) {
       </div>
     </div>
   );
-}
-
-/** The emailed reset link lands here (#reset=…&email=…): choose a new password. */
-function readReset() {
-  const q = new URLSearchParams(window.location.hash.slice(1));
-  return q.get('reset') && q.get('email') ? { token: q.get('reset'), email: q.get('email') } : null;
 }
 
 function ResetPassword({ reset, onDone }) {
@@ -194,7 +245,7 @@ function ResetPassword({ reset, onDone }) {
         setError('');
         try {
           await resetPassword(reset.email, reset.token, pw);
-          window.history.replaceState(null, '', '/account/');
+          window.history.replaceState(null, '', `/account/${window.location.search.replace(/[?&]reset=1/, '').replace(/^&/, '?')}`);
           onDone();
         } catch (err) {
           setError(err.message);
@@ -204,7 +255,7 @@ function ResetPassword({ reset, onDone }) {
     >
       <div>
         <p className="text-lg font-semibold text-zinc-950 dark:text-white">Choose a new password</p>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">For {reset.email}. You’ll be signed in here; sign in again on your other devices.</p>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{reset.email ? `For ${reset.email}. ` : ''}You’ll be signed in here.</p>
       </div>
       <div>
         <label htmlFor="rs-pw" className={label}>
@@ -233,12 +284,20 @@ function ResetPassword({ reset, onDone }) {
 export default function Account() {
   const { link, data, status, update } = useAccount();
   const [reset, setReset] = useState(readReset);
+  // Supabase signs the person in from their reset link a moment after the page opens.
+  useEffect(() => onRecovery(() => setReset(readReset())), []);
   // Sent here from the app: where to go back to once signed in.
   const [next] = useState(() => safeNext(new URLSearchParams(window.location.search).get('next')));
-  // Already signed in on this device: straight on to the app.
+  // Already signed in on this device: straight on to the app (once, whichever notices first).
+  const leaving = useRef(false);
+  const goNext = (how) => {
+    if (!next || leaving.current) return;
+    leaving.current = true;
+    window.location[how](next);
+  };
   useEffect(() => {
-    if (next && link && status === 'ready') window.location.replace(next);
-  }, [next, link, status]);
+    if (link && status === 'ready' && !reset) goNext('replace');
+  }, [next, link, status, reset]);
 
   if (reset) {
     return (
@@ -280,11 +339,9 @@ export default function Account() {
           {/* The form comes first on phones, so signing in needs no scrolling. */}
           <div className="elevated max-lg:order-first rounded-2xl p-6">
             <AuthForm
-              start={new URLSearchParams(window.location.search).get('mode') === 'signin' ? 'signin' : 'signup'}
+              start={new URLSearchParams(window.location.search).get('mode') === 'signin' || linkError() ? 'signin' : 'signup'}
               // Sent here from the app: back to where you were (your profile) once you're in.
-              onDone={() => {
-                if (next) window.location.assign(next);
-              }}
+              onDone={() => goNext('assign')}
             />
           </div>
         </div>
