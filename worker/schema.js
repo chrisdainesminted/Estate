@@ -71,6 +71,8 @@ export const SCHEMAS = {
     // T776 gets their part of the income and expenses. Empty: one owner.
     owners: list(10, { name: text(80), share: num }),
     taxReminder: bool, // an email each February when last year's tax pack is ready
+    // Lines from Portfolio the owner chose to leave out of their expenses (their source keys).
+    portfolioOff: list(500, { key: text(80) }),
   },
   listings: {
     kind: oneOf('rent', 'sale'),
@@ -185,6 +187,7 @@ export const SCHEMAS = {
     note: text(300),
     paidBy: text(80), // a co-owner's name when only they paid it and only they claim it; empty when it's shared
     receiptId: text(40), // set by the server when a receipt photo is attached
+    source: text(80), // set when it came from the owner's Portfolio (pf:…), so it's added once and kept in step
   },
   // A building or improvement that lasts: claimed over years as capital cost allowance, not expensed.
   assets: {
@@ -196,6 +199,7 @@ export const SCHEMAS = {
     uccYear: num,
     ucc: num,
     note: text(300),
+    source: text(80), // set when it came from the owner's Portfolio
   },
 };
 
