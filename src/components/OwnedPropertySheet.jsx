@@ -118,6 +118,13 @@ export default function OwnedPropertySheet({ open, onClose, onSave, market, home
             <NumberField id="own-rate" label="Rate, if you know it" suffix="%" step={0.05} decimals={2} max={30} value={f.rate} onChange={set('rate')} />
             <NumberField id="own-amort" label="Amortization" suffix="yrs" step={1} decimals={0} min={1} max={40} value={f.amortYears} onChange={set('amortYears')} hint="Usually 25 or 30" />
           </div>
+          <label className="flex items-start gap-2.5 text-zinc-700 dark:text-zinc-300">
+            <input type="checkbox" checked={f.dscrLoan} onChange={(e) => set('dscrLoan')(e.target.checked)} className="mt-0.5 size-4 accent-emerald-600" />
+            <span>
+              I got this mortgage from a rental (DSCR) lender
+              <span className="block text-xs text-zinc-500 dark:text-zinc-400">Then Portfolio also shows the lender’s rent check (DSCR) for it.</span>
+            </span>
+          </label>
         </section>
 
         <section className="space-y-4 border-t border-hairline pt-5">

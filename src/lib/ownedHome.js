@@ -52,7 +52,7 @@ export function growthPct(price, worth, years) {
   return Math.round(Math.min(Math.max(g, -15), 25) * 10) / 10;
 }
 
-export const EMPTY_OWNED = { address: '', city: null, units: 1, price: null, bought: '', down: null, payment: null, rate: null, amortYears: 25, rent: null, taxes: null, worth: null };
+export const EMPTY_OWNED = { address: '', city: null, units: 1, price: null, bought: '', down: null, payment: null, rate: null, amortYears: 25, rent: null, taxes: null, worth: null, dscrLoan: false };
 
 /**
  * Everything worked out from the form: `deal`, the fields to save, and what
@@ -84,6 +84,7 @@ export function ownedDeal(form, market, today = new Date()) {
     country: 'ca',
     city,
     status: 'owned',
+    dscrLoan: f.dscrLoan === true,
     price,
     downPct: Math.round((down / price) * 10000) / 100,
     rate,

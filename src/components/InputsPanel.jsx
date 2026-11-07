@@ -410,6 +410,12 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
               <NumberField id={id('owned')} label="Years owned" value={deal.yearsOwned} onChange={set('yearsOwned')} max={40} step={1} decimals={1} />
             </div>
           )}
+          {deal.status === 'owned' && (
+            <label className="flex items-center gap-2 self-end pb-2 text-sm text-zinc-700 dark:text-zinc-300">
+              <input type="checkbox" checked={deal.dscrLoan === true} onChange={(e) => onChange({ dscrLoan: e.target.checked })} className="accent-emerald-600" />
+              Rental (DSCR) lender
+            </label>
+          )}
           <div>
             <span className="mb-1.5 flex items-center gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
               Rules

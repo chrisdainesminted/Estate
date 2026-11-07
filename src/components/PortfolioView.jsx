@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRight, Briefcase, CheckCircle2, Pencil, Plus, XCircle } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { dealPlace, estimateToday, portfolioSummary } from '../lib/finance.js';
-import { TONE_CLASSES, TONE_TEXT, verdict } from '../lib/dscr.js';
+import { TONE_CLASSES, TONE_TEXT, usesDscr, verdict } from '../lib/dscr.js';
 import { chartTheme } from '../lib/chartTheme.js';
 import { compactMoney, money, percent, ratio } from '../lib/format.js';
 import { Button, Card, CardHeader, DscrChip, ExampleTag, LedgerHeading, LedgerLine, SelectField, Stat, SummaryCard, ViewHeader, signedClass } from './ui.jsx';
@@ -24,10 +24,12 @@ function CashFlowTooltip({ active, payload }) {
         <span>Net cash flow</span>
         <span className={`font-semibold ${signedClass(r.cf)}`}>{money(r.cf, { signed: true })}/mo</span>
       </div>
-      <div className="tabular flex justify-between gap-6 text-zinc-600 dark:text-zinc-300">
-        <span>DSCR</span>
-        <span className="font-medium text-zinc-900 dark:text-white">{ratio(r.dscr)}</span>
-      </div>
+      {r.dscrLoan && (
+        <div className="tabular flex justify-between gap-6 text-zinc-600 dark:text-zinc-300">
+          <span>DSCR</span>
+          <span className="font-medium text-zinc-900 dark:text-white">{ratio(r.dscr)}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -64,7 +66,7 @@ function CashFlowChart({ owned, dark, onOpen }) {
   const data = [...owned]
     .map((x) => ({ x, now: estimateToday(x.deal) }))
     .sort((p, q) => q.now.netCashFlow - p.now.netCashFlow)
-    .map(({ x, now }) => ({ id: x.deal.id, name: x.deal.name, cf: now.netCashFlow, dscr: now.dscr }));
+    .map(({ x, now }) => ({ id: x.deal.id, name: x.deal.name, cf: now.netCashFlow, dscr: now.dscr, dscrLoan: usesDscr(x.deal) }));
   const minHeight = Math.max(data.length * 46 + 36, 200);
 
   // Grows to fill the card when the neighbouring card is taller.
@@ -163,7 +165,7 @@ function ImpactCard({ owned, prospects, onOpen, onMarkOwned }) {
 
           <div className="mt-4">
             <ImpactRow label="Net cash flow /mo" tip="netCashFlow" before={before.netCashFlow} after={after.netCashFlow} fmt={(v) => money(v, { signed: true })} />
-            <ImpactRow label="Global DSCR" tip="globalDscr" before={before.dscr} after={after.dscr} fmt={ratio} />
+            {(owned.some((x) => usesDscr(x.deal)) || usesDscr(pick.deal)) && <ImpactRow label="Global DSCR" tip="globalDscr" before={before.dscr} after={after.dscr} fmt={ratio} />}
             <ImpactRow label="Cash-on-cash" tip="coc" before={before.coc} after={after.coc} fmt={(v) => percent(v)} />
             <ImpactRow label="Doors" before={before.units} after={after.units} fmt={String} />
             <ImpactRow label="10-yr projected equity" tip="equity" before={before.year10Equity} after={after.year10Equity} fmt={compactMoney} />
@@ -183,6 +185,9 @@ function ImpactCard({ owned, prospects, onOpen, onMarkOwned }) {
 
 function PropertiesTable({ owned, onOpen, onEdit }) {
   const paths = useMemo(() => projectedEquity(owned, 10).each, [owned]);
+  // The lender's rent check only means something for properties bought with a rental (DSCR) loan.
+  const anyDscr = owned.some((x) => usesDscr(x.deal));
+  const heads = ['Property', 'Doors', 'Rent /mo', 'PITIA', 'Net cash flow', ...(anyDscr ? ['DSCR'] : []), 'Cash-on-cash', 'Equity today', '10-yr equity', 'Verdict'];
   return (
     <Card delay={240}>
       <CardHeader title="Properties" subtitle="Click a property to open its full analysis, or Edit to change its numbers." />
@@ -190,7 +195,7 @@ function PropertiesTable({ owned, onOpen, onEdit }) {
         <table className="w-full min-w-[940px] text-sm">
           <thead>
             <tr className="caption">
-              {['Property', 'Doors', 'Rent /mo', 'PITIA', 'Net cash flow', 'DSCR', 'Cash-on-cash', 'Equity today', '10-yr equity', 'Verdict'].map((h, i) => (
+              {heads.map((h, i) => (
                 <th key={h} className={`px-4 py-3 font-medium first:pl-6 last:pr-6 ${i === 0 ? 'text-left' : 'text-right'}`}>
                   {h}
                 </th>
@@ -201,7 +206,8 @@ function PropertiesTable({ owned, onOpen, onEdit }) {
             {owned.map((x) => {
               const today = estimateToday(x.deal);
               // Verdict on today's numbers: the payment may have changed since purchase.
-              const v = verdict({ ...x.a, netCashFlow: today.netCashFlow, status: today.status, lenderApprovedButNegative: today.lenderApprovedButNegative });
+              const dscrLoan = usesDscr(x.deal);
+              const v = verdict({ ...x.a, netCashFlow: today.netCashFlow, status: dscrLoan ? today.status : { key: 'ok' }, lenderApprovedButNegative: false });
               const coc = x.a.cashInvested > 0 ? (today.netCashFlow * 12) / x.a.cashInvested : 0;
               return (
                 <tr key={x.deal.id} className="border-t border-hairline transition hover:bg-well">
@@ -229,9 +235,9 @@ function PropertiesTable({ owned, onOpen, onEdit }) {
                   <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-300">{money(x.a.grossRent)}</td>
                   <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-300">{money(today.pitia)}</td>
                   <td className={`px-4 py-3 text-right font-semibold ${signedClass(today.netCashFlow)}`}>{money(today.netCashFlow, { signed: true })}</td>
-                  <td className="px-4 py-3 text-right">
-                    <DscrChip status={today.status} dscr={today.dscr} size="sm" />
-                  </td>
+                  {anyDscr && (
+                    <td className="px-4 py-3 text-right text-zinc-500 dark:text-zinc-400">{dscrLoan ? <DscrChip status={today.status} dscr={today.dscr} size="sm" /> : '—'}</td>
+                  )}
                   <td className={`px-4 py-3 text-right ${signedClass(coc)}`}>{percent(coc)}</td>
                   <td className="px-4 py-3 text-right text-zinc-900 dark:text-white">{money(today.equity)}</td>
                   <td className="px-4 py-3">
@@ -274,7 +280,8 @@ export default function PortfolioView({ owned, prospects, dark, onOpen, onEdit =
     );
   }
 
-  const tone = p.negative > 0 ? 'bad' : p.status.key === 'tight' ? 'warn' : 'good';
+  const anyDscr = owned.some((x) => usesDscr(x.deal));
+  const tone = p.negative > 0 ? 'bad' : anyDscr && p.status.key === 'tight' ? 'warn' : 'good';
   const ToneIcon = { bad: XCircle, warn: AlertTriangle, good: CheckCircle2 }[tone];
   const badge =
     p.negative > 0 ? `${p.negative} of ${p.properties} losing money` : tone === 'warn' ? 'All make money, lender check is tight' : 'Every property makes money';
@@ -331,7 +338,7 @@ export default function PortfolioView({ owned, prospects, dark, onOpen, onEdit =
             <LedgerLine label={`Loans, ${percent(p.ltv, 0)} of value`} tip="ltv" value={money(-p.debt)} />
             <LedgerLine label="Equity today" tip="equity" value={<Num value={p.equity} format={(v) => money(v)} />} sum />
             <LedgerLine label="Return on your cash each year" tip="coc" value={percent(p.coc)} valueClass={signedClass(p.coc)} />
-            <LedgerLine label="Lender check" tip="globalDscr" value={<DscrChip status={p.status} dscr={p.dscr} size="sm" />} />
+            {anyDscr && <LedgerLine label="Lender check" tip="globalDscr" value={<DscrChip status={p.status} dscr={p.dscr} size="sm" />} />}
             <LedgerLine label="Equity in 10 years" value={compactMoney(p.year10Equity)} muted />
           </div>
         </div>
@@ -347,7 +354,7 @@ export default function PortfolioView({ owned, prospects, dark, onOpen, onEdit =
           <div className="grid grid-cols-2 gap-4 border-t border-hairline px-5 py-5 sm:grid-cols-4">
             <Stat label="Monthly rent" value={money(p.grossRent)} sub={`${money(p.pitia)} PITIA`} tip="pitia" />
             <Stat label="Operating costs" value={money(p.opex)} sub="per month" tip="opex" />
-            <Stat label="Reserves to hold" value={money(p.reserves)} sub="lender requirement" tip="reserves" />
+            {anyDscr && <Stat label="Reserves to hold" value={money(p.reserves)} sub="lender requirement" tip="reserves" />}
             <Stat label="If all sold in 10 yrs" value={money(p.year10Proceeds)} sub="cash after costs and payoffs" tip="saleProceeds" />
           </div>
         </Section>

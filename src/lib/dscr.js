@@ -47,6 +47,9 @@ export const BAND_CLASSES = {
  * month, flagging a tight lender check. The sentence beside it explains a
  * loss a lender would still approve (`trap`).
  */
+/** An owned property whose mortgage came from a rental (DSCR) lender: only then does the lender's rent check apply to it. */
+export const usesDscr = (deal) => deal?.dscrLoan === true;
+
 export function verdict(a) {
   if (a.lenderApprovedButNegative) return { key: 'trap', tone: 'bad', label: 'Loses money each month' };
   if (a.netCashFlow < 0) return { key: 'negative', tone: 'bad', label: 'Loses money each month' };
