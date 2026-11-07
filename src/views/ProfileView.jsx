@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ArrowRight, Building2, CircleHelp, Cloud, LogOut, FileSpreadsheet, FileText, Inbox, KeyRound, Mail, MessageSquare, Moon, Phone, Plus as PlusIcon, Sun, Users, Wrench } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Building2, CircleHelp, Cloud, ListChecks, LogOut, FileSpreadsheet, FileText, Inbox, KeyRound, Mail, MessageSquare, Moon, Phone, Plus as PlusIcon, Sun, Users, Wrench } from 'lucide-react';
 import { Button, Card, CardHeader, NumberField, Segmented, SelectField, SkeletonCard, ViewHeader, signedClass } from '../components/ui.jsx';
 import { PlusOffer, PlusTag, usePlus } from '../components/Plus.jsx';
 import { useAccount } from '../hooks/useAccount.js';
@@ -23,7 +23,7 @@ const primaryLink = `${linkBtn} bg-(--accent) font-semibold text-(--accent-ink) 
  * cash flow), each property with a way in, your tenants with what needs
  * doing and a message to each one a tap away, and your settings.
  */
-export default function ProfileView({ owned, prospects, hosted, account, syncText, dark, onToggleTheme, onOpen, onView, onLandlord, onAccount, onAddOwned, settings, onSettings, homeCity, exports, dealName, onHelp, onSignOut }) {
+export default function ProfileView({ owned, prospects, hosted, account, syncText, dark, onToggleTheme, onOpen, onView, onLandlord, onAccount, onAddOwned, settings, onSettings, homeCity, exports, dealName, onHelp, onSignOut, onSetup }) {
   const plus = usePlus();
   const [email, setEmail] = useState('');
   useEffect(() => {
@@ -105,6 +105,7 @@ export default function ProfileView({ owned, prospects, hosted, account, syncTex
         syncText={syncText}
         account={account}
         onSignOut={onSignOut}
+        onSetup={onSetup}
       />
     </div>
   );
@@ -440,7 +441,7 @@ function Everyone({ rows, settings }) {
   );
 }
 
-function Settings({ plus, hosted, settings, onSettings, homeCity, dark, onToggleTheme, onAccount, exports, count, dealName, onHelp, syncText, account, onSignOut }) {
+function Settings({ plus, hosted, settings, onSettings, homeCity, dark, onToggleTheme, onAccount, exports, count, dealName, onHelp, syncText, account, onSignOut, onSetup }) {
   const market = normalizeMarket(settings.market);
   const brrrr = normalizeBrrrr(settings.brrrr);
   const cities = CITIES.filter((c) => !c.key.endsWith('-other'));
@@ -498,6 +499,11 @@ function Settings({ plus, hosted, settings, onSettings, homeCity, dark, onToggle
               </div>
             )}
           </div>
+          {onSetup && !hosted && (
+            <Button variant="ghost" onClick={onSetup} className="-ml-3.5">
+              <ListChecks className="size-4" aria-hidden /> Answer the setup questions again
+            </Button>
+          )}
           <Button variant="ghost" onClick={onHelp} className="-ml-3.5">
             <CircleHelp className="size-4" aria-hidden /> How Squarely works
           </Button>

@@ -44,6 +44,7 @@ export const DEFAULT_PROFILE = {
   savings: 20000, // set aside for buying
   monthlySave: 800,
   debts: 300, // monthly: car, student loan, cards (minimums)
+  living: null, // monthly: everyday costs besides housing and debt payments (food, car, phone, childcare); null = not given
   rentNow: 1400, // what you pay to live today, a month
   firstTime: true,
   newBuild: false,
@@ -71,7 +72,7 @@ export function normalizeProfile(p) {
   if ([1, 2, 3, 4].includes(Number(p?.targetUnits))) out.targetUnits = Number(p.targetUnits);
   // Profiles saved before cities existed were all for Thunder Bay.
   if (p) out.city = cityByKey(p.city ?? 'thunder-bay').key;
-  for (const k of ['rentOther', 'taxPct']) out[k] = p?.[k] != null && Number.isFinite(Number(p[k])) ? Math.max(Number(p[k]), 0) : null;
+  for (const k of ['rentOther', 'taxPct', 'living']) out[k] = p?.[k] != null && Number.isFinite(Number(p[k])) ? Math.max(Number(p[k]), 0) : null;
   // Profiles saved before this flag existed count as entered once any answer differs from the example.
   out.entered = typeof p?.entered === 'boolean' ? p.entered : STARTER_KEYS.some((k) => typeof p?.[k] === 'number' && p[k] !== DEFAULT_PROFILE[k]);
   return out;

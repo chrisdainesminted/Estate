@@ -86,6 +86,7 @@ import { guessCity } from './lib/canada.js';
 
 // Views and charts load on demand so the first screen arrives quickly.
 const PortfolioView = lazy(() => import('./components/PortfolioView.jsx'));
+const Onboarding = lazy(() => import('./components/Onboarding.jsx'));
 const PlanView = lazy(() => import('./components/PlanView.jsx'));
 const CompareView = lazy(() => import('./views/CompareView.jsx'));
 const ListingsView = lazy(() => import('./views/ListingsView.jsx'));
@@ -528,6 +529,20 @@ export default function App() {
   useEffect(() => {
     if (!HOSTED && !lib.account && !booksLink) window.location.replace('/account/');
   }, [lib.account, booksLink]);
+  // A new account's first visit: what they're here for and their numbers, once (it waits for the account's
+  // saved settings, so someone who already answered on another device isn't asked again).
+  const [setupOpen, setSetupOpen] = useState(false);
+  const needSetup = !HOSTED && Boolean(lib.account) && lib.sync === 'cloud' && !lib.settings.onboarding?.done && !booksLink && !fromLink;
+  const finishSetup = (r) => {
+    for (const k of ['onboarding', 'home', 'market', 'sell']) if (r[k]) lib.updateSettings(k, r[k]);
+    setSetupOpen(false);
+    setView(r.mode === 'invest' ? 'listings' : MODES.find((m) => m.value === r.mode)?.first ?? 'home');
+    window.scrollTo(0, 0);
+  };
+  const skipSetup = () => {
+    if (!lib.settings.onboarding?.done) lib.updateSettings('onboarding', { done: true, skipped: true, at: new Date().toISOString().slice(0, 10) });
+    setSetupOpen(false);
+  };
 
   const openProfile = useCallback(() => (lib.account || HOSTED ? setView('profile') : goSignIn('profile')), [lib.account, setView]);
 
@@ -1007,6 +1022,7 @@ export default function App() {
                 exports={exports}
                 dealName={current?.deal?.name}
                 onHelp={() => setHelpOpen(true)}
+                onSetup={() => setSetupOpen(true)}
                 onSignOut={async () => {
                   await signOut();
                   lib.setAccount(null);
@@ -1315,6 +1331,11 @@ export default function App() {
             moreHidden={isDesktop && investing && !tabsUnlocked}
             onShowAll={showAllTabs}
           />
+        </Suspense>
+      )}
+      {(needSetup || setupOpen) && (
+        <Suspense fallback={null}>
+          <Onboarding settings={lib.settings} onFinish={finishSetup} onSkip={skipSetup} />
         </Suspense>
       )}
       {accountOpen && (

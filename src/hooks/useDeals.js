@@ -12,11 +12,12 @@ import { DEFAULT_SUITE, normalizeSuite } from '../lib/suites.js';
 import { DEFAULT_BUILD, normalizeBuild } from '../lib/build.js';
 import { DEFAULT_SELL, normalizeSell } from '../lib/selling.js';
 import { DEFAULT_BRRRR, normalizeBrrrr } from '../lib/brrrr.js';
+import { DEFAULT_ONBOARDING, normalizeOnboarding } from '../lib/onboarding.js';
 
 // Per-library settings that travel with the deals: offer targets, the growth
 // plan, tax inputs, the assumptions used to underwrite daily listings, your
 // first-home numbers and your progress on adding a suite.
-const DEFAULT_SETTINGS = { targets: DEFAULT_TARGETS, plan: DEFAULT_PLAN, tax: DEFAULT_TAX, market: DEFAULT_MARKET, home: DEFAULT_PROFILE, suite: DEFAULT_SUITE, ready: {}, rvb: {}, alerts: [], build: DEFAULT_BUILD, sell: DEFAULT_SELL, brrrr: DEFAULT_BRRRR };
+const DEFAULT_SETTINGS = { targets: DEFAULT_TARGETS, plan: DEFAULT_PLAN, tax: DEFAULT_TAX, market: DEFAULT_MARKET, home: DEFAULT_PROFILE, suite: DEFAULT_SUITE, ready: {}, rvb: {}, alerts: [], build: DEFAULT_BUILD, sell: DEFAULT_SELL, brrrr: DEFAULT_BRRRR, onboarding: DEFAULT_ONBOARDING };
 
 function normalizeSettings(s) {
   return {
@@ -38,6 +39,8 @@ function normalizeSettings(s) {
     sell: normalizeSell(s?.sell),
     // BRRRR: the renovation budget and refinance terms, and your own rehab estimates by listing.
     brrrr: normalizeBrrrr(s?.brrrr),
+    // The first-time questions: what they're here for and how big their portfolio is.
+    onboarding: normalizeOnboarding(s?.onboarding),
   };
 }
 
