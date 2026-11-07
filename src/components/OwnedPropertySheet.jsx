@@ -128,6 +128,22 @@ export default function OwnedPropertySheet({ open, onClose, onSave, market, home
         </section>
 
         <section className="space-y-4 border-t border-hairline pt-5">
+          <div>
+            <h3 className="font-semibold text-zinc-950 dark:text-white">Work you’ve put in (optional)</h3>
+            <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">Renovations, repairs or additions since you bought it. It counts as money you put in, and adds to what it’s worth.</p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <NumberField id="own-work" label="Spent on it" prefix="$" step={1000} decimals={0} value={f.work} onChange={set('work')} />
+            <div>
+              <label htmlFor="own-work-notes" className={label}>
+                What you did
+              </label>
+              <input id="own-work-notes" className={field} placeholder="New kitchen, roof, basement suite" maxLength={500} value={f.workNotes} onChange={(e) => set('workNotes')(e.target.value)} />
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-4 border-t border-hairline pt-5">
           <h3 className="font-semibold text-zinc-950 dark:text-white">Rent and costs</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <NumberField id="own-rent" label="Rent collected" prefix="$" suffix="/mo" step={50} decimals={0} value={f.rent} onChange={set('rent')} hint="All units together; 0 if you live in it" />
@@ -139,7 +155,13 @@ export default function OwnedPropertySheet({ open, onClose, onSave, market, home
           <section aria-label="Worked out for you" className="rounded-xl bg-well p-4">
             <h3 className="mb-2 font-semibold text-zinc-950 dark:text-white">Worked out for you</h3>
             <LedgerLine label="Down payment" value={`${money(r.deal.price * (r.downPct / 100))} (${percent(r.downPct / 100, 1)})`} />
-            <LedgerLine label={`Interest rate, ${note[r.rateFrom]}`} value={`${r.rate.toFixed(2)}%`} />
+            <LedgerLine label={`Interest rate, ${note[r.rateFrom]}`} value={`${r.rate.toFixed(2)}%`} valueClass={r.highRate ? 'text-amber-700 dark:text-amber-300' : ''} />
+            {r.highRate && (
+              <p className="mb-1 rounded-md bg-amber-400/15 p-2.5 text-xs leading-relaxed text-amber-900 ring-1 ring-amber-500/30 ring-inset dark:text-amber-100">
+                That’s high for a mortgage. If your payment includes property tax, use just the principal and interest, check the amortization (a 10- or 15-year loan pays more each month), or type your rate instead.
+              </p>
+            )}
+            {r.work > 0 && <LedgerLine label="Work you’ve put in" value={money(r.work)} />}
             <LedgerLine label={`Value growth, ${r.growthFrom === 'worth' ? 'from what it’s worth now' : 'typical'}`} value={`${r.appreciationPct}%/yr`} />
             <LedgerLine label={r.years > 0 ? `Worth today, after ${r.years < 1 ? `${Math.round(r.years * 12)} months` : `${Math.round(r.years * 10) / 10} years`}` : 'Worth today'} value={money(now.value)} />
             <LedgerLine label="Owed today" value={money(now.balance)} />

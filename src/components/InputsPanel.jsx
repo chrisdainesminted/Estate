@@ -10,6 +10,7 @@ import RentHelper from './RentHelper.jsx';
 import CitySelect from './CitySelect.jsx';
 import { dealPlace } from '../lib/finance.js';
 import { provinceName } from '../lib/canada.js';
+import { workPatch } from '../lib/ownedHome.js';
 
 /**
  * A group of inputs. The basics stay open; the rest fold down to one line
@@ -229,7 +230,7 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
           step={0.5}
           hint={ca ? `${money(a.closingCosts - a.landTransferTax)} + ${money(a.landTransferTax)} land transfer tax` : money(a.closingCosts)}
         />
-        <NumberField id={id('rehab')} label="Repair budget" prefix="$" value={deal.rehabCost} onChange={set('rehabCost')} step={1000} decimals={0} />
+        {deal.status !== 'owned' && <NumberField id={id('rehab')} label="Repair budget" prefix="$" value={deal.rehabCost} onChange={set('rehabCost')} step={1000} decimals={0} />}
         <div className="col-span-2">
           <NumberField
             id={id('reserves')}
@@ -285,8 +286,52 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
         </Derived>
       </Section>
 
+      {deal.status === 'owned' && (
+        <Section
+          title="Work you’ve put in"
+          collapsible
+          defaultOpen={Number(deal.rehabCost) > 0}
+          summary={Number(deal.rehabCost) > 0 ? [`${money(Number(deal.rehabCost))} spent`, deal.workNotes].filter(Boolean).join(' · ') : 'None yet'}
+        >
+          <NumberField
+            id={id('work')}
+            label="Spent on it"
+            prefix="$"
+            value={deal.rehabCost}
+            onChange={(v) => onChange(workPatch({ price: deal.price, work: v, notes: deal.workNotes, arv: deal.arv, arvAuto: deal.arvAuto }))}
+            step={1000}
+            decimals={0}
+            hint="Counts as money you put in"
+          />
+          <NumberField
+            id={id('work-value')}
+            label="Worth right after"
+            prefix="$"
+            value={deal.arv}
+            onChange={(v) => onChange({ arv: v, arvAuto: false })}
+            step={5000}
+            decimals={0}
+            hint={deal.arvAuto !== false ? 'Price plus the work, unless you change it' : `${money(Math.max(Number(deal.arv) - Number(deal.price) - Number(deal.rehabCost || 0), 0))} more than price plus the work`}
+          />
+          <div className="col-span-2">
+            <label htmlFor={id('work-notes')} className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              What you did
+            </label>
+            <textarea
+              id={id('work-notes')}
+              rows={2}
+              maxLength={500}
+              placeholder="New kitchen, roof, basement suite"
+              value={deal.workNotes ?? ''}
+              onChange={(e) => onChange({ workNotes: e.target.value })}
+              className="field w-full px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100"
+            />
+          </div>
+        </Section>
+      )}
+
       <Section
-        title="Fix-up & refinance"
+        title={deal.status === 'owned' ? 'Refinance' : 'Fix-up & refinance'}
         collapsible
         defaultOpen={valueAdd}
         summary={
@@ -297,6 +342,7 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
             : 'Not used'
         }
       >
+        {deal.status !== 'owned' && (
         <div className="col-span-2">
           <NumberField
             id={id('arv')}
@@ -310,6 +356,7 @@ export default function InputsPanel({ deal, a, rents, onChange, onDuplicate, onD
             hint={Number(deal.arv) > 0 ? `${money(a.forcedEquity)} of equity created by the repairs` : 'Leave at 0 if repairs add no value'}
           />
         </div>
+        )}
         <div className="col-span-2 flex items-center justify-between gap-3">
           <span className="flex items-center gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
             Cash-out refinance

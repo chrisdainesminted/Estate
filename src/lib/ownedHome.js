@@ -52,7 +52,7 @@ export function growthPct(price, worth, years) {
   return Math.round(Math.min(Math.max(g, -15), 25) * 10) / 10;
 }
 
-export const EMPTY_OWNED = { address: '', city: null, units: 1, price: null, bought: '', down: null, payment: null, rate: null, amortYears: 25, rent: null, taxes: null, worth: null, dscrLoan: false };
+export const EMPTY_OWNED = { address: '', city: null, units: 1, price: null, bought: '', down: null, payment: null, rate: null, amortYears: 25, rent: null, taxes: null, worth: null, dscrLoan: false, work: null, workNotes: '' };
 
 /**
  * Everything worked out from the form: `deal`, the fields to save, and what
@@ -72,7 +72,9 @@ export function ownedDeal(form, market, today = new Date()) {
   const fromPayment = rateFromPayment(price - down, f.payment, amortYears);
   const rate = fromPayment ?? num(f.rate) ?? m.rate;
   const rateFrom = fromPayment != null ? 'payment' : num(f.rate) != null ? 'you' : 'today';
-  const growth = growthPct(price, f.worth, years);
+  // Work put into the place: money spent, which (unless they tell us what it's worth) adds that much to its value.
+  const work = Math.max(num(f.work) ?? 0, 0);
+  const growth = growthPct(price + work, f.worth, years);
   const appreciationPct = growth ?? 3;
   const taxes = num(f.taxes);
   const place = cityByKey(city);
@@ -103,6 +105,7 @@ export function ownedDeal(form, market, today = new Date()) {
     capexPct: m.capexPct,
     appreciationPct,
     estimated: taxes == null,
+    ...workPatch({ price, work, notes: f.workNotes }),
     bought: /^\d{4}-\d{2}$/.test(f.bought) ? f.bought : '',
   };
   return {
@@ -114,5 +117,24 @@ export function ownedDeal(form, market, today = new Date()) {
     appreciationPct,
     growthFrom: growth != null ? 'worth' : 'typical',
     taxesFrom: taxes != null ? 'you' : 'typical',
+    work,
+    highRate: rate > 12,
+  };
+}
+
+/**
+ * The deal fields for work put into an owned place: what was spent
+ * (`rehabCost`, so it counts as cash put in), what was done, and its value
+ * right after (`arv`): the price plus the work unless they've said otherwise
+ * (`arvAuto`).
+ */
+export function workPatch({ price, work, notes, arv, arvAuto = true }) {
+  const spent = Math.max(num(work) ?? 0, 0);
+  const auto = arvAuto !== false;
+  return {
+    rehabCost: spent,
+    workNotes: String(notes ?? '').slice(0, 500),
+    arvAuto: auto,
+    arv: auto ? (spent > 0 ? Math.round((num(price) ?? 0) + spent) : 0) : Math.max(num(arv) ?? 0, 0),
   };
 }

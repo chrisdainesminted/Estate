@@ -56,3 +56,22 @@ describe('ownedDeal', () => {
     expect(ownedDeal({ price: null }, {}, today)).toBe(null);
   });
 });
+
+describe('work put into the place', () => {
+  const base = { address: '318 Dease St, Thunder Bay', price: 157000, bought: '2025-08', down: 40000, payment: 700, rent: 1800 };
+  it('counts the money spent and adds it to the value', () => {
+    const r = ownedDeal({ ...base, work: 25000, workNotes: 'New kitchen and roof' }, {}, today);
+    expect(r.deal).toMatchObject({ rehabCost: 25000, arv: 182000, arvAuto: true, workNotes: 'New kitchen and roof' });
+    const now = estimateToday(r.deal);
+    expect(now.value).toBeGreaterThan(182000);
+  });
+  it('measures growth from price plus work when they say what it’s worth', () => {
+    const r = ownedDeal({ ...base, bought: '2021-11', work: 50000, worth: 260000 }, {}, today);
+    expect(r.appreciationPct).toBeCloseTo(4.7, 1);
+    expect(estimateToday(r.deal).value).toBeGreaterThan(258000);
+  });
+  it('flags a payment that implies an unlikely rate', () => {
+    expect(ownedDeal({ ...base, down: 40000, payment: 2000 }, {}, today).highRate).toBe(true);
+    expect(ownedDeal(base, {}, today).highRate).toBe(false);
+  });
+});
