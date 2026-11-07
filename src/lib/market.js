@@ -501,7 +501,8 @@ export const SORTS = {
   coc: { label: 'Cash-on-cash', compare: (x, y) => y.a.coc - x.a.coc },
   cashCoc: { label: 'All-cash return', compare: (x, y) => y.cash.coc - x.cash.coc },
   room: { label: 'Room to negotiate', compare: (x, y) => room(y) - room(x) },
-  price: { label: 'Lowest price', compare: (x, y) => x.a.price - y.a.price },
+  priceLow: { label: 'Price: low to high', compare: (x, y) => x.a.price - y.a.price, byPrice: true },
+  priceHigh: { label: 'Price: high to low', compare: (x, y) => y.a.price - x.a.price, byPrice: true },
   newest: { label: 'Newest', compare: (x, y) => String(y.listing.firstSeen ?? '').localeCompare(String(x.listing.firstSeen ?? '')) },
 };
 
@@ -539,14 +540,17 @@ export function rankListings(listings, market, targets, { types, hidden, showHid
   const m = normalizeMarket(market);
   const want = new Set(types ?? m.types);
   const hide = new Set(hidden ?? m.hidden);
-  const order = (SORTS[sort] ?? SORTS.perDoor).compare;
+  // Older saved choices: 'price' was lowest first.
+  const chosen = SORTS[sort === 'price' ? 'priceLow' : sort] ?? SORTS.perDoor;
+  const order = chosen.compare;
   return (Array.isArray(listings) ? listings : [])
     // Only listings with a page of their own: an older saved feed may hold some without.
     .filter((l) => (l.status ?? 'active') === 'active' && listingPageUrl(l.url, l.address) && want.has(typeOf(unitsOf(l))) && (showHidden || !hide.has(l.id)))
     .map((l) => scoreListing(l, m, targets))
     .filter((s) => !onlyMeets || s.meets)
     // Listings with a real tax bill first: the rest have no numbers to rank by yet.
-    .sort((x, y) => x.needsTax - y.needsTax || order(x, y) || y.perDoor - x.perDoor);
+    // By price, every listing counts; otherwise those with a real tax bill come first (the rest have no numbers to rank by yet).
+    .sort((x, y) => (chosen.byPrice ? 0 : x.needsTax - y.needsTax) || order(x, y) || y.perDoor - x.perDoor);
 }
 
 /** New in the latest run, or cut in price by it. */

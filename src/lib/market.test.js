@@ -552,3 +552,14 @@ describe('dedupeListings', () => {
     expect(r[0].firstSeen).toBe('2026-11-02');
   });
 });
+
+describe('price sorts', () => {
+  const l = (id, price, taxes) => ({ id, address: `${id.charCodeAt(0)} Main St`, price, units: 1, taxes: taxes ?? undefined, url: `https://www.realtor.ca/real-estate/${id.charCodeAt(0)}/${id.charCodeAt(0)}-main-street-thunder-bay`, firstSeen: '2026-11-01' });
+  const feed = [l('a', 300000, 3000), l('b', 150000, null), l('c', 450000, 4000)];
+  it('sorts by price both ways, counting listings without a tax bill too', () => {
+    expect(rankListings(feed, DEFAULT_MARKET, DEFAULT_TARGETS, { sort: 'priceLow', types: ['single', 'small', 'large'] }).map((s) => s.listing.id)).toEqual(['b', 'a', 'c']);
+    expect(rankListings(feed, DEFAULT_MARKET, DEFAULT_TARGETS, { sort: 'priceHigh', types: ['single', 'small', 'large'] }).map((s) => s.listing.id)).toEqual(['c', 'a', 'b']);
+    // An older saved 'price' choice still means lowest first.
+    expect(rankListings(feed, DEFAULT_MARKET, DEFAULT_TARGETS, { sort: 'price', types: ['single', 'small', 'large'] })[0].listing.id).toBe('b');
+  });
+});

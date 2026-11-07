@@ -204,7 +204,6 @@ function AlertForm({ city, place, types, onCancel, onSave }) {
 
 const COLUMNS = 8;
 // Sorted here rather than in rankListings: it needs your Home numbers.
-const LIVE_SORT = { key: 'live', label: 'Cheapest to live in' };
 
 /** Type in a listing's yearly property tax, from its own page: Squarely never guesses one. */
 function TaxForm({ l, initial, onSave, onCancel }) {
@@ -578,11 +577,8 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
     [active, market, profile],
   );
   const ranked = useMemo(() => {
-    const list = rankListings(active, market, targets, { sort: sort === LIVE_SORT.key ? 'perDoor' : sort, showHidden });
-    if (sort !== LIVE_SORT.key) return list;
-    const cost = (s) => homes.get(s.listing.id)?.costToLive ?? Infinity;
-    return [...list].sort((x, y) => cost(x) - cost(y));
-  }, [active, market, targets, sort, showHidden, homes]);
+    return rankListings(active, market, targets, { sort, showHidden });
+  }, [active, market, targets, sort, showHidden]);
   const hiddenSet = useMemo(() => new Set(market.hidden), [market.hidden]);
   const belowMap = useMemo(() => underMarket(active), [active]);
   const visible = ranked.filter((s) => !hiddenSet.has(s.listing.id));
@@ -741,7 +737,6 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
                     {s.label}
                   </option>
                 ))}
-                {profile && <option value={LIVE_SORT.key}>{LIVE_SORT.label}</option>}
               </select>
               <Segmented
                 label="Show as"
@@ -809,9 +804,11 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
                     </th>
                     <th scope="col" className={`${th} hidden md:table-cell`}>
                       Price
+                      {sort === 'priceLow' && <span aria-hidden> ↑</span>}
+                      {sort === 'priceHigh' && <span aria-hidden> ↓</span>}
                     </th>
                     <th scope="col" className={`${th} hidden md:table-cell`}>
-                      To live in{sort === LIVE_SORT.key && <span aria-hidden> ↓</span>}
+                      To live in
                     </th>
                     <th scope="col" className={th}>
                       Per door{sort === 'perDoor' && <span aria-hidden> ↓</span>}
