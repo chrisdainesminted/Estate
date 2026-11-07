@@ -115,8 +115,8 @@ function Nav() {
   }, [menu]);
   return (
     <header className="sticky top-0 z-30 border-b border-hairline bg-(--page)/90 backdrop-blur supports-[backdrop-filter]:bg-(--page)/75">
-      <div className={`${shell} flex h-16 items-center justify-between gap-4`}>
-        <a href="/" aria-label="Squarely home" className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--accent)">
+      <div className={`${shell} flex h-16 items-center justify-between gap-4 max-[380px]:gap-2`}>
+        <a href="/" aria-label="Squarely home" className="min-w-0 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--accent)">
           <Logo />
         </a>
         <nav aria-label="Sections" className="hidden items-center gap-7 text-sm font-medium text-zinc-600 md:flex dark:text-zinc-400">
@@ -126,10 +126,10 @@ function Nav() {
             </a>
           ))}
         </nav>
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1 max-[380px]:gap-0">
           <AccountLink className="max-sm:hidden" />
-          <a href={APP} className={`${primary} px-4 py-2 text-sm`}>
-            Open the app
+          <a href={APP} className={`${primary} px-4 py-2 text-sm whitespace-nowrap max-[380px]:px-3`}>
+            Open <span className="max-[380px]:hidden">the </span>app
           </a>
           <button
             type="button"
@@ -137,7 +137,7 @@ function Nav() {
             aria-expanded={menu}
             aria-controls="site-menu"
             aria-label={menu ? 'Close menu' : 'Menu'}
-            className="grid size-10 place-items-center rounded-md text-zinc-700 hover:bg-well md:hidden dark:text-zinc-300"
+            className="grid size-10 place-items-center rounded-md text-zinc-700 hover:bg-well max-[380px]:size-9 md:hidden dark:text-zinc-300"
           >
             {menu ? <X className="size-5" aria-hidden /> : <Menu className="size-5" aria-hidden />}
           </button>

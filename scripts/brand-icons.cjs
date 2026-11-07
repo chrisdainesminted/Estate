@@ -1,10 +1,14 @@
 // Renders the brand images in public/ from the mark (src/lib/brand.js):
 // the app icons and the link preview. Needs Playwright with Chromium.
 // Usage: node scripts/brand-icons.cjs
+// For a rebranded copy of the site (see rebrand.mjs), just its link preview:
+//   BRAND_NAME="Real Estate Business" BRAND_OUT=brands/real-estate-business/public node scripts/brand-icons.cjs
 const { chromium } = require('playwright');
 const path = require('path');
 
-const PUBLIC = path.join(__dirname, '..', 'public');
+const NAME = process.env.BRAND_NAME || 'Squarely';
+const PUBLIC = process.env.BRAND_OUT ? path.resolve(__dirname, '..', process.env.BRAND_OUT) : path.join(__dirname, '..', 'public');
+const ONLY_PREVIEW = Boolean(process.env.BRAND_OUT);
 // Filled in from src/lib/brand.js once it's loaded (it's an ES module).
 let MARK_SVG = () => '';
 const ONYX = '#0b0b0c';
@@ -24,7 +28,7 @@ const ledgerLine = (label, value, opts = {}) =>
 
 const og = () => `<body style="margin:0;width:1200px;height:630px;background:${ONYX};font-family:Inter,sans-serif;display:flex;box-sizing:border-box;padding:72px 80px;gap:72px">
   <div style="flex:1 1 0;display:flex;flex-direction:column;justify-content:space-between">
-    <div style="display:flex;align-items:center;gap:18px">${mark(52)}<span style="font-size:46px;font-weight:700;letter-spacing:-0.035em;color:#fafafa">Squarely</span></div>
+    <div style="display:flex;align-items:center;gap:18px">${mark(52)}<span style="font-size:46px;font-weight:700;letter-spacing:-0.035em;color:#fafafa">${NAME}</span></div>
     <div>
       <div style="font-size:54px;line-height:1.08;font-weight:700;letter-spacing:-0.035em;color:#fafafa">A lender can approve a deal that <span style="color:${GREEN}">still loses you money.</span></div>
       <div style="margin-top:26px;font-size:22px;color:#a1a1aa">Rent, buy or manage · Real numbers · Anywhere in Canada</div>
@@ -66,6 +70,12 @@ function icoFrom(png, size) {
     await p.close();
     console.log(file);
   };
+  if (ONLY_PREVIEW) {
+    require('fs').mkdirSync(PUBLIC, { recursive: true });
+    await shoot(og(), 1200, 630, 'og.png');
+    await b.close();
+    return;
+  }
   await shoot(icon(180), 180, 180, 'apple-touch-icon.png');
   await shoot(icon(192), 192, 192, 'icon-192.png');
   await shoot(icon(512), 512, 512, 'icon-512.png');

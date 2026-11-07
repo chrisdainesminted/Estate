@@ -202,3 +202,21 @@ At about 6:34 am a second scheduled step, running in a session that has this rep
 - Surfaces: flat panels with hairline edges (`.panel` in `src/index.css`) on an onyx (#0b0b0c) or paper-white page, with 4–6 px corners. Numbers sit in ledgers (`LedgerLine` in `src/components/ui.jsx`): label, dotted leader, amount, and a double rule above the bottom line.
 
 Estimates for personal analysis only. Not lending or investment advice.
+
+## A second copy of the site under another name
+
+`scripts/rebrand.mjs` turns a build checkout into the same site under another
+name: every "Squarely" a person reads, the site's own address, the Worker's
+name (so its accounts and workspaces are its own), and the images that carry
+the name (from `brands/<slug>/public/`). The code stays one code base, so every
+change reaches both sites.
+
+Real Estate Business is set up this way. In Cloudflare, a second Worker
+(Workers & Pages → Create → Import a repository → this repository and branch),
+named `real-estate-business`, with:
+
+- Build command: `node scripts/rebrand.mjs --name "Real Estate Business" --slug real-estate-business --host real-estate-business.signia83.workers.dev --force && npm run build`
+- Deploy command: `npx wrangler deploy`
+
+Its link preview is made with
+`BRAND_NAME="Real Estate Business" BRAND_OUT=brands/real-estate-business/public node scripts/brand-icons.cjs`.
