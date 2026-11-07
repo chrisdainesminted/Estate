@@ -3,6 +3,7 @@ import { BellRing, Building2, Calculator, Copy, ExternalLink, FileText, Heart, H
 import PageShell, { h1 } from './PageShell.jsx';
 import AuthForm from '../components/AuthForm.jsx';
 import { useAccount } from '../hooks/useAccount.js';
+import { safeNext } from '../lib/gate.js';
 import { accountCall, accountUrl, changePassword, resetPassword, signOut } from '../lib/account.js';
 import { saveWorkspace } from '../lib/landlordApi.js';
 import { money } from '../lib/format.js';
@@ -232,6 +233,12 @@ function ResetPassword({ reset, onDone }) {
 export default function Account() {
   const { link, data, status, update } = useAccount();
   const [reset, setReset] = useState(readReset);
+  // Sent here from the app: where to go back to once signed in.
+  const [next] = useState(() => safeNext(new URLSearchParams(window.location.search).get('next')));
+  // Already signed in on this device: straight on to the app.
+  useEffect(() => {
+    if (next && link && status === 'ready') window.location.replace(next);
+  }, [next, link, status]);
 
   if (reset) {
     return (
@@ -249,7 +256,8 @@ export default function Account() {
         <div className="grid items-start gap-10 lg:grid-cols-[1fr_24rem]">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">Your Squarely account</p>
-            <h1 className={`${h1} mt-3`}>Everything you’re working on, in one place.</h1>
+            <h1 className={`${h1} mt-3`}>{next ? 'Make your free account to open Squarely.' : 'Everything you’re working on, in one place.'}</h1>
+            {next && <p className="mt-3 text-[15px] text-zinc-600 dark:text-zinc-400">It takes a minute, and your numbers, deals and listings then follow you to every device. Already have one? Choose Sign in.</p>}
             {status === 'error' && <p className="mt-3 text-sm text-red-700 dark:text-red-300">Couldn’t open the account saved on this device. Sign in again.</p>}
             <ul className="mt-8 space-y-5">
               {[
@@ -275,8 +283,7 @@ export default function Account() {
               start={new URLSearchParams(window.location.search).get('mode') === 'signin' ? 'signin' : 'signup'}
               // Sent here from the app: back to where you were (your profile) once you're in.
               onDone={() => {
-                const next = new URLSearchParams(window.location.search).get('next');
-                if (next && /^[a-z]{2,20}$/.test(next)) window.location.assign(`/app/?view=${next}`);
+                if (next) window.location.assign(next);
               }}
             />
           </div>

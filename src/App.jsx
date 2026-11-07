@@ -77,6 +77,7 @@ import { sellNextStep } from './lib/selling.js';
 import { distressOf } from './lib/distress.js';
 import { cityByKey } from './lib/canada.js';
 import { cityInAddress, moveToCity, placeLabel } from './lib/place.js';
+import { isBooksLink } from './lib/gate.js';
 import NextStep from './components/NextStep.jsx';
 import AskSquarely from './components/AskSquarely.jsx';
 import { askContext } from './lib/ask.js';
@@ -521,6 +522,13 @@ export default function App() {
   }, [lib, homeRules, homeCity, setView, isDesktop, toast]);
 
   // The profile button: your profile when signed in (the Claude page always is); otherwise make an account or sign in.
+  // Signed out while the app is open (sign out, account deleted): back to the account page.
+  // A co-owner's view-only books link (read once, before the link is tidied away) opens without one.
+  const [booksLink] = useState(() => isBooksLink(window.location.hash));
+  useEffect(() => {
+    if (!HOSTED && !lib.account && !booksLink) window.location.replace('/account/');
+  }, [lib.account, booksLink]);
+
   const openProfile = useCallback(() => (lib.account || HOSTED ? setView('profile') : goSignIn('profile')), [lib.account, setView]);
 
   // A property you already own: a new deal marked owned, opened to fill in.
