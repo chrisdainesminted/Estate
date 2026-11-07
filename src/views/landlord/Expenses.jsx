@@ -10,6 +10,7 @@ import Owners from './Owners.jsx';
 import Assets from './Assets.jsx';
 import ShareBooks from './ShareBooks.jsx';
 import BankImport from './BankImport.jsx';
+import { workForTax } from '../../lib/ownedHome.js';
 
 /** Opens a receipt photo in a new tab (it's private, so it's fetched with the link's key first). */
 async function openReceipt(api, receiptId) {
@@ -65,7 +66,7 @@ function Receipt({ e, api, readOnly, onError }) {
  * claimed as capital cost allowance, receipts, and the year's rental income
  * for each owner's tax return. `readOnly` is the co-owner's view-only link.
  */
-export default function Expenses({ data, api, readOnly = false }) {
+export default function Expenses({ data, api, readOnly = false, ownedDeals = [] }) {
   const thisYear = Number(today().slice(0, 4));
   const years = [...new Set([thisYear, thisYear - 1, ...data.expenses.map((e) => Number(String(e.date).slice(0, 4))), ...data.payments.map((p) => Number(String(p.month).slice(0, 4)))])].filter(Boolean).sort((a, b) => b - a);
   const [year, setYear] = useState(thisYear);
@@ -88,6 +89,8 @@ export default function Expenses({ data, api, readOnly = false }) {
   const packOwner = owners.find((o) => o.name === packFor) ? packFor : '';
   const list = data.expenses.filter((e) => String(e.date).startsWith(String(year))).sort((a, b) => (a.date < b.date ? 1 : -1));
   const withReceipts = list.filter((e) => e.receiptId).length;
+  // Repairs and improvements recorded on the homes you own in Portfolio, for this year's pack.
+  const work = workForTax(ownedDeals, year);
 
   const add = async (e) => {
     e.preventDefault();
@@ -108,7 +111,7 @@ export default function Expenses({ data, api, readOnly = false }) {
     setBusy(true);
     try {
       const { buildTaxPdf } = await import('../../lib/taxPdf.js');
-      const blob = await buildTaxPdf({ year, payments: data.payments, expenses: data.expenses, units: data.units, settings: data.settings ?? {}, owners, forOwner: packOwner, assets, receipt: api.receiptBlob });
+      const blob = await buildTaxPdf({ year, payments: data.payments, expenses: data.expenses, units: data.units, settings: data.settings ?? {}, owners, forOwner: packOwner, assets, receipt: api.receiptBlob, work });
       await saveFile(`Rental income and expenses ${year}${packOwner ? ` - ${packOwner}` : ''} - Squarely.pdf`, blob);
     } catch (err) {
       setError(err.message);
@@ -322,6 +325,23 @@ export default function Expenses({ data, api, readOnly = false }) {
               <Download className="size-4" aria-hidden /> Download {year} as a spreadsheet (CSV)
             </Button>
             {withReceipts > 0 && <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">The tax pack ends with the {withReceipts} receipt photo{withReceipts === 1 ? '' : 's'} for {year}.</p>}
+            {work.length > 0 && (
+              <div className="mt-4 rounded-md bg-well p-3 text-sm">
+                <p className="font-medium text-zinc-900 dark:text-white">Work on your properties, from Portfolio ({money(work.reduce((t, w) => t + w.cost, 0))})</p>
+                <ul className="mt-1.5 space-y-0.5 text-zinc-600 dark:text-zinc-400">
+                  {work.map((w) => (
+                    <li key={`${w.property}-${w.id}`} className="flex justify-between gap-3">
+                      <span className="min-w-0 truncate">
+                        {w.property}: {w.what || 'Work'} · {w.kind === 'repair' ? 'repair' : 'improvement'}
+                        {w.when ? '' : ' · no date'}
+                      </span>
+                      <span className="tabular shrink-0">{money(w.cost)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">Included in the tax pack in their own section, for your accountant to place as repairs or capital. Change them in Portfolio.</p>
+              </div>
+            )}
             {!readOnly && (
               <label className="mt-4 flex items-start gap-2 border-t border-hairline pt-4 text-sm text-zinc-700 dark:text-zinc-300">
                 <input

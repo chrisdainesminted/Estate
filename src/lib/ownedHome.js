@@ -9,6 +9,7 @@ import { cityByKey } from './canada.js';
 import { loanRate, monthlyPI } from './finance.js';
 import { CITY_VACANCY, INSURANCE_MIN, normalizeMarket } from './market.js';
 import { cityInAddress } from './place.js';
+import { kindOf, valueAdded } from './workValue.js';
 
 const num = (v) => (v != null && v !== '' && Number.isFinite(Number(v)) ? Number(v) : null);
 
@@ -52,7 +53,7 @@ export function growthPct(price, worth, years) {
   return Math.round(Math.min(Math.max(g, -15), 25) * 10) / 10;
 }
 
-export const EMPTY_OWNED = { address: '', city: null, units: 1, price: null, bought: '', down: null, payment: null, rate: null, amortYears: 25, rent: null, taxes: null, worth: null, dscrLoan: false, work: null, workNotes: '' };
+export const EMPTY_OWNED = { address: '', city: null, units: 1, price: null, bought: '', down: null, payment: null, rate: null, amortYears: 25, rent: null, taxes: null, worth: null, dscrLoan: false, work: null, workNotes: '', workItems: [] };
 
 /**
  * Everything worked out from the form: `deal`, the fields to save, and what
@@ -73,8 +74,10 @@ export function ownedDeal(form, market, today = new Date()) {
   const rate = fromPayment ?? num(f.rate) ?? m.rate;
   const rateFrom = fromPayment != null ? 'payment' : num(f.rate) != null ? 'you' : 'today';
   // Work put into the place: money spent, which (unless they tell us what it's worth) adds that much to its value.
-  const work = Math.max(num(f.work) ?? 0, 0);
-  const growth = growthPct(price + work, f.worth, years);
+  const items = Array.isArray(f.workItems) && f.workItems.length ? f.workItems.map(cleanWorkItem) : null;
+  const work = items ? items.reduce((t, w) => t + w.cost, 0) : Math.max(num(f.work) ?? 0, 0);
+  const added = items ? items.reduce((t, w) => t + valueAdded(w), 0) : valueAdded({ what: f.workNotes, cost: work });
+  const growth = growthPct(price + added, f.worth, years);
   const appreciationPct = growth ?? 3;
   const taxes = num(f.taxes);
   const place = cityByKey(city);
@@ -105,7 +108,7 @@ export function ownedDeal(form, market, today = new Date()) {
     capexPct: m.capexPct,
     appreciationPct,
     estimated: taxes == null,
-    ...workPatch({ price, work, notes: f.workNotes }),
+    ...workPatch(items ? { price, items } : { price, work, notes: f.workNotes }),
     bought: /^\d{4}-\d{2}$/.test(f.bought) ? f.bought : '',
   };
   return {
@@ -118,6 +121,7 @@ export function ownedDeal(form, market, today = new Date()) {
     growthFrom: growth != null ? 'worth' : 'typical',
     taxesFrom: taxes != null ? 'you' : 'typical',
     work,
+    added,
     highRate: rate > 12,
   };
 }
@@ -132,7 +136,25 @@ export function cleanWorkItem(w) {
     what: String(w?.what ?? '').slice(0, 200),
     cost: Math.max(num(w?.cost) ?? 0, 0),
     when: /^\d{4}-\d{2}$/.test(String(w?.when ?? '')) ? w.when : '',
+    // A repair (an expense that year) or an improvement (capital, claimed as CCA): their pick, or '' to go by the description.
+    kind: w?.kind === 'repair' || w?.kind === 'improvement' ? w.kind : '',
+    // What it adds to the home's value: their own figure, or null to go by the description and the cost studies.
+    addsValue: w?.addsValue != null && w.addsValue !== '' && Number.isFinite(Number(w.addsValue)) ? Math.max(Number(w.addsValue), 0) : null,
   };
+}
+
+/**
+ * Every job done on the homes you own, for a tax year's paperwork: those
+ * dated in `year`, and those with no date (so they aren't missed). Each is
+ * { property, address, what, cost, when, kind }.
+ */
+export function workForTax(deals, year) {
+  const y = String(year);
+  return (Array.isArray(deals) ? deals : [])
+    .filter((d) => d?.status === 'owned')
+    .flatMap((d) => workItemsOf(d).map((w) => ({ property: d.name || 'Property', address: d.address || '', ...w, kind: kindOf(w) })))
+    .filter((w) => w.cost > 0 && (!w.when || w.when.startsWith(y)))
+    .sort((a, b) => (a.when || '9999').localeCompare(b.when || '9999'));
 }
 
 /** The jobs on a deal; one from before jobs were listed separately (a single amount and note) becomes the first. */
@@ -152,12 +174,14 @@ export function workItemsOf(deal) {
 export function workPatch({ price, items, work, notes, arv, arvAuto = true }) {
   const list = (items ?? (num(work) > 0 || notes ? [{ what: notes, cost: work }] : [])).slice(0, 50).map(cleanWorkItem);
   const spent = list.reduce((t, w) => t + w.cost, 0);
+  // Only what the work adds to the value goes into it: a new kitchen does, tree removal doesn't.
+  const added = list.reduce((t, w) => t + valueAdded(w), 0);
   const auto = arvAuto !== false;
   return {
     workItems: list,
     rehabCost: spent,
     workNotes: list.map((w) => w.what.trim()).filter(Boolean).join(', ').slice(0, 500),
     arvAuto: auto,
-    arv: auto ? (spent > 0 ? Math.round((num(price) ?? 0) + spent) : 0) : Math.max(num(arv) ?? 0, 0),
+    arv: auto ? (added > 0 ? Math.round((num(price) ?? 0) + added) : 0) : Math.max(num(arv) ?? 0, 0),
   };
 }

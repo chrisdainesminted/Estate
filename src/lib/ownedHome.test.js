@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { growthPct, ownedDeal, rateFromPayment, workItemsOf, workPatch, yearsSince } from './ownedHome.js';
+import { growthPct, ownedDeal, rateFromPayment, workForTax, workItemsOf, workPatch, yearsSince } from './ownedHome.js';
 import { estimateToday, loanRate, monthlyPI } from './finance.js';
 
 const today = new Date(2026, 10, 7); // November 2026
@@ -61,12 +61,13 @@ describe('work put into the place', () => {
   const base = { address: '318 Dease St, Thunder Bay', price: 157000, bought: '2025-08', down: 40000, payment: 700, rent: 1800 };
   it('counts the money spent and adds it to the value', () => {
     const r = ownedDeal({ ...base, work: 25000, workNotes: 'New kitchen and roof' }, {}, today);
-    expect(r.deal).toMatchObject({ rehabCost: 25000, arv: 182000, arvAuto: true, workNotes: 'New kitchen and roof' });
+    // A kitchen remodel gets back 49.5% of its cost (Cost vs. Value 2024).
+    expect(r.deal).toMatchObject({ rehabCost: 25000, arv: 169375, arvAuto: true, workNotes: 'New kitchen and roof' });
     const now = estimateToday(r.deal);
-    expect(now.value).toBeGreaterThan(182000);
+    expect(now.value).toBeGreaterThan(169375);
   });
   it('measures growth from price plus work when they say what it’s worth', () => {
-    const r = ownedDeal({ ...base, bought: '2021-11', work: 50000, worth: 260000 }, {}, today);
+    const r = ownedDeal({ ...base, bought: '2021-11', workItems: [{ what: 'Basement suite', cost: 60000, addsValue: 50000 }], worth: 260000 }, {}, today);
     expect(r.appreciationPct).toBeCloseTo(4.7, 1);
     expect(estimateToday(r.deal).value).toBeGreaterThan(258000);
   });
@@ -79,14 +80,29 @@ describe('work put into the place', () => {
 describe('separate jobs', () => {
   it('adds up each job and keeps the value at price plus work', () => {
     const p = workPatch({ price: 157000, items: [{ what: 'New windows', cost: 14500, when: '2025-10' }, { what: 'Roof', cost: 9000 }] });
-    expect(p).toMatchObject({ rehabCost: 23500, arv: 180500, workNotes: 'New windows, Roof' });
+    expect(workPatch({ price: 157000, items: [{ what: 'Tree removal', cost: 3500 }] })).toMatchObject({ rehabCost: 3500, arv: 0 });
+    // Windows get back 67.1% and a roof 56.9% of their cost: 9,729 + 5,121 added to the value.
+    expect(p).toMatchObject({ rehabCost: 23500, arv: 171850, workNotes: 'New windows, Roof' });
     expect(p.workItems).toHaveLength(2);
     expect(p.workItems[0]).toMatchObject({ what: 'New windows', cost: 14500, when: '2025-10' });
     expect(workPatch({ price: 157000, items: [] })).toMatchObject({ rehabCost: 0, arv: 0 });
     expect(workPatch({ price: 157000, items: [{ cost: 1000 }], arv: 200000, arvAuto: false }).arv).toBe(200000);
   });
   it('reads a single amount from before as the first job', () => {
-    expect(workItemsOf({ rehabCost: 14500, workNotes: 'New Windows' })).toEqual([{ id: 'w0', what: 'New Windows', cost: 14500, when: '' }]);
+    expect(workItemsOf({ rehabCost: 14500, workNotes: 'New Windows' })).toEqual([{ id: 'w0', what: 'New Windows', cost: 14500, when: '', kind: '', addsValue: null }]);
     expect(workItemsOf({ rehabCost: 0 })).toEqual([]);
+  });
+});
+
+describe('workForTax', () => {
+  it('lists the year’s jobs and undated ones, from homes you own only', () => {
+    const deals = [
+      { status: 'owned', name: '318 Dease St', workItems: [{ what: 'Windows', cost: 14500, when: '2025-10' }, { what: 'Paint', cost: 800, when: '2026-03', kind: 'repair' }, { what: 'Deck', cost: 3000 }] },
+      { status: 'prospect', name: 'Maybe', workItems: [{ what: 'Roof', cost: 9000, when: '2026-01' }] },
+    ];
+    const r = workForTax(deals, 2026);
+    expect(r.map((w) => w.what)).toEqual(['Paint', 'Deck']);
+    expect(r[0]).toMatchObject({ property: '318 Dease St', kind: 'repair', cost: 800 });
+    expect(r[1].kind).toBe('improvement');
   });
 });

@@ -1007,7 +1007,7 @@ export default function App() {
               />
             )}
 
-            {view === 'landlord' && <LandlordView key={landlordTab ?? 'inbox'} homeCity={homeCity} initialTab={landlordTab ?? undefined} />}
+            {view === 'landlord' && <LandlordView key={landlordTab ?? 'inbox'} homeCity={homeCity} initialTab={landlordTab ?? undefined} ownedDeals={owned.map((x) => x.deal)} />}
 
             {view === 'profile' && (
               <ProfileView

@@ -14,7 +14,7 @@ const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const clean = (s) => String(s ?? '').replace(/⁠/g, '').replace(/−/g, '-').replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
 const cad = (v) => clean(money(v, { cents: true }));
 
-export async function buildTaxPdf({ year, payments, expenses, units, settings, owners = [], forOwner = '', assets = [], receipt = null }) {
+export async function buildTaxPdf({ year, payments, expenses, units, settings, owners = [], forOwner = '', assets = [], receipt = null, work = [] }) {
   const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const { m } = PAGE;
@@ -189,6 +189,40 @@ export async function buildTaxPdf({ year, payments, expenses, units, settings, o
       doc.addPage();
       y = m;
     }
+  }
+
+  // Work done on the homes you own (from Portfolio): repairs and improvements, for the accountant to place.
+  if (work.length) {
+    room(80);
+    rule(y, true);
+    y += 16;
+    text('Work done on your properties', m, y, { size: 11, bold: true });
+    y += 14;
+    small('From your Portfolio. Repairs that restore something as it was are usually an expense that year (T776 line 8960). Improvements that make it better or last years are usually capital, claimed as capital cost allowance. Your accountant makes the call; leave out anything already logged as an expense above.');
+    y += 8;
+    text('When', m, y, { size: 8, color: MUTED });
+    text('Property', m + 60, y, { size: 8, color: MUTED });
+    text('What', m + 200, y, { size: 8, color: MUTED });
+    text('Type', m + 380, y, { size: 8, color: MUTED });
+    text('Cost', m + W, y, { size: 8, color: MUTED, align: 'right' });
+    y += 12;
+    for (const w of work) {
+      room(13);
+      text(w.when ? new Date(`${w.when}-15T12:00:00`).toLocaleDateString('en-CA', { month: 'short', year: 'numeric' }) : 'No date', m, y, { size: 8.5, color: w.when ? INK : MUTED });
+      text(doc.splitTextToSize(clean(w.property), 132)[0] || '', m + 60, y, { size: 8.5 });
+      text(doc.splitTextToSize(clean(w.what || 'Work'), 172)[0] || '', m + 200, y, { size: 8.5 });
+      text(w.kind === 'repair' ? 'Repair' : 'Improvement', m + 380, y, { size: 8.5 });
+      text(cad(w.cost), m + W, y, { size: 8.5, align: 'right' });
+      y += 13;
+    }
+    rule(y - 8);
+    y += 6;
+    const sum = (k) => work.filter((w) => (w.kind === 'repair') === (k === 'repair')).reduce((t, w) => t + num(w.cost), 0);
+    if (sum('repair')) line('', 'Repairs', sum('repair'));
+    if (sum('improvement')) line('', 'Improvements', sum('improvement'));
+    line('', 'Total work', sum('repair') + sum('improvement'), true);
+    if (work.some((w) => !w.when)) small('"No date" jobs have no month set in Portfolio: check which year they belong to.');
+    y += 14;
   }
 
   // Rent by unit and month.

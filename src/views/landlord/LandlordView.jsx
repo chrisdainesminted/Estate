@@ -66,7 +66,7 @@ export default function LandlordView(props) {
   return books ? <BooksView books={books} /> : <LandlordWorkspace {...props} />;
 }
 
-function LandlordWorkspace({ homeCity, initialTab }) {
+function LandlordWorkspace({ homeCity, initialTab, ownedDeals = [] }) {
   const [ws, setWs] = useState(() => {
     const fromLink = parseWorkspace(location.hash);
     if (fromLink) {
@@ -253,7 +253,7 @@ function LandlordWorkspace({ homeCity, initialTab }) {
   const late = data.units.filter((u) => ['late', 'partial'].includes(rentStatus(u, data.payments, today()).state)).length;
   const openRepairs = data.maintenance.filter((m) => m.status !== 'fixed').length;
   const badge = { inbox: unread, rent: late, repairs: openRepairs };
-  const props = { data, api, ws, province, homeCity, config, settings: data.settings || {}, go: setTab };
+  const props = { data, api, ws, province, homeCity, config, settings: data.settings || {}, go: setTab, ownedDeals };
 
   return (
     <div className="space-y-6">

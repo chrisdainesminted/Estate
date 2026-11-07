@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import Sheet from './Sheet.jsx';
 import CitySelect from './CitySelect.jsx';
 import { Button, FieldLabel, LedgerLine, NumberField } from './ui.jsx';
+import WorkItems from './WorkItems.jsx';
 import { EMPTY_OWNED, ownedDeal } from '../lib/ownedHome.js';
 import { estimateToday } from '../lib/finance.js';
 import { cityInAddress } from '../lib/place.js';
@@ -130,16 +131,10 @@ export default function OwnedPropertySheet({ open, onClose, onSave, market, home
         <section className="space-y-4 border-t border-hairline pt-5">
           <div>
             <h3 className="font-semibold text-zinc-950 dark:text-white">Work you’ve put in (optional)</h3>
-            <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">Renovations, repairs or additions since you bought it. It counts as money you put in, and adds to what it’s worth.</p>
+            <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">Renovations, repairs or upkeep since you bought it. Add each job: it all counts as money you put in, and we work out how much of it adds to what the home is worth.</p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <NumberField id="own-work" label="Spent on it" prefix="$" step={1000} decimals={0} value={f.work} onChange={set('work')} />
-            <div>
-              <label htmlFor="own-work-notes" className={label}>
-                What you did
-              </label>
-              <input id="own-work-notes" className={field} placeholder="New kitchen, roof, basement suite" maxLength={500} value={f.workNotes} onChange={(e) => set('workNotes')(e.target.value)} />
-            </div>
+          <div className="grid">
+            <WorkItems items={f.workItems} idPrefix="own-work" onChange={set('workItems')} />
           </div>
         </section>
 
@@ -162,6 +157,7 @@ export default function OwnedPropertySheet({ open, onClose, onSave, market, home
               </p>
             )}
             {r.work > 0 && <LedgerLine label="Work you’ve put in" value={money(r.work)} />}
+            {r.work > 0 && <LedgerLine label="Of that, adds to its value" value={money(r.added)} />}
             <LedgerLine label={`Value growth, ${r.growthFrom === 'worth' ? 'from what it’s worth now' : 'typical'}`} value={`${r.appreciationPct}%/yr`} />
             <LedgerLine label={r.years > 0 ? `Worth today, after ${r.years < 1 ? `${Math.round(r.years * 12)} months` : `${Math.round(r.years * 10) / 10} years`}` : 'Worth today'} value={money(now.value)} />
             <LedgerLine label="Owed today" value={money(now.balance)} />
