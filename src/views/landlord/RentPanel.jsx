@@ -1,19 +1,22 @@
 import { useState } from 'react';
-import { CalendarPlus, ExternalLink, Plus, Trash2 } from 'lucide-react';
+import { Briefcase, CalendarPlus, ExternalLink, Plus, Trash2 } from 'lucide-react';
 import { Button, Card, CardHeader, LedgerLine } from '../../components/ui.jsx';
 import { daysUntil, increaseNotice, leaseSheet, nextIncrease, payInvite, receiptMessage, rentReminder, rentStatus, thisMonth, today } from '../../lib/landlord.js';
 import { links } from '../../lib/landlordApi.js';
 import { money } from '../../lib/format.js';
 import { dateLabel, downloadIcs, icsFile } from '../../lib/when.js';
 import { CopyButton, Empty, Input, Pill, SendButtons, TextArea, editable } from './shared.jsx';
+import { homesToRent } from '../../lib/ownedHome.js';
 
 const STATE = { paid: ['Paid', 'green'], partial: ['Part paid', 'amber'], due: ['Due', 'zinc'], late: ['Late', 'red'], none: ['No rent set', 'zinc'] };
 const monthName = (ym) => new Date(`${ym}-15T12:00:00`).toLocaleDateString('en-CA', { month: 'long', year: 'numeric' });
 
 /** Units and their tenants: this month's rent, payments, reminders, lease dates and increases. */
-export default function RentPanel({ data, api, ws, province, settings }) {
+export default function RentPanel({ data, api, ws, province, settings, ownedDeals = [] }) {
   const [openId, setOpenId] = useState(data.units[0]?.id ?? null);
+  // false, or the unit to start from: blank, or a home from Portfolio filled in.
   const [adding, setAdding] = useState(false);
+  const homes = homesToRent(ownedDeals, data.units);
   const on = today();
   const unit = data.units.find((u) => u.id === openId);
   const totals = data.units.reduce(
@@ -31,13 +34,37 @@ export default function RentPanel({ data, api, ws, province, settings }) {
           title={`Rent for ${monthName(on.slice(0, 7))}`}
           subtitle={data.units.length ? `${money(totals.paid)} of ${money(totals.rent)} in` : 'Add each unit you rent out'}
           actions={
-            <Button onClick={() => (setAdding(true), setOpenId(null))}>
+            <Button onClick={() => (setAdding({}), setOpenId(null))}>
               <Plus className="size-4" aria-hidden /> Add a unit
             </Button>
           }
         />
+        {homes.length > 0 && (
+          <div className="border-b border-hairline px-5 py-4">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+              <Briefcase className="size-3.5" aria-hidden /> From your Portfolio
+            </p>
+            <ul className="mt-2 space-y-2">
+              {homes.map((h) => (
+                <li key={h.deal.id} className="flex items-center justify-between gap-3">
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-zinc-900 dark:text-white">{h.deal.name}</span>
+                    <span className="block text-xs text-zinc-500 dark:text-zinc-400">
+                      {h.units > 1 ? `${h.have} of ${h.units} units set up` : 'Not set up yet'}
+                      {h.next.rent ? ` · ${money(h.next.rent)}/mo` : ''}
+                    </span>
+                  </span>
+                  <Button variant="primary" className="shrink-0 px-3 py-1.5 text-xs" onClick={() => (setAdding({ ...h.next }), setOpenId(null))}>
+                    <Plus className="size-3.5" aria-hidden /> {h.units > 1 ? `Add unit ${h.have + 1}` : 'Add it'}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">The address and rent come from Portfolio: just add your tenant.</p>
+          </div>
+        )}
         {data.units.length === 0 ? (
-          <Empty>No units yet.</Empty>
+          <Empty>{homes.length ? 'No units yet. Add one from your Portfolio above.' : 'No units yet.'}</Empty>
         ) : (
           <ul className="divide-y divide-hairline">
             {data.units.map((u) => {
@@ -68,7 +95,7 @@ export default function RentPanel({ data, api, ws, province, settings }) {
       </Card>
       <div className="space-y-6">
         {adding ? (
-          <UnitForm api={api} onDone={(id) => (setAdding(false), setOpenId(id))} />
+          <UnitForm key={JSON.stringify(adding)} start={adding} api={api} onDone={(id) => (setAdding(false), setOpenId(id))} />
         ) : unit ? (
           <Unit key={unit.id} unit={unit} data={data} api={api} ws={ws} province={province} settings={settings} on={on} />
         ) : (
@@ -335,8 +362,8 @@ function Lease({ unit, province, settings }) {
 
 const BLANK = { label: '', address: '', rent: undefined, dueDay: 1, tenantName: '', tenantEmail: '', tenantPhone: '', leaseStart: '', leaseEnd: '', deposit: undefined, lastIncrease: '', notes: '' };
 
-function UnitForm({ unit, api, onDone }) {
-  const [f, setF] = useState({ ...BLANK, ...(unit || {}) });
+function UnitForm({ unit, start, api, onDone }) {
+  const [f, setF] = useState({ ...BLANK, ...(start || {}), ...(unit || {}) });
   const [error, setError] = useState('');
   const set = (k) => (v) => setF((x) => ({ ...x, [k]: v }));
   const submit = async (e) => {
@@ -351,7 +378,7 @@ function UnitForm({ unit, api, onDone }) {
   };
   return (
     <Card>
-      <CardHeader title={unit ? 'Edit unit' : 'Add a unit'} subtitle="Only you see this." />
+      <CardHeader title={unit ? 'Edit unit' : 'Add a unit'} subtitle={!unit && start?.label ? 'Filled in from your Portfolio: add your tenant, then save. Only you see this.' : 'Only you see this.'} />
       <form onSubmit={submit} className="grid gap-4 p-5 sm:grid-cols-2">
         <Input id="u-label" label="Unit name" value={f.label} onChange={set('label')} />
         <Input id="u-addr" label="Address" value={f.address} onChange={set('address')} />

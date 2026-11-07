@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { growthPct, ownedDeal, rateFromPayment, workForTax, workItemsOf, workPatch, yearsSince } from './ownedHome.js';
+import { growthPct, homesToRent, ownedDeal, rateFromPayment, workForTax, workItemsOf, workPatch, yearsSince } from './ownedHome.js';
 import { estimateToday, loanRate, monthlyPI } from './finance.js';
 
 const today = new Date(2026, 10, 7); // November 2026
@@ -104,5 +104,22 @@ describe('workForTax', () => {
     expect(r.map((w) => w.what)).toEqual(['Paint', 'Deck']);
     expect(r[0]).toMatchObject({ property: '318 Dease St', kind: 'repair', cost: 800 });
     expect(r[1].kind).toBe('improvement');
+  });
+});
+
+describe('homesToRent', () => {
+  const deals = [
+    { id: 'a', status: 'owned', name: '318 Dease St', address: '318 Dease St, Thunder Bay', units: 1, rentPerUnit: 1800 },
+    { id: 'b', status: 'owned', name: '230 Brodie Street N', address: '230 Brodie Street N, Thunder Bay', units: 2, rentPerUnit: 1750 },
+    { id: 'c', status: 'prospect', name: 'Maybe', address: '1 Main St', units: 1 },
+  ];
+  it('offers each owned home’s next unit, filled in', () => {
+    const r = homesToRent(deals, []);
+    expect(r.map((h) => h.next.label)).toEqual(['318 Dease St', '230 Brodie Street N, unit 1']);
+    expect(r[0].next).toEqual({ label: '318 Dease St', address: '318 Dease St, Thunder Bay', rent: 1800 });
+  });
+  it('drops homes whose units are all set up, matching addresses loosely', () => {
+    const r = homesToRent(deals, [{ label: 'Main', address: '318 Dease Street' }, { label: 'Upper', address: '230 Brodie St. N, Thunder Bay' }]);
+    expect(r.map((h) => h.next.label)).toEqual(['230 Brodie Street N, unit 2']);
   });
 });

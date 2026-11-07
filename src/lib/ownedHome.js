@@ -185,3 +185,30 @@ export function workPatch({ price, items, work, notes, arv, arvAuto = true }) {
     arv: auto ? (added > 0 ? Math.round((num(price) ?? 0) + added) : 0) : Math.max(num(arv) ?? 0, 0),
   };
 }
+
+const plainAddr = (s) => String(s ?? '').toLowerCase().split(',')[0].replace(/\b(street|st|avenue|ave|road|rd|drive|dr|boulevard|blvd|crescent|cres|court|ct|place|pl|north|south|east|west|n|s|e|w)\b\.?/g, '').replace(/[^a-z0-9]/g, '');
+
+/**
+ * Homes in Portfolio with doors not yet set up in Tenants & rent, each
+ * with the unit to add next: { deal, units, have, next: { label, address,
+ * rent } }. A unit belongs to a home when their street addresses match.
+ */
+export function homesToRent(deals, units) {
+  const list = Array.isArray(units) ? units : [];
+  return (Array.isArray(deals) ? deals : [])
+    .filter((d) => d?.status === 'owned' && !d.example)
+    .map((d) => {
+      const doors = Math.max(Math.round(Number(d.units) || 1), 1);
+      const key = plainAddr(d.address || d.name);
+      const have = key ? list.filter((u) => plainAddr(u.address || u.label) === key).length : 0;
+      const n = have + 1;
+      const name = String(d.name || d.address || 'Home').trim();
+      return {
+        deal: d,
+        units: doors,
+        have,
+        next: { label: doors > 1 ? `${name}, unit ${n}` : name, address: String(d.address || d.name || '').trim(), rent: Math.round(Number(d.rentPerUnit) || 0) || undefined },
+      };
+    })
+    .filter((h) => h.have < h.units);
+}
