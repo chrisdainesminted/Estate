@@ -68,24 +68,31 @@ function useFeed(city) {
 
 const longDate = (iso) => (iso ? new Date(`${iso}T12:00:00`).toLocaleDateString('en-CA', { month: 'long', day: 'numeric', year: 'numeric' }) : '');
 
-/** A number field that keeps what's typed and hands back a number. */
-function NumberField({ id, children, value, onChange, step = 1, min = 0, suffix }) {
+/** "1234567.5" as "1,234,567.5": commas in the whole part, the decimals as typed. */
+const withCommas = (raw) => {
+  const [whole, dec] = String(raw).split('.');
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return dec !== undefined ? `${grouped}.${dec}` : grouped;
+};
+const plain = (v) => (Number.isFinite(v) ? String(v) : '');
+
+/** A number field that shows commas as you type and hands back a number. */
+function NumberField({ id, children, value, onChange, suffix }) {
+  const [text, setText] = useState(() => withCommas(plain(value)));
+  const change = (e) => {
+    // Digits and one decimal point; commas are put back in their places.
+    const [whole = '', ...rest] = e.target.value.replace(/[^\d.]/g, '').split('.');
+    const clean = rest.length ? `${whole}.${rest.join('')}` : whole;
+    setText(withCommas(clean));
+    onChange(clean === '' || clean === '.' ? NaN : Number(clean));
+  };
   return (
     <div>
       <label htmlFor={id} className={label}>
         {children}
       </label>
       <div className="relative">
-        <input
-          id={id}
-          type="number"
-          inputMode="decimal"
-          min={min}
-          step={step}
-          value={Number.isFinite(value) ? value : ''}
-          onChange={(e) => onChange(e.target.value === '' ? NaN : Number(e.target.value))}
-          className={`${field} ${suffix ? 'pr-12' : ''}`}
-        />
+        <input id={id} type="text" inputMode="decimal" autoComplete="off" value={text} onChange={change} className={`${field} ${suffix ? 'pr-12' : ''}`} />
         {suffix && <span className="pointer-events-none absolute inset-y-0 right-3.5 grid place-items-center text-sm text-zinc-500">{suffix}</span>}
       </div>
     </div>
@@ -287,10 +294,10 @@ function TryIt({ city, onCity }) {
             <p className="mt-4 max-w-md text-zinc-500 dark:text-zinc-400">Two numbers change everything: what you earn, and what a suite could bring in each month.</p>
             <div className="mt-7 grid max-w-md gap-5">
               <CitySelect id="try-city" label="Where" value={city} onChange={onCity} />
-              <NumberField id="try-income" value={income} onChange={setIncome} step={1000}>
+              <NumberField id="try-income" value={income} onChange={setIncome}>
                 Household income, before tax
               </NumberField>
-              <NumberField id="try-savings" value={savings} onChange={setSavings} step={1000}>
+              <NumberField id="try-savings" value={savings} onChange={setSavings}>
                 Saved for buying
               </NumberField>
             </div>
@@ -630,8 +637,8 @@ function Calculators({ city, onCity }) {
             <div className="sm:col-span-2">
               <CitySelect id="calc-city" label="Where" value={city} onChange={onCity} />
             </div>
-            {inputs.map(([id, text, value, set, step, suffix]) => (
-              <NumberField key={`${tab}-${id}`} id={`calc-${id}`} value={value} onChange={set} step={step} suffix={suffix}>
+            {inputs.map(([id, text, value, set, , suffix]) => (
+              <NumberField key={`${tab}-${id}`} id={`calc-${id}`} value={value} onChange={set} suffix={suffix}>
                 {text}
               </NumberField>
             ))}
