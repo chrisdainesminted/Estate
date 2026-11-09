@@ -29,7 +29,7 @@ const shell = 'mx-auto w-full max-w-6xl px-4 sm:px-6';
 const eyebrow = 'text-xs font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300';
 const h2 = 'font-display text-balance text-[34px] font-semibold leading-[1.08] tracking-[-0.035em] text-zinc-900 sm:text-[48px] dark:text-white';
 const lede = 'mt-5 max-w-2xl text-[17px] leading-relaxed text-zinc-500 sm:text-lg dark:text-zinc-400';
-const section = 'py-16 sm:py-24';
+const section = 'py-14 sm:py-20';
 const card = 'rounded-[24px] border border-hairline bg-(--panel)';
 const soft = 'bg-(--soft)';
 const primary =
@@ -110,20 +110,15 @@ export default function Landing() {
       </a>
       <Nav />
       <main id="main">
-        <Hero />
-        <TryIt city={city} onCity={setCity} />
-        <How />
-        <Homes />
+        <Hero city={city} onCity={setCity} />
         <Today feed={feed} shown={shown} picked={city} index={index} />
-        <Calculators city={city} onCity={setCity} />
         <Paths />
-        <Inside />
-        <Owners />
+        <Calculators city={city} onCity={setCity} />
         <Pricing />
         <Faq />
-        <Contact />
       </main>
       <SiteFooter />
+      <StickyStart />
     </div>
   );
 }
@@ -133,8 +128,8 @@ const NAV = [
   ['Listings', open('listings')],
   ['Calculators', '#calculator'],
   ['Pricing', '#pricing'],
-  ['For owners', '#owners'],
-  ['Ask a question', '#contact'],
+  ['For owners', '#paths'],
+  ['Ask a question', '/contact/'],
 ];
 
 function Nav() {
@@ -204,57 +199,86 @@ const PHRASES = [
   'Find your next deal.',
 ];
 
-function Hero() {
+/**
+ * The first screen answers the question people come with, "what could I
+ * buy?", before they scroll: a short headline on the left and the live
+ * estimate on the right (under the headline on phones). The same engine as
+ * the app works out the most a lender would let you pay in the picked city,
+ * on your own and with a basement suite rented out.
+ */
+function Hero({ city, onCity }) {
+  const [income, setIncome] = useState(SAMPLE.income);
+  const [savings, setSavings] = useState(60000);
+  const place = cityByKey(city);
+  const result = useMemo(() => {
+    const profile = { ...SAMPLE, income: n0(income), savings: n0(savings), city: place.key, entered: true };
+    const common = { profile, ratePct: DEFAULT_MARKET.rate, taxPct: place.taxPct, city: place.key };
+    return { alone: maxPrice({ ...common, units: 1 }), suite: maxPrice({ ...common, units: 2, rentPerOtherUnit: suiteRent(place) }) };
+  }, [income, savings, place]);
+  const gain = result.suite.price - result.alone.price;
   return (
     <section id="top" className="border-b border-hairline">
-      <div className={`${shell} pb-14 pt-12 sm:pt-20 lg:pb-20`}>
-        <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
+      <div className={`${shell} pb-12 pt-8 sm:pt-14 lg:pb-16`}>
+        <div className="grid items-center gap-8 lg:grid-cols-[1fr_minmax(0,30rem)] lg:gap-14">
           <div className="rise">
             <p className={eyebrow}>For buyers, sellers and investors across Canada</p>
-            <h1 className="mt-6 text-[48px] font-semibold leading-[1.02] tracking-[-0.045em] text-zinc-900 sm:text-[68px] lg:text-[80px] dark:text-white">
+            <h1 className="mt-4 text-[42px] font-semibold leading-[1.02] tracking-[-0.045em] text-zinc-900 sm:text-[64px] lg:text-[76px] dark:text-white">
               Real estate shouldn’t be <span className="text-emerald-600 dark:text-emerald-300">scary.</span>
             </h1>
-            <p className="mt-7 max-w-xl text-[17px] leading-[1.65] text-zinc-500 sm:text-lg dark:text-zinc-400">
-              Our mission is to make real estate easier to understand, property ownership more transparent, and property management simpler. We give Canadians the knowledge and
-              tools to make confident decisions, whether they’re buying their first property, investing, or managing rentals.
+            <p className="mt-5 max-w-lg text-[17px] leading-relaxed text-zinc-500 sm:text-lg dark:text-zinc-400">
+              See what you can afford, what a home really costs each month, and the homes that fit, in plain numbers.
             </p>
-            <p className="mt-6 text-lg text-zinc-600 dark:text-zinc-300">Clear information. Smarter decisions. Simpler real estate.</p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <a href={open('home')} className={primary}>
-                See what you can buy
-              </a>
-              <a href="/homes/" className={secondary}>
-                Find a home to rent or buy
-              </a>
-            </div>
-            <ul className="mt-6 flex flex-wrap gap-2 text-sm font-semibold text-zinc-600 dark:text-zinc-300">
+            <ul className="mt-6 flex flex-wrap gap-2 text-sm font-semibold text-zinc-600 max-lg:hidden dark:text-zinc-300">
               {['Free to use', 'No sign-up', 'Anywhere in Canada'].map((t) => (
                 <li key={t} className="inline-flex items-center gap-1.5 rounded-full bg-(--soft) px-3 py-1.5">
                   <Check className="size-3.5 text-emerald-600 dark:text-emerald-300" aria-hidden /> {t}
                 </li>
               ))}
             </ul>
+            <div className="mt-8 flex gap-3 max-lg:hidden">
+              <a href="/homes/" className={secondary}>
+                Find a home to rent or buy
+              </a>
+              <a href={open('portfolio')} className={secondary}>
+                I already own a home
+              </a>
+            </div>
           </div>
-          <figure className="rise" style={{ animationDelay: '80ms' }}>
-            <img
-              src="/landing/hw/keys.webp"
-              width="1200"
-              height="800"
-              alt="One hand passing a set of house keys to another, over signed papers."
-              className="aspect-[4/3.6] w-full rounded-[28px] object-cover lg:aspect-[1/1.05]"
-            />
-            <figcaption className="mt-4 flex items-center gap-3.5 px-1">
-              <span className="size-11 shrink-0 rounded-[12px] bg-(--soft)" aria-hidden />
-              <span className="text-sm leading-snug">
-                <span className="block font-bold text-zinc-900 dark:text-white">Big decisions. Small, comfortable steps.</span>
-                <span className="text-zinc-500 dark:text-zinc-400">No need to have it all figured out.</span>
-              </span>
-            </figcaption>
-          </figure>
+          <div id="tryit" className={`${card} rise scroll-mt-24 p-5 sm:p-7`} style={{ animationDelay: '80ms' }}>
+            <p className="font-display text-xl font-semibold tracking-tight text-zinc-900 dark:text-white">What could you buy?</p>
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="col-span-2">
+                <CitySelect id="try-city" label="Where" value={city} onChange={onCity} />
+              </div>
+              <NumberField id="try-income" value={income} onChange={setIncome}>
+                Income, before tax
+              </NumberField>
+              <NumberField id="try-savings" value={savings} onChange={setSavings}>
+                Saved for buying
+              </NumberField>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-3" aria-live="polite">
+              <div className="rounded-[14px] bg-(--soft) p-4">
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-300">On your own</p>
+                <p className="mt-1 font-display text-[24px] font-semibold tracking-[-0.03em] tabular-nums text-zinc-900 sm:text-[28px] dark:text-white">{money(result.alone.price)}</p>
+              </div>
+              <div className="rounded-[14px] border border-emerald-600/70 bg-(--soft) p-4">
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-300">With a suite</p>
+                <p className="mt-1 font-display text-[24px] font-semibold tracking-[-0.03em] tabular-nums text-zinc-900 sm:text-[28px] dark:text-white">{money(result.suite.price)}</p>
+              </div>
+            </div>
+            <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
+              {gain > 0 ? `A rented suite adds ${money(gain)}: lenders count its ${money(suiteRent(place))}/mo rent. ` : ''}A typical house in {placeName(place)} is {money(place.price)}.
+            </p>
+            <a href={open('home')} className={`${primary} mt-5 w-full`}>
+              See your full plan <ArrowRight className="size-4" aria-hidden />
+            </a>
+            <p className="mt-3 text-center text-xs text-zinc-500 dark:text-zinc-400">Free · No sign-up · Real lending rules at a {DEFAULT_MARKET.rate}% rate</p>
+          </div>
         </div>
       </div>
-      <div className="overflow-hidden border-t border-hairline py-5" aria-hidden>
-        <div className="hw-marquee flex w-max gap-10 whitespace-nowrap font-display text-xl font-semibold tracking-[-0.02em] text-zinc-400 sm:text-2xl">
+      <div className="overflow-hidden border-t border-hairline py-4" aria-hidden>
+        <div className="hw-marquee flex w-max gap-10 whitespace-nowrap font-display text-lg font-semibold tracking-[-0.02em] text-zinc-400 sm:text-xl">
           {[...PHRASES, ...PHRASES].map((p, i) => (
             <span key={i} className="flex items-center gap-10">
               {p}
@@ -267,162 +291,21 @@ function Hero() {
   );
 }
 
-/**
- * Try it: the same engine as the app works out the most a lender would let
- * you pay in the picked city, on your own and with a basement suite rented out.
- */
-function TryIt({ city, onCity }) {
-  const [income, setIncome] = useState(SAMPLE.income);
-  const [savings, setSavings] = useState(60000);
-  const place = cityByKey(city);
-  const result = useMemo(() => {
-    const profile = { ...SAMPLE, income: n0(income), savings: n0(savings), city: place.key, entered: true };
-    const common = { profile, ratePct: DEFAULT_MARKET.rate, taxPct: place.taxPct, city: place.key };
-    return { alone: maxPrice({ ...common, units: 1 }), suite: maxPrice({ ...common, units: 2, rentPerOtherUnit: suiteRent(place) }) };
-  }, [income, savings, place]);
-  const gain = result.suite.price - result.alone.price;
-  const held = (r) => (r.limit === 'savings' ? 'Held back by your savings.' : 'Held back by your income.');
+/** On phones, once the first screen has scrolled away, one button back to the answer. */
+function StickyStart() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const on = () => setShow(window.scrollY > window.innerHeight * 1.2 && window.innerHeight + window.scrollY < document.body.scrollHeight - 400);
+    on();
+    window.addEventListener('scroll', on, { passive: true });
+    return () => window.removeEventListener('scroll', on);
+  }, []);
   return (
-    <section id="tryit" aria-labelledby="tryit-title" className="scroll-mt-24">
-      <div className={`${shell} py-14 sm:py-20`}>
-        <Reveal className={`${card} grid gap-10 p-6 sm:p-10 lg:grid-cols-2 lg:gap-14`}>
-          <div>
-            <p className={eyebrow}>Try it: what could you buy?</p>
-            <h2 id="tryit-title" className="mt-4 font-display text-[32px] font-semibold leading-[1.1] tracking-[-0.035em] text-zinc-900 sm:text-[44px] dark:text-white">
-              See how much a rented suite could add.
-            </h2>
-            <p className="mt-4 max-w-md text-zinc-500 dark:text-zinc-400">Two numbers change everything: what you earn, and what a suite could bring in each month.</p>
-            <div className="mt-7 grid max-w-md gap-5">
-              <CitySelect id="try-city" label="Where" value={city} onChange={onCity} />
-              <NumberField id="try-income" value={income} onChange={setIncome}>
-                Household income, before tax
-              </NumberField>
-              <NumberField id="try-savings" value={savings} onChange={setSavings}>
-                Saved for buying
-              </NumberField>
-            </div>
-            <p className="mt-5 max-w-md text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-              Uses the real lending limits (39% of income for housing, 44% with debts) and the stress test. Your details stay in this page.
-            </p>
-          </div>
-          <div className="flex flex-col gap-4" aria-live="polite">
-            <div className="rounded-[18px] border border-hairline bg-(--soft) p-6">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-600 dark:text-zinc-300">On your own</p>
-              <p className="mt-2 font-display text-[32px] font-semibold tracking-[-0.03em] tabular-nums text-zinc-900 dark:text-white">{money(result.alone.price)}</p>
-              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{held(result.alone)}</p>
-            </div>
-            <div className="rounded-[18px] border border-emerald-600/70 bg-(--soft) p-6">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-600 dark:text-zinc-300">With a suite rented out</p>
-              <p className="mt-2 font-display text-[32px] font-semibold tracking-[-0.03em] tabular-nums text-zinc-900 dark:text-white">{money(result.suite.price)}</p>
-              <p className="mt-1 text-sm text-zinc-700 dark:text-zinc-300">
-                {gain > 0 ? `${money(gain)} more, because a lender can count the suite’s ${money(suiteRent(place))}/mo rent. ` : ''}
-                {held(result.suite)}
-              </p>
-            </div>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              A typical house in {placeName(place)}: {money(place.price)}. Counts {money(SAMPLE.debts)}/mo of debts and a {DEFAULT_MARKET.rate}% rate.
-            </p>
-            <a href={open('home')} className={`${primary} w-full`}>
-              Get your full answer
-            </a>
-          </div>
-        </Reveal>
-      </div>
-    </section>
-  );
-}
-
-function How() {
-  const steps = [
-    ['Tell it about you', 'Income, savings and the rent you pay now. Two minutes, and it stays on your device.', ['Browse homes', '/homes/']],
-    ['View your estimates', 'On your own and with a tenant, under the real rules of your province.', ['Run my own numbers', '#calculator']],
-    ['Find the home', 'Listings sorted by what each would cost you to live in, every morning.', ['See worked-out listings', open('listings')]],
-  ];
-  return (
-    <section id="how" aria-labelledby="how-title" className={`scroll-mt-24 ${soft}`}>
-      <Reveal className={`${shell} ${section}`}>
-        <p className={eyebrow}>How does it work?</p>
-        <div className="mt-4 grid gap-6 lg:grid-cols-[1.4fr_1fr] lg:items-end">
-          <div>
-            <h2 id="how-title" className={h2}>
-              From “can I even?” to a shortlist.
-            </h2>
-            <p className={lede}>Compare the costs of living in a property or renting it out, with calculations based on your province’s rules.</p>
-          </div>
-          <p className="text-[15px] leading-relaxed text-zinc-600 lg:justify-self-end dark:text-zinc-400">
-            The asking price is one number. What it costs you to live there is another, and that one sits beside every home.
-          </p>
-        </div>
-        <ol className="mt-12 grid gap-10 md:grid-cols-3">
-          {steps.map(([t, b, [cta, href]], i) => (
-            <li key={t} className="border-t border-(--line-strong) pt-6">
-              <span className="font-display text-[36px] font-medium tabular-nums text-emerald-500">0{i + 1}</span>
-              <h3 className="mt-3 text-xl font-semibold tracking-tight text-zinc-900 dark:text-white">{t}</h3>
-              <p className="mt-2 text-[15px] leading-relaxed text-zinc-600 dark:text-zinc-400">{b}</p>
-              <a href={href} className={`${textLink} mt-5`}>
-                {cta}
-              </a>
-            </li>
-          ))}
-        </ol>
-        <div className="mt-14 border-t border-(--line-strong) pt-8">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-zinc-700 dark:text-zinc-300">What each estimate covers</p>
-          <ul className="mt-4 flex flex-wrap gap-2 text-sm text-zinc-600 dark:text-zinc-300">
-            {['Mortgage payment', 'Mortgage insurance', 'Property taxes', 'Home insurance', 'Condo or suite fees', 'Rent from other units'].map((t) => (
-              <li key={t} className="rounded-full border border-(--line-strong) px-3 py-1">
-                {t}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
-            Utilities, moving costs and closing costs are listed separately, never folded in silently. Every figure is an estimate until a lender or licensed professional confirms
-            it.
-          </p>
-        </div>
-      </Reveal>
-    </section>
-  );
-}
-
-/** Ways in by kind of home: each opens the real tools, not a made-up listing. */
-function Homes() {
-  const homes = [
-    ['condo', 'Condo', 'A bright start in the city', 'A light-filled layout, a little room to work from home, and an easy sense of everyday comfort.', ['Condos for sale', '/homes/']],
-    ['townhome', 'Townhome', 'Room for your next chapter', 'Space for slow mornings, shared dinners, and whatever your next few years have in store.', ['See what you can buy', open('home')]],
-    ['house', 'House with a suite', 'A little more breathing room', 'A family home with a suite downstairs, where the rent helps carry the mortgage.', ['Run the numbers', open('home')]],
-  ];
-  return (
-    <section id="homes" aria-labelledby="homes-title" className="scroll-mt-24 border-b border-hairline">
-      <div className={`${shell} ${section}`}>
-        <Reveal className="max-w-3xl">
-          <p className={eyebrow}>A place to start imagining</p>
-          <h2 id="homes-title" className={`${h2} mt-4`}>
-            Different homes.
-            <br />
-            Different next chapters.
-          </h2>
-          <p className={lede}>Pick the kind of home you have in mind, and see what the numbers look like for you.</p>
-        </Reveal>
-        <div className="mt-12 grid gap-5 md:grid-cols-3">
-          {homes.map(([img, kind, title, body, [cta, href]], i) => (
-            <Reveal key={img} delay={i * 60} className={`${card} flex flex-col overflow-hidden`}>
-              <div className="relative">
-                <img src={`/landing/hw/${img}.webp`} width="1200" height="670" loading="lazy" alt="" className="aspect-[1.4/1] w-full object-cover" />
-                <span className="absolute left-4 top-4 rounded-full bg-(--panel) px-3 py-1 text-xs font-bold text-zinc-900 dark:text-white">{kind}</span>
-              </div>
-              <div className="flex flex-1 flex-col p-6">
-                <h3 className="text-[22px] font-semibold tracking-tight text-zinc-900 dark:text-white">{title}</h3>
-                <p className="mt-3 text-[15px] leading-relaxed text-zinc-600 dark:text-zinc-400">{body}</p>
-                <a href={href} className={`${textLink} mt-auto border-t border-hairline pt-5`}>
-                  {cta}
-                </a>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-        <p className="mt-6 text-sm text-zinc-500 dark:text-zinc-400">Photos show the kind of home, not a particular one for sale.</p>
-      </div>
-    </section>
+    <div className={`fixed inset-x-0 bottom-0 z-30 border-t border-hairline bg-(--page)/95 p-3 backdrop-blur transition-transform duration-300 lg:hidden ${show ? 'translate-y-0' : 'translate-y-full'}`} style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }} aria-hidden={!show}>
+      <a href={open('home')} tabIndex={show ? 0 : -1} className={`${primary} w-full`}>
+        See what you can buy
+      </a>
+    </div>
   );
 }
 
@@ -666,123 +549,40 @@ function Calculators({ city, onCity }) {
 }
 
 const PATHS = [
-  ['Buying', 'From “can I even?” to the keys.', ['What you could buy today, and the cash to close', 'Homes that fit you, marked as a fit, a stretch, or not yet', 'Every step from the first check to moving day'], 'Start my plan', open('home')],
-  ['Building', 'From a blueprint to a shopping list.', ['Walk through the rooms and what each one needs', 'Studs, drywall, insulation, paint and floors, counted', 'A materials list you can price at the hardware store'], 'Price my build', open('build')],
-  ['Selling', 'Know your number before an agent does.', ['What it’s likely worth, next to similar homes', 'What you walk away with after commission and the mortgage', 'A sell-ready checklist, and a free listing to sell privately'], 'What’s my home worth?', open('sell')],
-  ['Investing', 'Every deal, run the way a lender runs it.', ['Cash flow, the debt cover ratio, and the most you should pay', 'Rent you can count toward your next purchase', 'Rent, repairs and tax time in one place'], 'Analyze a deal', open('analyze')],
+  ['keys', 'Buying', 'From “can I even?” to the keys.', 'What you can buy, the cash to close, and homes that fit you.', 'Start my plan', open('home')],
+  ['house', 'Selling', 'Know your number before an agent does.', 'What it’s likely worth, and what you walk away with.', 'What’s my home worth?', open('sell')],
+  ['townhome', 'Investing', 'Every deal, run the way a lender runs it.', 'Cash flow, the debt cover ratio, and the most to pay.', 'Analyze a deal', open('analyze')],
+  ['owners', 'Owning & renting out', 'Your properties, all in one place.', 'Rent, repairs, work done and tax time, kept together.', 'Open My properties', open('portfolio')],
 ];
 
+/** Four ways in, one card each, so people pick their own path instead of reading about all of them. */
 function Paths() {
   return (
-    <section id="paths" aria-labelledby="paths-title" className="border-b border-hairline">
-      <div className={`${shell} ${section}`}>
+    <section id="paths" aria-labelledby="paths-title" className="scroll-mt-24 border-b border-hairline">
+      <div className={`${shell} py-14 sm:py-20`}>
         <Reveal className="max-w-3xl">
-          <p className={eyebrow}>One place for all of it</p>
-          <h2 id="paths-title" className={`${h2} mt-4`}>
-            Let’s get started
+          <p className={eyebrow}>Start wherever you are</p>
+          <h2 id="paths-title" className={`${h2} mt-3`}>
+            What brings you here?
           </h2>
-          <p className={lede}>Start wherever you are. Each path begins with numbers you can understand.</p>
         </Reveal>
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {PATHS.map(([title, lead, points, cta, href], i) => (
-            <Reveal key={title} delay={i * 50} className={`${card} flex flex-col p-7`}>
-              <span className="size-11 rounded-[12px] bg-(--soft)" aria-hidden />
-              <h3 className="mt-7 text-[22px] font-semibold tracking-tight text-zinc-900 dark:text-white">{title}</h3>
-              <p className="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-emerald-600 dark:text-emerald-300">{lead}</p>
-              <ul className="mt-5 grid gap-2.5 text-[15px] text-zinc-600 dark:text-zinc-400">
-                {points.map((p) => (
-                  <li key={p}>{p}</li>
-                ))}
-              </ul>
-              <a href={href} className={`${textLink} mt-auto pt-6`}>
-                {cta}
-              </a>
-            </Reveal>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Inside() {
-  const items = [
-    ['Morning listings', 'Homes with what each would cost you to live in, worked out beside your numbers.', 'See today’s shortlist', open('listings')],
-    ['Home check', 'What a lender would probably approve you for, and what it costs each month next to your rent.', 'Check my numbers', open('home')],
-    ['Money you can get', 'First-home savings, land transfer tax refunds, the buyers’ credit and the RRSP plan, added up.', 'Run the numbers', open('home')],
-    ['Find a lender', 'Who lends, what to bring, what to ask, and how to check a broker’s licence.', 'Read the guide', '/lenders/'],
-    ['Landlord tools', 'List a home free, then keep applications, rent and repairs in one place.', 'Open landlord tools', open('landlord')],
-    ['Your property space', 'Sign in, then keep the homes you own, their work, rent and tax lines together.', 'Open My properties', open('portfolio')],
-  ];
-  return (
-    <section id="inside" aria-labelledby="inside-title" className={`scroll-mt-24 ${soft}`}>
-      <div className={`${shell} ${section}`}>
-        <Reveal className="max-w-3xl">
-          <p className={eyebrow}>What’s inside</p>
-          <h2 id="inside-title" className={`${h2} mt-4`}>
-            Everything a broker would check, before you call one.
-          </h2>
-          <p className={lede}>A short set of tools, each one built to answer a specific question, and a straight answer about what it cannot tell you.</p>
-        </Reveal>
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map(([t, b, cta, href], i) => (
-            <Reveal key={t} delay={i * 40} className={`${card} flex flex-col p-7`}>
-              <h3 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-white">{t}</h3>
-              <p className="mt-2 text-[15px] leading-relaxed text-zinc-600 dark:text-zinc-400">{b}</p>
-              <a href={href} className={`${textLink} mt-auto pt-5`}>
-                {cta}
-              </a>
-            </Reveal>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Owners() {
-  const points = [
-    ['Getting a property rental-ready', 'Set up the unit, list it free, and take applications and viewings in one place.'],
-    ['Keeping the everyday organized', 'Rent, repairs and expenses tracked, with the tax lines ready for your accountant.'],
-    ['A smarter perspective on what’s next', 'What each home is worth today, what work added to it, and when a refinance makes sense.'],
-  ];
-  return (
-    <section id="owners" aria-labelledby="owners-title" className="scroll-mt-24 border-b border-hairline">
-      <div className={`${shell} ${section} grid items-center gap-12 lg:grid-cols-2`}>
-        <Reveal>
-          <img src="/landing/hw/owners.webp" width="1200" height="670" loading="lazy" alt="Two people at a kitchen table looking over a chart on a tablet." className="aspect-[4/3] w-full rounded-[28px] object-cover" />
-          <div className="mt-5 flex gap-4 rounded-[24px] border border-hairline bg-(--soft) p-6">
-            <span className="size-11 shrink-0 rounded-[12px] bg-(--panel)" aria-hidden />
-            <div>
-              <h3 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-white">Your properties, all in one place.</h3>
-              <p className="mt-1.5 text-[15px] text-zinc-600 dark:text-zinc-400">Add the homes you own, the work you’ve put in, and what they bring in each month.</p>
-              <a href={open('portfolio')} className={`${textLink} mt-4`}>
-                Open my property space
-              </a>
-            </div>
-          </div>
-        </Reveal>
-        <Reveal delay={60}>
-          <p className={eyebrow}>For the ownership side of life</p>
-          <h2 id="owners-title" className={`${h2} mt-4`}>
-            Navigate property ownership with greater confidence.
-          </h2>
-          <p className={lede}>Whether you have one home or a growing list of questions, start with the tools that make sense for you.</p>
-          <ul className="mt-8 grid gap-6">
-            {points.map(([t, b]) => (
-              <li key={t} className="flex gap-4">
-                <span className="size-11 shrink-0 rounded-[12px] bg-(--soft)" aria-hidden />
-                <span>
-                  <span className="block font-display text-xl font-semibold tracking-tight text-zinc-900 dark:text-white">{t}</span>
-                  <span className="mt-1 block text-[15px] text-zinc-600 dark:text-zinc-400">{b}</span>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {PATHS.map(([img, title, lead, body, cta, href], i) => (
+            <Reveal key={title} delay={i * 50}>
+              <a href={href} className={`${card} tile group flex h-full flex-col overflow-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent)`}>
+                <img src={`/landing/hw/${img}.webp`} width="1200" height="670" loading="lazy" alt="" className="aspect-[16/10] w-full object-cover" />
+                <span className="flex flex-1 flex-col p-5">
+                  <span className="text-xl font-semibold tracking-tight text-zinc-900 font-display dark:text-white">{title}</span>
+                  <span className="mt-1 text-xs font-bold uppercase tracking-[0.12em] text-emerald-600 dark:text-emerald-300">{lead}</span>
+                  <span className="mt-3 text-[15px] text-zinc-600 dark:text-zinc-400">{body}</span>
+                  <span className={`${textLink} mt-auto pt-4`}>
+                    {cta} <ArrowRight className="size-4 transition group-hover:translate-x-0.5" aria-hidden />
+                  </span>
                 </span>
-              </li>
-            ))}
-          </ul>
-          <a href={open('landlord')} className={`${secondary} mt-8`}>
-            Open landlord tools
-          </a>
-        </Reveal>
+              </a>
+            </Reveal>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -837,7 +637,7 @@ function Pricing() {
               </p>
               <p className="mt-2 text-[15px] text-zinc-600 dark:text-zinc-400">{p.lead}</p>
               <ul className="mt-6 grid gap-2.5 border-t border-hairline pt-6 text-[15px] text-zinc-700 dark:text-zinc-300">
-                {p.points.map((x) => (
+                {p.points.slice(0, 4).map((x) => (
                   <li key={x} className="flex gap-2.5">
                     <Check className="mt-1 size-4 shrink-0 text-emerald-600 dark:text-emerald-300" aria-hidden /> {x}
                   </li>
@@ -867,20 +667,6 @@ const FAQ = [
     'What does it cost?',
     'Looking around, the calculators, listings and plans cost nothing, and listing a home is free. Plus is $12 a month. Landlords who track rent pay 2% of each tenanted unit’s rent, at most $30 a unit, and the first unit is free.',
   ],
-  [
-    'I’ve never talked to a lender. Where do I start?',
-    <>
-      Start with the calculators above, then our{' '}
-      <a href="/lenders/" className="font-semibold text-emerald-700 underline underline-offset-2 dark:text-emerald-300">
-        guide to finding a lender
-      </a>
-      : who lends, what to bring, what to ask, and how to check a broker’s licence in your province.
-    </>,
-  ],
-  [
-    'What can I do in My properties?',
-    'Add the homes you own, with what you paid, the mortgage, the rent and the work you’ve put in. You see what each is worth and brings in, and the tax lines are ready at year end. Sign in to keep it on every device.',
-  ],
   ['Is this financial advice?', 'No. These are careful estimates so you walk into a broker’s office knowing your numbers. A mortgage broker or lender confirms the real ones.'],
 ];
 
@@ -896,7 +682,7 @@ function Faq() {
             Clear answers.
           </h2>
           <p className={lede}>There’s no such thing as being “too early” to ask.</p>
-          <a href="#contact" className={`${secondary} mt-8`}>
+          <a href="/contact/" className={`${secondary} mt-8`}>
             Ask your own question
           </a>
         </div>
@@ -911,104 +697,6 @@ function Faq() {
             </details>
           ))}
         </div>
-      </div>
-    </section>
-  );
-}
-
-const TOPICS = ['Just exploring', 'Buying a home', 'Building a home', 'Selling a home', 'Investing or rental income', 'Landlord tools or billing', 'A number looks wrong', 'Something else'];
-
-/** The contact form: it goes to the same inbox as the contact page. */
-function Contact() {
-  const [f, setF] = useState({ name: '', email: '', topic: TOPICS[0], message: '', website: '' });
-  const [state, setState] = useState({ status: 'idle', error: '' });
-  const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
-  const send = async (e) => {
-    e.preventDefault();
-    setState({ status: 'sending', error: '' });
-    try {
-      const res = await fetch('/api/contact', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(f) });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Couldn’t send that. Try again in a minute.');
-      setState({ status: 'sent', error: '' });
-    } catch (err) {
-      setState({ status: 'idle', error: err.message });
-    }
-  };
-  return (
-    <section id="contact" aria-labelledby="contact-title" className="scroll-mt-24">
-      <div className={`${shell} ${section} grid gap-12 lg:grid-cols-2`}>
-        <div>
-          <p className={eyebrow}>A conversation, not a commitment</p>
-          <h2 id="contact-title" className={`${h2} mt-4`}>
-            Find out how
-            <br />
-            close you are.
-          </h2>
-          <p className={lede}>Two minutes, free, and nothing to sign up for. Tell us where you’re at and we’ll reply by email.</p>
-          <div className="mt-8 flex gap-4 rounded-[24px] bg-(--soft) p-6">
-            <span className="size-11 shrink-0 rounded-[12px] bg-(--panel)" aria-hidden />
-            <p className="text-[15px] text-zinc-600 dark:text-zinc-300">
-              <span className="block font-bold text-zinc-900 dark:text-white">Real questions welcome.</span>
-              No pressure to take the next step.
-            </p>
-          </div>
-          <a href="/homes/" className={`${secondary} mt-6`}>
-            Browse homes first
-          </a>
-        </div>
-        {state.status === 'sent' ? (
-          <div className={`${card} h-max p-8`} role="status">
-            <p className="font-display text-2xl font-semibold text-zinc-900 dark:text-white">Thanks, {f.name.split(' ')[0]}. Your question is in.</p>
-            <p className="mt-2 text-zinc-600 dark:text-zinc-400">We’ll reply to {f.email}, usually within two business days.</p>
-          </div>
-        ) : (
-          <form onSubmit={send} className={`${card} grid gap-5 p-6 sm:p-8`}>
-            <div>
-              <label htmlFor="hw-name" className={label}>
-                Your name
-              </label>
-              <input id="hw-name" required autoComplete="name" value={f.name} onChange={set('name')} className={field} />
-            </div>
-            <div>
-              <label htmlFor="hw-email" className={label}>
-                Email address
-              </label>
-              <input id="hw-email" type="email" required autoComplete="email" value={f.email} onChange={set('email')} className={field} />
-            </div>
-            <div>
-              <label htmlFor="hw-topic" className={label}>
-                What would you like to talk about?
-              </label>
-              <select id="hw-topic" value={f.topic} onChange={set('topic')} className={field}>
-                {TOPICS.map((t) => (
-                  <option key={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="hw-msg" className={label}>
-                Your question
-              </label>
-              <textarea id="hw-msg" required minLength={5} rows={5} value={f.message} onChange={set('message')} className={field} />
-            </div>
-            <input type="text" name="website" tabIndex={-1} autoComplete="off" value={f.website} onChange={set('website')} className="hidden" aria-hidden />
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              We use your details only to reply. Please don’t include banking information, identity documents or tenant details.{' '}
-              <a href="/privacy/" className="underline underline-offset-2">
-                Privacy
-              </a>
-            </p>
-            {state.error && (
-              <p role="alert" className="text-sm text-red-700 dark:text-red-300">
-                {state.error}
-              </p>
-            )}
-            <button type="submit" disabled={state.status === 'sending'} className={`${primary} w-full disabled:opacity-60`}>
-              {state.status === 'sending' ? 'Sending…' : 'Send my question'}
-            </button>
-          </form>
-        )}
       </div>
     </section>
   );
