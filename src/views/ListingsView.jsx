@@ -558,6 +558,8 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
   // The listing opened on its own page, by id.
   const [openId, setOpenId] = useState(null);
   const [alerting, setAlerting] = useState(false);
+  // On phones the less-used controls fold behind one Filters button, so the listings start sooner.
+  const [moreFilters, setMoreFilters] = useState(false);
   const [onlyMeets, setOnlyMeets] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -702,27 +704,29 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
                 );
               })}
             </div>
-            <Segmented
-              label="Financing"
-              value={market.lens}
-              onChange={(lens) => onMarket({ lens })}
-              options={[
-                { value: 'dscr', label: 'DSCR loan' },
-                { value: 'own', label: '20% down' },
-              ]}
-            />
+            <div className={moreFilters ? '' : 'max-sm:hidden'}>
+              <Segmented
+                label="Financing"
+                value={market.lens}
+                onChange={(lens) => onMarket({ lens })}
+                options={[
+                  { value: 'dscr', label: 'DSCR loan' },
+                  { value: 'own', label: '20% down' },
+                ]}
+              />
+            </div>
             <button
               type="button"
               aria-pressed={onlyMeets}
               onClick={() => setOnlyMeets((v) => !v)}
-              className={toggle(onlyMeets)}
+              className={`${toggle(onlyMeets)} ${moreFilters || onlyMeets ? '' : 'max-sm:hidden'}`}
               title={targetText ? `Your targets: ${targetText}` : 'Set targets in Assumptions'}
             >
               {onlyMeets && <Check className="size-3.5" aria-hidden />}
               Beats my targets <span className="tabular text-emerald-700 dark:text-emerald-400">{visible.filter((x) => x.meets).length}</span>
             </button>
             {hiddenCount > 0 && (
-              <button type="button" aria-pressed={showHidden} onClick={() => setShowHidden((v) => !v)} className={toggle(showHidden)}>
+              <button type="button" aria-pressed={showHidden} onClick={() => setShowHidden((v) => !v)} className={`${toggle(showHidden)} ${moreFilters || showHidden ? '' : 'max-sm:hidden'}`}>
                 {showHidden && <Check className="size-3.5" aria-hidden />}
                 Hidden ({hiddenCount})
               </button>
@@ -748,13 +752,16 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
                   { value: 'map', label: 'Map' },
                 ]}
               />
+              <Button className="px-2.5 py-1.5 sm:hidden" onClick={() => setMoreFilters((v) => !v)} aria-expanded={moreFilters}>
+                <SlidersHorizontal className="size-4" aria-hidden /> {moreFilters ? 'Fewer' : 'Filters'}
+              </Button>
               {onAlerts && (
-                <Button className="px-2.5 py-1.5" onClick={() => setAlerting((v) => !v)} aria-expanded={alerting} aria-label="Alert me about new listings" title="Alert me about new listings">
+                <Button className={`px-2.5 py-1.5 ${moreFilters ? '' : 'max-sm:hidden'}`} onClick={() => setAlerting((v) => !v)} aria-expanded={alerting} aria-label="Alert me about new listings" title="Alert me about new listings">
                   <BellPlus className="size-4" aria-hidden />
                 </Button>
               )}
               <Button
-                className="px-2.5 py-1.5"
+                className={`px-2.5 py-1.5 ${moreFilters || editing ? '' : 'max-sm:hidden'}`}
                 onClick={() => setEditing((v) => !v)}
                 aria-expanded={editing}
                 aria-controls="listing-assumptions"

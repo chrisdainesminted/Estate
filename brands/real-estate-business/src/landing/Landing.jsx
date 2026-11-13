@@ -229,7 +229,7 @@ function Hero({ city, onCity }) {
               See what you can afford, what a home really costs each month, and the homes that fit, in plain numbers.
             </p>
             <ul className="mt-6 flex flex-wrap gap-2 text-sm font-semibold text-zinc-600 max-lg:hidden dark:text-zinc-300">
-              {['Free to use', 'No sign-up', 'Anywhere in Canada'].map((t) => (
+              {['Free to use', 'Free account', 'Anywhere in Canada'].map((t) => (
                 <li key={t} className="inline-flex items-center gap-1.5 rounded-full bg-(--soft) px-3 py-1.5">
                   <Check className="size-3.5 text-emerald-600 dark:text-emerald-300" aria-hidden /> {t}
                 </li>
@@ -273,7 +273,7 @@ function Hero({ city, onCity }) {
             <a href={open('home')} className={`${primary} mt-5 w-full`}>
               See your full plan <ArrowRight className="size-4" aria-hidden />
             </a>
-            <p className="mt-3 text-center text-xs text-zinc-500 dark:text-zinc-400">Free · No sign-up · Real lending rules at a {DEFAULT_MARKET.rate}% rate</p>
+            <p className="mt-3 text-center text-xs text-zinc-500 dark:text-zinc-400">Free · Real lending rules at a {DEFAULT_MARKET.rate}% rate</p>
           </div>
         </div>
       </div>
@@ -499,7 +499,7 @@ function Calculators({ city, onCity }) {
           <h2 id="calc-title" className={`${h2} mt-4`}>
             Making sense of the numbers that matter.
           </h2>
-          <p className={lede}>No sign-up. No commitment. Just a starting point for a more confident conversation.</p>
+          <p className={lede}>Free to try. No commitment. Just a starting point for a more confident conversation.</p>
         </Reveal>
         <div className="mt-10 flex flex-wrap gap-2" role="tablist" aria-label="Calculators">
           {TABS.map(([key, text]) => (
@@ -623,7 +623,7 @@ function Pricing() {
           <h2 id="pricing-title" className={h2}>
             Free to start.
           </h2>
-          <p className={lede}>No account needed to look around. Plus is there when it saves you time.</p>
+          <p className={lede}>Try the calculators without an account. Plus is there when it saves you time.</p>
         </Reveal>
         <div className="mt-12 grid gap-4 lg:grid-cols-3">
           {plans.map((p) => (

@@ -12,6 +12,7 @@ import { Section, SectionGroup } from '../components/Section.jsx';
 import CitySelect from '../components/CitySelect.jsx';
 import { RentVsBuy } from './HomeExtras.jsx';
 import { sitePage } from '../lib/site.js';
+import { accountLink } from '../lib/account.js';
 
 const checkedOn = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' });
 const KIND = { 1: 'a house', 2: 'a duplex', 3: 'a triplex', 4: 'a fourplex' };
@@ -330,7 +331,7 @@ function Start({ onHome }) {
             Six quick questions, then your answer
           </h2>
           <p className="mt-1.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-            About two minutes. You’ll see what a bank would lend you, alone and with a tenant, the cash you’d need, and when you’d be ready. Your answers stay in this browser unless you make an account.
+            About two minutes. You’ll see what a bank would lend you, alone and with a tenant, the cash you’d need, and when you’d be ready. {accountLink() ? 'Your answers are saved to your account.' : 'Your answers stay in this browser unless you make an account.'}
           </p>
         </div>
         <div className="grid gap-4 px-5 py-5 sm:grid-cols-2 sm:px-6">

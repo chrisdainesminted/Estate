@@ -984,7 +984,7 @@ export default function App() {
           </div>
         </header>
 
-        <main id="main" tabIndex={-1} className="gutter mx-auto max-w-[1500px] space-y-6 py-6 outline-none sm:py-8">
+        <main id="main" tabIndex={-1} className="gutter mx-auto max-w-[1500px] space-y-6 pt-6 pb-24 outline-none sm:pt-8">
           {/* Portal target for glossary tips; display: contents keeps it out of the layout. */}
           <div id="tip-layer" className="contents" />
           <Suspense fallback={<SkeletonCard className="h-[32rem]" />}>

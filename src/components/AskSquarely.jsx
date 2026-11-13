@@ -82,10 +82,11 @@ export default function AskSquarely({ context, mode, account }) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed right-4 z-40 inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-3 text-sm font-semibold text-zinc-950 shadow-lg shadow-emerald-900/30 transition hover:bg-emerald-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 print:hidden"
+          aria-label="Ask Squarely"
+          className="fixed right-4 z-40 inline-flex items-center gap-2 rounded-full bg-emerald-500 p-3 text-sm sm:px-4 font-semibold text-zinc-950 shadow-lg shadow-emerald-900/30 transition hover:bg-emerald-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 print:hidden"
           style={{ bottom: 'calc(var(--dock, 0px) + 1rem)' }}
         >
-          <MessageCircleQuestion className="size-4" aria-hidden /> Ask Squarely
+          <MessageCircleQuestion className="size-5 sm:size-4" aria-hidden /> <span className="max-sm:sr-only">Ask Squarely</span>
         </button>
       )}
       {open && (

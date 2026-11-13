@@ -285,7 +285,7 @@ function Hero({ city, onCity }) {
                 Find a home to rent or buy
               </a>
             </div>
-            <p className="mt-5 text-sm text-zinc-500 dark:text-zinc-400">Free · No sign-up · Anywhere in Canada</p>
+            <p className="mt-5 text-sm text-zinc-500 dark:text-zinc-400">Free · Try it above without an account · Anywhere in Canada</p>
           </div>
           <Estimator city={city} onCity={onCity} />
         </div>
@@ -583,7 +583,7 @@ function Pricing() {
               <Sparkles className="size-4 text-emerald-600" aria-hidden /> Plus
             </p>
             <p className="mt-1 text-3xl font-semibold tracking-tight text-zinc-950 dark:text-white">
-              $12<span className="text-base font-medium text-zinc-500">/month</span>
+              $12<span className="text-base font-medium text-zinc-500 dark:text-zinc-400">/month</span>
             </p>
             <ul className="mt-5 grid gap-2 text-sm text-zinc-700 dark:text-zinc-300">
               <li className="flex gap-2 font-medium">
@@ -602,7 +602,7 @@ function Pricing() {
           <div className="rounded-2xl border border-hairline bg-(--panel) p-6">
             <p className="text-lg font-semibold text-zinc-950 dark:text-white">Landlords</p>
             <p className="mt-1 text-3xl font-semibold tracking-tight text-zinc-950 dark:text-white">
-              2%<span className="text-base font-medium text-zinc-500"> of rent tracked</span>
+              2%<span className="text-base font-medium text-zinc-500 dark:text-zinc-400"> of rent tracked</span>
             </p>
             <ul className="mt-5 grid gap-2 text-sm text-zinc-700 dark:text-zinc-300">
               {['Listings where people apply and book viewings', 'Rent tracking, reminders and receipts', 'Repairs, expenses and your T776 tax pack', 'At most $30 a unit; your first unit is free'].map((x) => (
@@ -768,7 +768,7 @@ function Closing() {
         <h2 id="closing-title" className="mx-auto max-w-3xl text-4xl font-semibold leading-[1.08] tracking-[-0.035em] text-zinc-950 sm:text-5xl dark:text-white">
           Find out how close you are.
         </h2>
-        <p className="mx-auto mt-4 max-w-xl text-lg text-zinc-600 dark:text-zinc-400">Two minutes, free, and nothing to sign up for.</p>
+        <p className="mx-auto mt-4 max-w-xl text-lg text-zinc-600 dark:text-zinc-400">Two minutes and a free account.</p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <a href={open('home')} className={primary}>
             See what you can buy <ArrowRight className="size-4" aria-hidden />

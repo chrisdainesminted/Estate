@@ -6,7 +6,7 @@ import { LISTING_CITIES } from '../lib/market.js';
 const checked = new Date(`${RULES_CHECKED}T12:00:00`).toLocaleDateString('en-CA', { month: 'long', day: 'numeric', year: 'numeric' });
 
 const PRINCIPLES = [
-  [Lock, 'Private by default', 'No account needed. Your income, savings and deals stay in your browser unless you choose to sync them.'],
+  [Lock, 'Private by default', 'Your income, savings and deals are used only to work out your answers, and are kept in your own private account.'],
   [Scale, 'The real rules, shown', `Down payments, mortgage insurance, the stress test, land transfer tax and every first-buyer program, for each province, checked ${checked} and linked to the official source.`],
   [Calculator, 'Every number explained', 'Each figure says what it means and how it was worked out. How we calculate lists the formulas.'],
   [ShieldCheck, 'Only real listings', 'Homes for sale come from public listing sites and link to their own page; homes posted on Squarely can be reported, and reported ones are reviewed.'],
