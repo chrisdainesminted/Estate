@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ArrowLeft, ExternalLink, EyeOff, Eye, TrendingDown } from 'lucide-react';
-import HousePhoto from '../components/HousePhoto.jsx';
+import HousePhoto, { useMapsKey } from '../components/HousePhoto.jsx';
 import { Button, NumberField } from '../components/ui.jsx';
 import { analyzeDeal } from '../lib/finance.js';
 import { money, percent } from '../lib/format.js';
@@ -49,8 +49,6 @@ export function TickerStrip({ active, items, fresh, place, market, city }) {
     ['For sale', String(active.length)],
     ['New', `+${fresh}`, fresh ? up : ''],
     ['Price cuts', String(cuts), cuts ? down : ''],
-    ['Beat your targets', String(items.filter((s) => s.meets).length), up],
-    ['5-yr fixed', `${market.rate}%`],
     ...(vacancy != null ? [['Vacancy', `${vacancy}%`]] : []),
   ];
   return (
@@ -73,7 +71,7 @@ export function MoverBanner({ mover, onOpen }) {
     <button
       type="button"
       onClick={() => onOpen(s.listing.id)}
-      className="flex w-full flex-wrap items-center gap-x-5 gap-y-1.5 rounded-xl bg-red-500/[0.06] px-4 py-3 text-left ring-1 ring-red-600/20 transition ring-inset hover:bg-red-500/[0.1] dark:ring-red-400/25"
+      className="flex w-full flex-wrap items-center gap-x-5 gap-y-1.5 rounded-xl bg-red-500/[0.06] max-sm:hidden px-4 py-3 text-left ring-1 ring-red-600/20 transition ring-inset hover:bg-red-500/[0.1] dark:ring-red-400/25"
     >
       <span className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-[0.08em] text-red-700 uppercase dark:text-[#ff8a80]">
         <TrendingDown className="size-3.5" aria-hidden /> Biggest mover
@@ -102,6 +100,7 @@ function Badge({ tone = 'good', children }) {
 
 /** One listing as a card: its photo, price, what it pays you and how its price has moved. */
 export function ListingCard({ s, feed, below, place, onOpen }) {
+  const hasPhotos = Boolean(useMapsKey());
   const l = s.listing;
   const m = lastMove(l);
   const badges = [
@@ -117,17 +116,30 @@ export function ListingCard({ s, feed, below, place, onOpen }) {
       onClick={() => onOpen(l.id)}
       className="group flex flex-col overflow-hidden rounded-2xl bg-white text-left ring-1 ring-(--line-strong) transition ring-inset hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgb(0_0_0/0.5)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:bg-[#101012]"
     >
+      {hasPhotos ? (
       <HousePhoto address={l.address} place={place} className="aspect-[16/10] w-full" label="Street View photo" width={640} height={400}>
-        {badges.length > 0 && (
-          <span className="absolute top-3 left-3 flex flex-wrap gap-1.5">
+          {badges.length > 0 && (
+            <span className="absolute top-3 left-3 flex flex-wrap gap-1.5">
+              {badges.slice(0, 2).map(([tone, text]) => (
+                <Badge key={text} tone={tone}>
+                  {text}
+                </Badge>
+              ))}
+            </span>
+          )}
+        </HousePhoto>
+      ) : (
+        // No photo to show: the card starts with its badges, not an empty box.
+        badges.length > 0 && (
+          <span className="flex flex-wrap gap-1.5 px-4 pt-4">
             {badges.slice(0, 2).map(([tone, text]) => (
               <Badge key={text} tone={tone}>
                 {text}
               </Badge>
             ))}
           </span>
-        )}
-      </HousePhoto>
+        )
+      )}
       <span className="flex flex-col gap-2.5 p-4">
         <span className="flex items-baseline justify-between gap-2">
           <span className="tabular text-[22px] font-bold tracking-tight text-zinc-950 dark:text-white">{money(s.a.price)}</span>

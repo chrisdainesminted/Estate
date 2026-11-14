@@ -5,7 +5,8 @@ import QuickCheck from './QuickCheck.jsx';
 
 const KEY = 'bedrock-welcomed';
 
-function seen() {
+/** Whether the first-visit quick check has been answered or skipped in this browser. */
+export function welcomeSeen() {
   try {
     return localStorage.getItem(KEY) === '1';
   } catch {
@@ -14,11 +15,12 @@ function seen() {
 }
 
 /** First visit: what Squarely answers, and the quickest way to try it on a property. Shown until it's dismissed in this browser. */
-export default function Welcome({ country, city, rents, onQuickCheck }) {
-  const [open, setOpen] = useState(() => !seen());
+export default function Welcome({ country, city, rents, onQuickCheck, onDone }) {
+  const [open, setOpen] = useState(() => !welcomeSeen());
   if (!open) return null;
   const dismiss = () => {
     setOpen(false);
+    onDone?.();
     try {
       localStorage.setItem(KEY, '1');
     } catch {

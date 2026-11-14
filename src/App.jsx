@@ -65,7 +65,7 @@ import DealPicker from './components/DealPicker.jsx';
 import DealMemo from './components/DealMemo.jsx';
 import CommandPalette, { shortcutLabel } from './components/CommandPalette.jsx';
 import Sheet from './components/Sheet.jsx';
-import Welcome from './components/Welcome.jsx';
+import Welcome, { welcomeSeen } from './components/Welcome.jsx';
 import { SectionGroup, SectionsContext, useSectionsState } from './components/Section.jsx';
 import Dock from './components/Dock.jsx';
 import Logo, { LogoMark } from './components/Logo.jsx';
@@ -231,6 +231,7 @@ const VIEWS = [
     about: 'Your total equity, the properties you own, your tenants with a message to each a tap away, and your settings.',
   },
 ];
+const DEAL_VIEWS = new Set(['analyze', 'cash', 'compare']);
 const INVEST_VIEWS = new Set(VIEWS.filter((v) => v.group === 'invest').map((v) => v.value));
 const MODES = [
   { value: 'buy', label: 'Buy', first: 'home' },
@@ -384,6 +385,7 @@ export default function App() {
   const [adj, setAdj] = useState(NO_ADJ);
   const [scope, setScope] = useState('active');
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [welcomed, setWelcomed] = useState(welcomeSeen);
   const [sheetOpen, setSheetOpen] = useState(false);
   // Editing a property from Portfolio: its inputs in a side panel, without leaving Portfolio.
   const [portfolioEdit, setPortfolioEdit] = useState(false);
@@ -947,7 +949,8 @@ export default function App() {
               )}
             </nav>
 
-            {investing && (
+            {/* The deal picker only where a single deal is on screen; elsewhere it's one less thing in the header. */}
+            {investing && DEAL_VIEWS.has(tabView) && (
               <div className="order-4 w-full pb-1 lg:order-none lg:w-auto lg:pb-0">
                 <DealPicker items={baseItems} activeId={activeId} onSelect={pickDeal} onNew={newDeal} />
               </div>
@@ -1206,7 +1209,10 @@ export default function App() {
 
           {view === 'analyze' && (
             <>
-              {!fromLink && <Welcome country={homeRules} city={homeCity} rents={rents} onQuickCheck={quickCheck} />}
+              {!fromLink && <Welcome country={homeRules} city={homeCity} rents={rents} onQuickCheck={quickCheck} onDone={() => setWelcomed(true)} />}
+              {/* First visit: the one question on its own. The full analysis follows once it's answered or skipped. */}
+              {(fromLink || welcomed) && (
+              <>
               <HeroSummary
                 deal={current.deal}
                 a={a}
@@ -1251,6 +1257,8 @@ export default function App() {
                   </SectionGroup>
                 </div>
               </div>
+              </>
+              )}
             </>
           )}
 
