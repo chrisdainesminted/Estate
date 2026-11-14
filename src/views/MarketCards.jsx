@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { ArrowLeft, ExternalLink, EyeOff, Eye, TrendingDown } from 'lucide-react';
 import HousePhoto, { useMapsKey } from '../components/HousePhoto.jsx';
 import GradeBadge from '../components/GradeBadge.jsx';
+import RiskList from '../components/RiskList.jsx';
+import { isCondo } from '../lib/condo.js';
 import { Button, NumberField } from '../components/ui.jsx';
 import { analyzeDeal } from '../lib/finance.js';
 import { money, percent } from '../lib/format.js';
@@ -287,6 +289,10 @@ export function ListingDetail({ s, place, imported, hidden, onBack, onAnalyze, o
             {l.highlights && <p className="mt-3 max-w-2xl text-sm text-zinc-700 dark:text-zinc-300">{l.highlights}</p>}
             {sentence && <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">{sentence}</p>}
           </div>
+
+          <RiskList
+            property={{ units: unitsOf(l), condo: isCondo(l), yearBuilt: l.yearBuilt, province: place.province, rentStated: Number(l.grossRent) > 0 || (Array.isArray(l.rents) && l.rents.some((r) => Number(r) > 0)), text: l.highlights ?? '' }}
+          />
 
           <PriceChart l={l} />
 

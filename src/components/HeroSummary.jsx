@@ -9,6 +9,9 @@ import { Button, DscrChip, ExampleTag, SummaryCard, signedClass } from './ui.jsx
 import DealLedgers from './DealLedgers.jsx';
 import CalcInputs from './CalcInputs.jsx';
 import GradeBadge from './GradeBadge.jsx';
+import RiskList from './RiskList.jsx';
+import { isCondoDeal } from '../lib/condo.js';
+import { cityByKey } from '../lib/canada.js';
 
 const TONE_ICONS = { bad: XCircle, warn: AlertTriangle, good: CheckCircle2 };
 
@@ -90,6 +93,11 @@ export default function HeroSummary({ deal, a, base, whatIf, onShare, onChange }
             {dealSentence(a)}
             {breakeven && <span className="text-zinc-600 dark:text-zinc-400"> {breakeven}</span>}
           </p>
+          <RiskList
+            compact
+            className="mt-4"
+            property={{ units: a.units, condo: isCondoDeal(deal), yearBuilt: deal.yearBuilt, province: deal.country === 'ca' ? (deal.province ?? cityByKey(deal.city).province) : 'US', rentStated: /Rents as listed|Some rents/.test(deal.notes ?? ''), text: deal.notes ?? '' }}
+          />
           {deal.estimated && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Taxes and insurance are estimated from the price: edit the deal once you know the real numbers.</p>}
 
           {whatIf && (

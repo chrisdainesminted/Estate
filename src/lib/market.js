@@ -404,6 +404,7 @@ export function listingToDeal(listing, market, lens) {
     vacancyPct: m.vacancyPct,
     capexPct: m.capexPct,
     address: listing.address,
+    yearBuilt: listing.yearBuilt ?? null,
     condo: isCondo(listing),
     listingUrl: listing.url || '',
     notes: [listing.highlights, rentNote, taxSource(listing, m) === 'you' && 'Property tax as you entered it.', listing.mls && `MLS® ${listing.mls}.`].filter(Boolean).join(' '),
