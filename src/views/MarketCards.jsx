@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ArrowLeft, ExternalLink, EyeOff, Eye, TrendingDown } from 'lucide-react';
 import HousePhoto, { useMapsKey } from '../components/HousePhoto.jsx';
+import GradeBadge from '../components/GradeBadge.jsx';
 import { Button, NumberField } from '../components/ui.jsx';
 import { analyzeDeal } from '../lib/finance.js';
 import { money, percent } from '../lib/format.js';
@@ -142,7 +143,10 @@ export function ListingCard({ s, feed, below, place, onOpen }) {
       )}
       <span className="flex flex-col gap-2.5 p-4">
         <span className="flex items-baseline justify-between gap-2">
-          <span className="tabular text-[22px] font-bold tracking-tight text-zinc-950 dark:text-white">{money(s.a.price)}</span>
+          <span className="flex items-center gap-2.5">
+            {!s.needsTax && <GradeBadge a={s.a} size="sm" />}
+            <span className="tabular text-[22px] font-bold tracking-tight text-zinc-950 dark:text-white">{money(s.a.price)}</span>
+          </span>
           {!s.needsTax && <span className={`tabular text-sm font-bold ${s.a.coc >= 0 ? up : down}`}>{percent(s.a.coc, 1)}</span>}
         </span>
         <span>

@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import GradeBadge from './GradeBadge.jsx';
 import { Pencil } from 'lucide-react';
 import { Button } from './ui.jsx';
 
@@ -49,7 +50,8 @@ export default function Dock({ views, view, onView, result, onEdit }) {
     <div ref={root} className="fixed inset-x-0 bottom-0 z-40 bg-(--panel) lg:hidden print:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       {result && (
         <section aria-label="This deal at a glance" className="gutter flex items-center justify-between gap-3 border-t border-hairline py-2.5">
-          <div className="min-w-0">
+          {result.a && <GradeBadge a={result.a} size="sm" />}
+          <div className="min-w-0 flex-1">
             <p className={`tabular text-lg leading-tight font-semibold ${result.valueClass}`}>
               {result.value}
               <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">/mo</span>

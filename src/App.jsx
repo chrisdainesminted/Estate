@@ -874,7 +874,7 @@ export default function App() {
   const own = useMemo(() => analyzeDeal(ownMoney(active)), [active]);
   const dockResult =
     view === 'analyze'
-      ? { value: money(a.netCashFlow, { signed: true }), valueClass: signedClass(a.netCashFlow), sub: `${percent(a.coc, 1)} return · DSCR ${ratio(a.dscr)}` }
+      ? { a, value: money(a.netCashFlow, { signed: true }), valueClass: signedClass(a.netCashFlow), sub: `${percent(a.coc, 1)} return · DSCR ${ratio(a.dscr)}` }
       : view === 'cash'
         ? { value: money(own.netCashFlow, { signed: true }), valueClass: signedClass(own.netCashFlow), sub: `${percent(own.coc, 1)} return · ${money(own.pi)} mortgage` }
         : null;
@@ -913,7 +913,7 @@ export default function App() {
   return (
     <PlusProvider value={plus}>
     <SectionsContext.Provider value={sections}>
-      <div className="relative min-h-screen bg-(--page) print:hidden">
+      <div className="hud relative min-h-screen bg-(--page) print:hidden">
         <a
           href="#main"
           className="sr-only z-[100] rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3"

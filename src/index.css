@@ -1,11 +1,16 @@
 @import 'tailwindcss';
 /* Inter, served from the site itself: no third-party request blocks the first paint. */
 @import '@fontsource-variable/inter';
+/* The app's high-tech touches: Space Grotesk for headings, JetBrains Mono for labels and ranks. */
+@import '@fontsource-variable/space-grotesk';
+@import '@fontsource-variable/jetbrains-mono';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --font-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Space Grotesk Variable', 'Space Grotesk', 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-hud: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
   /* Corners: fields and buttons at 8px, panels at 12px, sheets and hero cards at 16px. */
   --radius-md: 8px;
@@ -463,4 +468,139 @@ html.dark .listing-map .map-tiles {
 
 .listing-map.leaflet-container {
   background: var(--color-well);
+}
+
+/* ---------- The app's HUD: high tech, a little like a game ----------
+   Scoped to the app (.hud on its root) and kept to low specificity
+   (:where), so a rebranded copy's own theme can turn any of it off by
+   setting the --hud-* values or its own fonts. Light mode gets the
+   shapes; the glow is for the dark (onyx) theme. */
+
+:root {
+  --hud-grid: rgb(9 9 11 / 0.035);
+  --hud-corner: rgb(39 129 34 / 0.55);
+  --hud-glow: transparent;
+  --hud-glow-strong: transparent;
+  --hud-sheen: rgb(39 129 34 / 0.06);
+}
+html.dark {
+  --hud-grid: rgb(115 255 106 / 0.035);
+  --hud-corner: rgb(115 255 106 / 0.5);
+  --hud-glow: rgb(115 255 106 / 0.28);
+  --hud-glow-strong: rgb(115 255 106 / 0.45);
+  --hud-sheen: rgb(115 255 106 / 0.05);
+}
+
+/* A faint blueprint grid behind everything, and a soft light from the top. */
+:where(.hud) {
+  background-image:
+    radial-gradient(60rem 22rem at 50% -6rem, var(--hud-sheen), transparent 70%),
+    linear-gradient(var(--hud-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--hud-grid) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    32px 32px,
+    32px 32px;
+  background-attachment: fixed;
+}
+
+/* Headings in Space Grotesk; small labels in a monospace, spaced out like a readout. */
+:where(.hud) :where(h1, h2, h3) {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+:where(.hud) :where(.caption) {
+  font-family: var(--font-hud);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Panels: tick marks at the corners, like a heads-up display, and a lit edge on hover. */
+:where(.hud) :where(.panel) {
+  background-image:
+    linear-gradient(var(--hud-corner), var(--hud-corner)),
+    linear-gradient(var(--hud-corner), var(--hud-corner)),
+    linear-gradient(var(--hud-corner), var(--hud-corner)),
+    linear-gradient(var(--hud-corner), var(--hud-corner));
+  background-size:
+    12px 1.5px,
+    1.5px 12px,
+    12px 1.5px,
+    1.5px 12px;
+  background-position:
+    left 0 top 0,
+    left 0 top 0,
+    right 0 bottom 0,
+    right 0 bottom 0;
+  background-repeat: no-repeat;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+html.dark :where(.hud) :where(.panel):hover {
+  border-color: color-mix(in oklab, var(--accent) 28%, var(--color-hairline));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.035),
+    0 0 0 1px rgb(115 255 106 / 0.04),
+    0 18px 50px -30px var(--hud-glow);
+}
+
+/* The tab you're on glows from underneath. */
+:where(.hud) :where(header) :where([aria-current='page']) {
+  box-shadow: 0 10px 18px -12px var(--hud-glow-strong);
+}
+
+/* Primary buttons carry a little light, and press down when tapped. */
+:where(.hud) :where(button, a):where([class*='bg-(--accent)']) {
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.06) inset,
+    0 8px 24px -10px var(--hud-glow-strong);
+}
+:where(.hud) :where(button, a):where([class*='bg-(--accent)']):active {
+  transform: translateY(1px) scale(0.99);
+}
+
+/* Good numbers glow softly in the dark. */
+html.dark :where(.hud) :where(.dark\:text-emerald-300, .dark\:text-emerald-400, .dark\:text-\[\#73ff6a\]) {
+  text-shadow: 0 0 14px var(--hud-glow);
+}
+
+/* The deal grade: a lit tile, and a score bar that fills in when it appears. */
+.grade-glow-good {
+  box-shadow: 0 0 22px -6px var(--hud-glow-strong);
+}
+.grade-glow-gold {
+  box-shadow: 0 0 24px -6px rgb(251 191 36 / 0.55);
+}
+.grade-tile {
+  animation: grade-in 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+@keyframes grade-in {
+  from {
+    transform: scale(0.6) rotate(-8deg);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.xp-fill {
+  animation: xp-fill 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transform-origin: left;
+}
+@keyframes xp-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .grade-tile,
+  .xp-fill {
+    animation: none;
+  }
 }

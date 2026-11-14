@@ -7,6 +7,7 @@ import { UNIT_TYPES } from '../lib/presets.js';
 import { Button, ExampleTag, SummaryCard } from './ui.jsx';
 import DealLedgers from './DealLedgers.jsx';
 import CalcInputs from './CalcInputs.jsx';
+import GradeBadge from './GradeBadge.jsx';
 
 const TONE_ICONS = { bad: XCircle, warn: AlertTriangle, good: CheckCircle2 };
 
@@ -74,6 +75,8 @@ export default function HeroSummary({ deal, a, base, whatIf, onShare, onChange }
               </Button>
             )}
           </div>
+
+          <GradeBadge a={a} full className="mt-4" />
 
           <p className={`mt-4 flex items-center gap-1.5 text-[15px] font-semibold ${TONE_TEXT[v.tone]}`}>
             <VIcon className="size-4 shrink-0" aria-hidden />

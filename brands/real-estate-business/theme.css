@@ -137,3 +137,20 @@ html.dark .shot {
     animation: none;
   }
 }
+
+/* Homeward keeps its calm look: no grid, corner ticks or glow from the app's HUD, and its own fonts for labels and ranks. */
+:root,
+html.dark {
+  --hud-grid: transparent;
+  --hud-corner: transparent;
+  --hud-glow: transparent;
+  --hud-glow-strong: transparent;
+  --hud-sheen: transparent;
+  --font-hud: 'DM Sans Variable', 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+}
+:where(.hud) :where(.caption) {
+  font-family: var(--font-sans);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12px;
+}
