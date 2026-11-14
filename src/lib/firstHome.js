@@ -56,6 +56,8 @@ export const DEFAULT_PROFILE = {
   gift: 0, // money family will give toward the down payment
   readyBy: null, // 'YYYY-MM': the month the savings plan says you'll be ready, kept for the reminder email
   remindReady: false, // email me that month
+  credit: null, // credit score band: '680' (680 or more), '600' (600 to 679), 'under600', or null when not sure
+  selfEmployed: false, // self-employed or paid on commission: lenders average two years of tax returns
   entered: false, // false until the person gives their own numbers; until then these are an example
 };
 
@@ -68,7 +70,8 @@ export function normalizeProfile(p) {
   const out = { ...DEFAULT_PROFILE };
   for (const k of ['income', 'savings', 'monthlySave', 'debts', 'rentNow', 'targetPrice', 'gift']) if (p && Number.isFinite(Number(p[k]))) out[k] = Math.max(Number(p[k]), 0);
   out.readyBy = typeof p?.readyBy === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(p.readyBy) ? p.readyBy : null;
-  for (const k of ['firstTime', 'newBuild', 'remindReady']) if (typeof p?.[k] === 'boolean') out[k] = p[k];
+  for (const k of ['firstTime', 'newBuild', 'remindReady', 'selfEmployed']) if (typeof p?.[k] === 'boolean') out[k] = p[k];
+  out.credit = ['680', '600', 'under600'].includes(p?.credit) ? p.credit : null;
   if ([1, 2, 3, 4].includes(Number(p?.targetUnits))) out.targetUnits = Number(p.targetUnits);
   // Profiles saved before cities existed were all for Thunder Bay.
   if (p) out.city = cityByKey(p.city ?? 'thunder-bay').key;

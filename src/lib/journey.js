@@ -32,6 +32,8 @@ export function myPlan({ profile, ratePct, now = new Date() }) {
 
   const solo = maxPrice({ profile: p, units: 1, ratePct, taxPct });
   const duplex = maxPrice({ profile: p, units: 2, ratePct, taxPct, rentPerOtherUnit: rent });
+  // Lenders differ on rent from the other unit: some count all of it, others half. Both, so the plan isn't built on the generous one.
+  const duplexHalf = maxPrice({ profile: p, units: 2, ratePct, taxPct, rentPerOtherUnit: rent * 0.5 });
   const best = duplex.price >= solo.price ? { ...duplex, units: 2 } : { ...solo, units: 1 };
   const bestCheck = best.price > 0 ? check(best.price, best.units) : null;
 
@@ -89,6 +91,7 @@ export function myPlan({ profile, ratePct, now = new Date() }) {
   }
 
   return {
+    duplexHalf,
     profile: p,
     local,
     gift: raw.gift,

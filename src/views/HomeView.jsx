@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, BellRing, Check, CheckCircle2, ChevronDown, ExternalLink, XCircle } from 'lucide-react';
+import { ArrowRight, BellRing, Check, CheckCircle2, ChevronDown, ExternalLink, ShieldAlert, XCircle } from 'lucide-react';
 import { RULES, RULES_CHECKED, benefits, buyCheck, liveIn, localFor, maxPrice } from '../lib/firstHome.js';
 import { monthName, myPlan } from '../lib/journey.js';
 import { SUITE_KINDS, SUITE_RULES_CHECKED, allowedFor, moneyFor, stepsFor, suitePayback } from '../lib/suites.js';
@@ -40,6 +40,63 @@ const yesNo = [
 ];
 
 /** Your numbers: what a lender and the savings plan need to know. */
+const CREDIT_OPTIONS = [
+  ['', 'Not sure'],
+  ['680', '680 or more'],
+  ['600', '600 to 679'],
+  ['under600', 'Under 600'],
+];
+
+/** The credit score band and how the income is earned: both change what a lender will do. */
+function CreditFields({ credit, selfEmployed, onChange, idPrefix }) {
+  return (
+    <>
+      <SelectField id={`${idPrefix}-credit`} label="Credit score" value={credit ?? ''} onChange={(e) => onChange({ credit: e.target.value || null })} hint="Free from Equifax or TransUnion">
+        {CREDIT_OPTIONS.map(([value, text]) => (
+          <option key={value} value={value}>
+            {text}
+          </option>
+        ))}
+      </SelectField>
+      <label className="flex items-start gap-2 self-center text-sm text-zinc-800 dark:text-zinc-200">
+        <input type="checkbox" checked={selfEmployed} onChange={(e) => onChange({ selfEmployed: e.target.checked })} className="mt-1 accent-emerald-600" />
+        <span>I’m self-employed or paid on commission</span>
+      </label>
+    </>
+  );
+}
+
+/**
+ * What a lender will look at that the numbers alone don't show: the credit
+ * score (insured mortgages need 600 or more for at least one buyer), and
+ * how income is proven when it isn't a salary.
+ */
+function LenderNotes({ p }) {
+  const notes = [];
+  if (p.credit === 'under600')
+    notes.push([
+      'bad',
+      'Mortgages with under 20% down are insured, and the insurers need a credit score of at least 600 for one of you. Below that it’s usually 20% down with an alternative lender, at a higher rate, so these numbers are out of reach for now. Paying every bill on time and keeping cards under a third of their limit raises a score within months.',
+    ]);
+  else if (p.credit === '600')
+    notes.push(['warn', 'A score from 600 to 679 can get an insured mortgage, but some lenders save their best rates for 680 and up, so your rate may be a little higher than the one used here.']);
+  else if (!p.credit) notes.push(['plain', 'Check your credit score (free from Equifax or TransUnion). Under 600 changes everything here, so it’s worth knowing first.']);
+  if (p.selfEmployed)
+    notes.push(['warn', 'Lenders use the average of your last two years of income from your tax returns (line 15000 of your Notice of Assessment), not this year’s. If that’s lower than what you typed, use it.']);
+  if (!notes.length) return null;
+  const tone = { bad: 'text-red-800 dark:text-red-300', warn: 'text-amber-900 dark:text-amber-200', plain: 'text-zinc-600 dark:text-zinc-400' };
+  return (
+    <ul className="mt-3 grid gap-1.5 text-sm">
+      {notes.map(([t, text]) => (
+        <li key={text} className={`flex items-start gap-1.5 ${tone[t]}`}>
+          <ShieldAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+          {text}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function Profile({ p, onHome }) {
   const [open, setOpen] = useState(false);
   const f = (key, props) => <NumberField id={`home-${key}`} value={p[key]} onChange={(v) => onHome({ [key]: v, entered: true })} {...props} />;
@@ -105,7 +162,7 @@ function Profile({ p, onHome }) {
         {f('savings', { label: 'Saved for buying', prefix: '$', step: 1000, decimals: 0 })}
         {f('monthlySave', { label: 'You can save', prefix: '$', suffix: '/mo', step: 50, decimals: 0 })}
         {f('rentNow', { label: 'Rent you pay now', prefix: '$', suffix: '/mo', step: 50, decimals: 0 })}
-        {f('debts', { label: 'Debt payments', prefix: '$', suffix: '/mo', step: 25, decimals: 0, hint: 'Car, student loan, cards' })}
+        {f('debts', { label: 'Debt payments', prefix: '$', suffix: '/mo', step: 25, decimals: 0, hint: 'Car, loans; cards: 3% of the balance' })}
         {f('gift', { label: 'Gift from family', prefix: '$', step: 1000, decimals: 0, hint: 'Toward the down payment' })}
         <div>
           <span className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">First home?</span>
@@ -114,6 +171,9 @@ function Profile({ p, onHome }) {
         <div>
           <span className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">Buying new-built?</span>
           <Segmented size="sm" label="Buying new-built?" value={p.newBuild ? 'yes' : 'no'} onChange={(v) => onHome({ newBuild: v === 'yes' })} options={yesNo} />
+        </div>
+        <div className="col-span-2 grid grid-cols-2 gap-3">
+          <CreditFields idPrefix="home" credit={p.credit} selfEmployed={p.selfEmployed} onChange={(patch) => onHome({ ...patch, entered: true })} />
         </div>
       </div>
       )}
@@ -306,6 +366,7 @@ function SuiteGuide({ s, onSuite, city }) {
  */
 function Start({ onHome }) {
   const [v, setV] = useState({ income: null, savings: null, debts: null, rentNow: null, monthlySave: null });
+  const [lender, setLender] = useState({ credit: null, selfEmployed: false });
   const [city, setCity] = useState(guessCity);
   const [missing, setMissing] = useState([]);
   const set = (key) => (n) => {
@@ -320,7 +381,7 @@ function Start({ onHome }) {
       document.getElementById(`start-${gaps[0]}`)?.focus();
       return;
     }
-    onHome({ city, rentOther: null, taxPct: null, targetPrice: cityByKey(city).price, income: v.income, savings: v.savings, debts: Number.isFinite(v.debts) ? v.debts : 0, rentNow: v.rentNow, ...(Number.isFinite(v.monthlySave) ? { monthlySave: v.monthlySave } : {}), entered: true });
+    onHome({ city, rentOther: null, taxPct: null, targetPrice: cityByKey(city).price, income: v.income, savings: v.savings, debts: Number.isFinite(v.debts) ? v.debts : 0, rentNow: v.rentNow, ...(Number.isFinite(v.monthlySave) ? { monthlySave: v.monthlySave } : {}), ...lender, entered: true });
   };
   const label = { income: 'your income', savings: 'what you’ve saved', rentNow: 'the rent you pay' };
   return (
@@ -342,8 +403,9 @@ function Start({ onHome }) {
           <NumberField id="start-income" label="Household income, before tax" prefix="$" suffix="/yr" step={1000} decimals={0} value={v.income} onChange={set('income')} hint="Everyone who’ll be on the mortgage" />
           <NumberField id="start-savings" label="Saved for buying" prefix="$" step={1000} decimals={0} value={v.savings} onChange={set('savings')} hint="Bank, TFSA, FHSA, RRSP: anything for the down payment" />
           <NumberField id="start-rentNow" label="Rent you pay now" prefix="$" suffix="/mo" step={50} decimals={0} value={v.rentNow} onChange={set('rentNow')} hint="Your share, if you split it" />
-          <NumberField id="start-debts" label="Monthly debt payments" prefix="$" suffix="/mo" step={25} decimals={0} value={v.debts} onChange={set('debts')} hint="Car, student loan, card minimums. Leave blank if none" />
+          <NumberField id="start-debts" label="Monthly debt payments" prefix="$" suffix="/mo" step={25} decimals={0} value={v.debts} onChange={set('debts')} hint="Car, loans, lines of credit; cards count as 3% of the balance. Blank if none" />
           <NumberField id="start-monthlySave" label="You could save each month" prefix="$" suffix="/mo" step={50} decimals={0} value={v.monthlySave} onChange={set('monthlySave')} hint="A guess is fine. Blank uses $800" />
+          <CreditFields idPrefix="start" credit={lender.credit} selfEmployed={lender.selfEmployed} onChange={(patch) => setLender((x) => ({ ...x, ...patch }))} />
         </div>
         <div className="flex flex-col gap-3 border-t border-hairline px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <p role="alert" className="text-sm text-red-700 dark:text-red-400">
@@ -538,6 +600,11 @@ export default function HomeView({ profile: raw, suite, rvb = {}, market, items,
                 <li>
                   With a rental unit: <strong className="font-semibold text-zinc-950 tabular-nums dark:text-white">{money(duplex.price)}</strong>
                   {duplex.price > solo.price && <span className="text-emerald-700 dark:text-emerald-400"> ({money(duplex.price - solo.price)} more)</span>}
+                  {plan.duplexHalf.price < duplex.price && (
+                    <span className="block text-sm text-zinc-500 dark:text-zinc-400">
+                      {money(plan.duplexHalf.price)} if your lender counts only half the rent: lenders differ, so ask.
+                    </span>
+                  )}
                 </li>
                 <li>
                   You’d need <strong className="font-semibold text-zinc-950 tabular-nums dark:text-white">{money(plan.cashToClose)}</strong> cash to close
@@ -551,6 +618,7 @@ export default function HomeView({ profile: raw, suite, rvb = {}, market, items,
               Held back by your {plan.best.limit === 'income' ? 'income' : 'savings'}. A typical house in {placeName(local.city)} is about {money(local.city.price)}
               {local.city.priceEstimated ? ' (estimate)' : ''}, and there’s about {money(b.total)} in government money you can claim.
             </p>
+            <LenderNotes p={raw} />
             <div className="mt-4 flex flex-wrap gap-2">
               <Button variant="primary" onClick={() => onView('homes')}>
                 Homes that fit me <ArrowRight className="size-4" aria-hidden />

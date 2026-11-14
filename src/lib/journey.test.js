@@ -120,3 +120,11 @@ describe('a goal years away', () => {
     expect(closer.goal.months).toBeLessThanOrEqual(24);
   });
 });
+
+describe('myPlan, rent from a second unit', () => {
+  it('also says what you could buy if a lender counts only half the rent', () => {
+    const plan = myPlan({ profile: { income: 85000, savings: 60000, debts: 300, rentNow: 1500, city: 'toronto', entered: true }, ratePct: 5.14 });
+    expect(plan.duplexHalf.price).toBeLessThan(plan.duplex.price);
+    expect(plan.duplexHalf.price).toBeGreaterThanOrEqual(plan.solo.price);
+  });
+});

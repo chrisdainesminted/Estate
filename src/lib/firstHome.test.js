@@ -180,3 +180,10 @@ describe('homeFor', () => {
     expect(homeFor({ ...deal, units: 6 }, {}, 4.5)).toBeNull();
   });
 });
+
+describe('normalizeProfile, lender details', () => {
+  it('keeps a known credit band and self-employment, and drops anything else', () => {
+    expect(normalizeProfile({ credit: '600', selfEmployed: true })).toMatchObject({ credit: '600', selfEmployed: true });
+    expect(normalizeProfile({ credit: '750' })).toMatchObject({ credit: null, selfEmployed: false });
+  });
+});

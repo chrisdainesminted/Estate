@@ -238,7 +238,7 @@ export function NumberField({ id, label, tip, value, onChange, prefix, suffix, m
   );
 }
 
-export function SelectField({ id, label, tip, value, onChange, children }) {
+export function SelectField({ id, label, tip, value, onChange, hint, children }) {
   return (
     <div>
       <FieldLabel htmlFor={id} tip={tip}>
@@ -247,6 +247,7 @@ export function SelectField({ id, label, tip, value, onChange, children }) {
       <select id={id} value={value} onChange={onChange} className={`field w-full px-3 py-2.5 ${fieldText}`}>
         {children}
       </select>
+      {hint && <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">{hint}</p>}
     </div>
   );
 }
