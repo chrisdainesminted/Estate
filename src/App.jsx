@@ -36,6 +36,7 @@ import {
   Repeat,
   Gem,
   UserRound,
+  ChevronDown,
 } from 'lucide-react';
 import { useDeals } from './hooks/useDeals.js';
 import { accountCall, signOut } from './lib/account.js';
@@ -260,6 +261,8 @@ const SECTIONS = [
   { id: 'sec-opinion', label: 'Second opinion from Claude', keywords: 'review ai', folds: true },
 ];
 const DETAIL_IDS = SECTIONS.filter((x) => x.folds).map((x) => x.id);
+// Analyze shows the first three detail rows; these wait behind "More details" until opened.
+const DEEP_IDS = ['sec-stress', 'sec-projection', 'sec-refi', 'sec-exit', 'sec-tax', 'sec-opinion'];
 
 function build(deal, targets, adjusted = false) {
   const rows = projectDeal(deal, YEARS);
@@ -386,6 +389,7 @@ export default function App() {
   const [scope, setScope] = useState('active');
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [welcomed, setWelcomed] = useState(welcomeSeen);
+  const [moreDetails, setMoreDetails] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   // Editing a property from Portfolio: its inputs in a side panel, without leaving Portfolio.
   const [portfolioEdit, setPortfolioEdit] = useState(false);
@@ -1248,13 +1252,23 @@ export default function App() {
                       onUsePrice={(price) => withUndo(`Price set to ${money(price)}`, () => lib.updateDeal(active.id, { price }))}
                     />
                     {sliders}
-                    <StressTestCard deal={active} adj={adj} onPick={(p) => setAdj((x) => ({ ...x, ...p }))} />
-                    <ProjectionChart rows={current.rows} a={a} deal={current.deal} dark={dark} appreciationPct={Number(current.deal.appreciationPct)} />
-                    {current.refi && <RefiCard refi={current.refi} a={a} deal={current.deal} />}
-                    <ExitCard sale={current.sale} deal={current.deal} />
-                    <TaxCard deal={current.deal} tax={lib.settings.tax} onTax={(patch) => lib.updateSettings('tax', patch)} />
-                    <SecondOpinion item={current} targets={targets} />
+                    {/* The three most people need; the deeper ones wait behind "More details". */}
+                    {(moreDetails || allOpen || DEEP_IDS.some((id) => sections.isOpen(id))) && (
+                      <>
+                        <StressTestCard deal={active} adj={adj} onPick={(p) => setAdj((x) => ({ ...x, ...p }))} />
+                        <ProjectionChart rows={current.rows} a={a} deal={current.deal} dark={dark} appreciationPct={Number(current.deal.appreciationPct)} />
+                        {current.refi && <RefiCard refi={current.refi} a={a} deal={current.deal} />}
+                        <ExitCard sale={current.sale} deal={current.deal} />
+                        <TaxCard deal={current.deal} tax={lib.settings.tax} onTax={(patch) => lib.updateSettings('tax', patch)} />
+                        <SecondOpinion item={current} targets={targets} />
+                      </>
+                    )}
                   </SectionGroup>
+                  {!(moreDetails || allOpen || DEEP_IDS.some((id) => sections.isOpen(id))) && (
+                    <Button variant="ghost" className="w-full text-sm" onClick={() => setMoreDetails(true)}>
+                      More details: stress test, 10 years, selling, taxes <ChevronDown className="size-4" aria-hidden />
+                    </Button>
+                  )}
                 </div>
               </div>
               </>

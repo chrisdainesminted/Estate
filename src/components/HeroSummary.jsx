@@ -1,10 +1,11 @@
 import { placeLabel } from '../lib/place.js';
-import { AlertTriangle, CheckCircle2, ExternalLink, FlaskConical, MapPin, Share2, XCircle } from 'lucide-react';
+import { useState } from 'react';
+import { AlertTriangle, CheckCircle2, ChevronDown, ExternalLink, FlaskConical, MapPin, Share2, XCircle } from 'lucide-react';
 import { TONE_TEXT, verdict } from '../lib/dscr.js';
 import { breakevenSentence, dealSentence } from '../lib/explain.js';
-import { money, safeHttpUrl } from '../lib/format.js';
+import { money, percent, safeHttpUrl } from '../lib/format.js';
 import { UNIT_TYPES } from '../lib/presets.js';
-import { Button, ExampleTag, SummaryCard } from './ui.jsx';
+import { Button, DscrChip, ExampleTag, SummaryCard, signedClass } from './ui.jsx';
 import DealLedgers from './DealLedgers.jsx';
 import CalcInputs from './CalcInputs.jsx';
 import GradeBadge from './GradeBadge.jsx';
@@ -32,6 +33,9 @@ export default function HeroSummary({ deal, a, base, whatIf, onShare, onChange }
     a.interestOnly && `interest-only for ${a.ioYears} years`,
   ].filter(Boolean);
   const breakeven = breakevenSentence(a);
+  // Three numbers first; the line-by-line ledgers wait behind one tap (or show during a what-if).
+  const [full, setFull] = useState(false);
+  const showLedgers = full || Boolean(whatIf);
 
   return (
     <SummaryCard
@@ -106,7 +110,38 @@ export default function HeroSummary({ deal, a, base, whatIf, onShare, onChange }
       }
     >
       {onChange && !whatIf && <CalcInputs deal={deal} a={a} onChange={onChange} />}
-      <DealLedgers deal={deal} a={a} base={base} />
+      {showLedgers ? (
+        <DealLedgers deal={deal} a={a} base={base} />
+      ) : (
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <Stat label="Each month" value={money(a.netCashFlow, { signed: true })} valueClass={signedClass(a.netCashFlow)} />
+          <Stat label="Cash in" value={money(a.cashInvested)} />
+          <Stat label="Return a year" value={percent(a.coc, 1)} valueClass={signedClass(a.coc)} />
+          <div className="col-span-3 flex flex-wrap items-center justify-between gap-2 pt-1">
+            <span className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+              Lender check <DscrChip status={a.status} dscr={a.dscr} size="sm" />
+            </span>
+            <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => setFull(true)} aria-expanded={false}>
+              Every line <ChevronDown className="size-3.5" aria-hidden />
+            </Button>
+          </div>
+        </div>
+      )}
+      {full && !whatIf && (
+        <Button variant="ghost" className="mt-3 px-2 py-1 text-xs" onClick={() => setFull(false)} aria-expanded>
+          Fewer lines <ChevronDown className="size-3.5 rotate-180" aria-hidden />
+        </Button>
+      )}
     </SummaryCard>
+  );
+}
+
+/** One headline number in a tile: what it is, and the figure. */
+function Stat({ label, value, valueClass = 'text-zinc-950 dark:text-white' }) {
+  return (
+    <div className="rounded-lg bg-zinc-950/[0.03] px-3 py-3 ring-1 ring-(--line-strong) ring-inset dark:bg-white/[0.03]">
+      <p className="font-hud text-[10px] font-semibold tracking-[0.12em] text-zinc-500 uppercase dark:text-zinc-400">{label}</p>
+      <p className={`tabular mt-1 truncate text-lg font-bold tracking-tight sm:text-2xl ${valueClass}`}>{value}</p>
+    </div>
   );
 }

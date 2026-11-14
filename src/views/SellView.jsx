@@ -5,7 +5,8 @@ import { listingPageUrl, siteName } from '../lib/market.js';
 import { cityByKey } from '../lib/canada.js';
 import { money } from '../lib/format.js';
 import { saveFile } from '../lib/runtime.js';
-import { Button, Card, CardHeader, LedgerLine, NumberField, Segmented, SelectField, SkeletonCard, SummaryCard, ViewHeader, signedClass } from '../components/ui.jsx';
+import { Button, Card, CardHeader, LedgerLine, NumberField, Segmented, SelectField, SkeletonCard, ViewHeader, signedClass } from '../components/ui.jsx';
+import { Section, SectionGroup } from '../components/Section.jsx';
 import { PlusGate, usePlus } from '../components/Plus.jsx';
 import { CityPicker } from './ListingsView.jsx';
 
@@ -84,47 +85,47 @@ export function SellWorth({ sell, onSell, feedState, indexState, city, onCity, n
       {status === 'checking' ? (
         <SkeletonCard className="h-64" />
       ) : (
-        <SummaryCard
-          id="sell-worth"
-          head={
-            worth ? (
-              <>
-                <h2 className="text-xl font-semibold tracking-tight text-zinc-950 sm:text-2xl dark:text-white">About {money(worth.estimate)}</h2>
-                <p className="mt-2 text-[15px] text-zinc-700 dark:text-zinc-300">
-                  Similar homes in {place.name} are asking {money(worth.low)} to {money(worth.high)}.
-                </p>
-                <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
-                  From {worth.count} {worth.byBeds ? `${KINDS[sell.units - 1].toLowerCase()}s within a bedroom of yours` : `${KINDS[sell.units - 1].toLowerCase()}s of any size`} for sale now. These are asking prices: homes usually sell for a little less, and condition and
-                  street matter. An agent’s market analysis uses recent sales.
-                </p>
-                <div className="mt-4">
-                  {plus.active ? (
-                    <Button onClick={report}>
-                      <FileDown className="size-4" aria-hidden /> Pricing report (PDF)
-                    </Button>
-                  ) : (
-                    <PlusGate feature="report" compact />
-                  )}
-                </div>
-                {error && (
-                  <p role="alert" className="mt-2 text-sm text-red-700 dark:text-red-300">
-                    {error}
-                  </p>
+        <Card id="sell-worth" className="px-5 py-5 sm:px-6">
+          {worth ? (
+            <>
+              <h2 className="text-xl font-semibold tracking-tight text-zinc-950 sm:text-2xl dark:text-white">About {money(worth.estimate)}</h2>
+              <p className="mt-2 text-[15px] text-zinc-700 dark:text-zinc-300">
+                Similar homes in {place.name} are asking {money(worth.low)} to {money(worth.high)}.
+              </p>
+              <p className="mt-3 text-[15px] text-zinc-700 dark:text-zinc-300">
+                You’d walk away with about <strong className={`tabular font-semibold ${signedClass(n.net)}`}>{money(n.net)}</strong> after the agent and the costs of selling.
+              </p>
+              <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">Asking prices, not sales: homes usually sell for a little less.</p>
+              <div className="mt-4">
+                {plus.active ? (
+                  <Button onClick={report}>
+                    <FileDown className="size-4" aria-hidden /> Pricing report (PDF)
+                  </Button>
+                ) : (
+                  <PlusGate feature="report" compact />
                 )}
-              </>
-            ) : (
-              <>
-                <h2 className="text-lg font-semibold text-zinc-950 dark:text-white">Not enough to compare yet</h2>
-                <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-                  Fewer than three {KINDS[sell.units - 1].toLowerCase()}s are for sale in {place.name} today. Try a nearby city, or check back: listings are found every morning.
+              </div>
+              {error && (
+                <p role="alert" className="mt-2 text-sm text-red-700 dark:text-red-300">
+                  {error}
                 </p>
-              </>
-            )
-          }
-        >
-          {worth && (
-            <div className="text-sm">
-              <p className="mb-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">Homes compared</p>
+              )}
+            </>
+          ) : (
+            <>
+              <h2 className="text-lg font-semibold text-zinc-950 dark:text-white">Not enough to compare yet</h2>
+              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+                Fewer than three {KINDS[sell.units - 1].toLowerCase()}s are for sale in {place.name} today. Try a nearby city, or check back: listings are found every morning.
+              </p>
+            </>
+          )}
+        </Card>
+      )}
+
+      <SectionGroup>
+        {worth && (
+          <Section id="sell-comps" title="Homes compared" value={`${worth.count} for sale`} meaning="The similar homes for sale now that the estimate comes from.">
+            <div className="px-5 pb-3 text-sm sm:px-6">
               <ul className="divide-y divide-hairline">
                 {worth.comps.map((l) => (
                   <li key={l.id} className="flex items-center justify-between gap-3 py-2">
@@ -140,50 +141,48 @@ export function SellWorth({ sell, onSell, feedState, indexState, city, onCity, n
                 ))}
               </ul>
             </div>
-          )}
-        </SummaryCard>
-      )}
-
-      <Card>
-        <CardHeader title="What you’d walk away with" subtitle="After the agent, the mortgage and the costs of selling." />
-        <div className="grid gap-6 px-5 pb-5 @3xl:grid-cols-2 lg:grid-cols-2">
-          <div className="grid content-start grid-cols-2 gap-3">
-            <NumberField id="sell-price" label="Selling price" prefix="$" value={price} onChange={(v) => onSell({ price: v })} step={5000} decimals={0} hint={sell.price == null ? 'The estimate above' : undefined} />
-            <div>
-              <span className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">Selling</span>
-              <Segmented stretch size="sm" label="Selling with an agent or privately" value={sell.privateSale ? 'private' : 'agent'} onChange={(v) => onSell({ privateSale: v === 'private' })} options={yesNo} />
+          </Section>
+        )}
+        <Section id="sell-net" title="What you’d walk away with" value={money(n.net)} valueClass={signedClass(n.net)} meaning="Change the price, the commission, your mortgage and the costs.">
+          <div className="grid gap-6 p-5 @3xl:grid-cols-2 lg:grid-cols-2">
+            <div className="grid content-start grid-cols-2 gap-3">
+              <NumberField id="sell-price" label="Selling price" prefix="$" value={price} onChange={(v) => onSell({ price: v })} step={5000} decimals={0} hint={sell.price == null ? 'The estimate above' : undefined} />
+              <div>
+                <span className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">Selling</span>
+                <Segmented stretch size="sm" label="Selling with an agent or privately" value={sell.privateSale ? 'private' : 'agent'} onChange={(v) => onSell({ privateSale: v === 'private' })} options={yesNo} />
+              </div>
+              {!sell.privateSale && <NumberField id="sell-commission" label="Commission, both agents" suffix="%" value={sell.commissionPct} onChange={(v) => onSell({ commissionPct: v })} step={0.25} decimals={2} hint="It’s negotiable: ask" />}
+              <NumberField id="sell-mortgage" label="Mortgage left" prefix="$" value={sell.mortgage} onChange={(v) => onSell({ mortgage: v })} step={1000} decimals={0} />
+              {sell.mortgage > 0 && (
+                <>
+                  <NumberField id="sell-rate" label="Its rate" suffix="%" value={sell.ratePct} onChange={(v) => onSell({ ratePct: v })} step={0.05} decimals={2} />
+                  <div>
+                    <span className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">Rate type</span>
+                    <Segmented stretch size="sm" label="Rate type" value={sell.fixed ? 'fixed' : 'variable'} onChange={(v) => onSell({ fixed: v === 'fixed' })} options={[{ value: 'fixed', label: 'Fixed' }, { value: 'variable', label: 'Variable' }]} />
+                  </div>
+                  <NumberField id="sell-penalty" label="Penalty from your lender" prefix="$" value={sell.penalty ?? undefined} onChange={(v) => onSell({ penalty: v })} step={100} decimals={0} hint="From your payout statement; blank estimates it" />
+                </>
+              )}
+              <NumberField id="sell-legal" label="Lawyer or notary" prefix="$" value={sell.legal} onChange={(v) => onSell({ legal: v })} step={100} decimals={0} />
+              <NumberField id="sell-repairs" label="Repairs and staging" prefix="$" value={sell.repairs} onChange={(v) => onSell({ repairs: v })} step={500} decimals={0} />
+              <NumberField id="sell-moving" label="Moving" prefix="$" value={sell.moving} onChange={(v) => onSell({ moving: v })} step={100} decimals={0} />
             </div>
-            {!sell.privateSale && <NumberField id="sell-commission" label="Commission, both agents" suffix="%" value={sell.commissionPct} onChange={(v) => onSell({ commissionPct: v })} step={0.25} decimals={2} hint="It’s negotiable: ask" />}
-            <NumberField id="sell-mortgage" label="Mortgage left" prefix="$" value={sell.mortgage} onChange={(v) => onSell({ mortgage: v })} step={1000} decimals={0} />
-            {sell.mortgage > 0 && (
-              <>
-                <NumberField id="sell-rate" label="Its rate" suffix="%" value={sell.ratePct} onChange={(v) => onSell({ ratePct: v })} step={0.05} decimals={2} />
-                <div>
-                  <span className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">Rate type</span>
-                  <Segmented stretch size="sm" label="Rate type" value={sell.fixed ? 'fixed' : 'variable'} onChange={(v) => onSell({ fixed: v === 'fixed' })} options={[{ value: 'fixed', label: 'Fixed' }, { value: 'variable', label: 'Variable' }]} />
-                </div>
-                <NumberField id="sell-penalty" label="Penalty from your lender" prefix="$" value={sell.penalty ?? undefined} onChange={(v) => onSell({ penalty: v })} step={100} decimals={0} hint="From your payout statement; blank estimates it" />
-              </>
-            )}
-            <NumberField id="sell-legal" label="Lawyer or notary" prefix="$" value={sell.legal} onChange={(v) => onSell({ legal: v })} step={100} decimals={0} />
-            <NumberField id="sell-repairs" label="Repairs and staging" prefix="$" value={sell.repairs} onChange={(v) => onSell({ repairs: v })} step={500} decimals={0} />
-            <NumberField id="sell-moving" label="Moving" prefix="$" value={sell.moving} onChange={(v) => onSell({ moving: v })} step={100} decimals={0} />
+            <div className="text-sm">
+              <LedgerLine label="Selling price" value={money(price)} />
+              {n.lines.map((l) => (
+                <LedgerLine key={l.key} label={l.label} value={money(-l.amount)} />
+              ))}
+              <LedgerLine label="In your pocket" value={money(n.net)} valueClass={`text-xl ${signedClass(n.net)}`} total />
+              {n.penaltyEstimated && (
+                <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                  The penalty is estimated as three months’ interest.{n.fixed ? ' On a fixed rate it’s often more (the interest rate differential): ask your lender for a payout statement.' : ''}
+                </p>
+              )}
+              <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">Selling the home you live in: no tax on the gain under the principal residence exemption. A rental or second home is different: ask an accountant.</p>
+            </div>
           </div>
-          <div className="text-sm">
-            <LedgerLine label="Selling price" value={money(price)} />
-            {n.lines.map((l) => (
-              <LedgerLine key={l.key} label={l.label} value={money(-l.amount)} />
-            ))}
-            <LedgerLine label="In your pocket" value={money(n.net)} valueClass={`text-xl ${signedClass(n.net)}`} total />
-            {n.penaltyEstimated && (
-              <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-                The penalty is estimated as three months’ interest.{n.fixed ? ' On a fixed rate it’s often more (the interest rate differential): ask your lender for a payout statement.' : ''}
-              </p>
-            )}
-            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">Selling the home you live in: no tax on the gain under the principal residence exemption. A rental or second home is different: ask an accountant.</p>
-          </div>
-        </div>
-      </Card>
+        </Section>
+      </SectionGroup>
     </div>
   );
 }
