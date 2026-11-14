@@ -361,17 +361,20 @@ function Start({ onHome }) {
 }
 
 /** The home you want, how far off it is, and what closes the gap. */
-function GapCard({ plan, onHome, onAccount, account }) {
+function GapCard({ plan, onHome, onAccount, account, bare = false }) {
   const p = plan.profile;
   const g = plan.goal;
   const units = g.units;
   const ready = g.short === 0 && g.qualifies;
+  const Wrap = bare ? 'div' : Card;
   return (
-    <Card id="plan-gap">
-      <div className="border-b border-hairline px-5 py-4 sm:px-6">
-        <h2 className="text-base font-semibold text-zinc-950 dark:text-white">The home you want, and when you’ll get there</h2>
-        <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">Start from a typical home in {placeName(plan.local.city)}, or set your own.</p>
-      </div>
+    <Wrap id="plan-gap">
+      {!bare && (
+        <div className="border-b border-hairline px-5 py-4 sm:px-6">
+          <h2 className="text-base font-semibold text-zinc-950 dark:text-white">The home you want, and when you’ll get there</h2>
+          <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">Start from a typical home in {placeName(plan.local.city)}, or set your own.</p>
+        </div>
+      )}
       <div className="grid gap-6 p-5 sm:px-6 @3xl:grid-cols-2">
         <div className="grid content-start grid-cols-2 gap-3">
           <NumberField id="home-target" label="Price" prefix="$" value={g.price} onChange={(v) => onHome({ targetPrice: v })} step={5000} decimals={0} />
@@ -469,7 +472,7 @@ function GapCard({ plan, onHome, onAccount, account }) {
           )}
         </div>
       </div>
-    </Card>
+    </Wrap>
   );
 }
 
@@ -522,10 +525,8 @@ export default function HomeView({ profile: raw, suite, rvb = {}, market, items,
       {header}
       {nextStep}
 
-      <SummaryCard
-        id="home-summary"
-        head={
-          <>
+      {/* The answer on its own; how it's worked out and the savings plan fold away below. */}
+      <Card id="home-summary" className="px-5 py-5 sm:px-6">
             <h2 className="text-xl font-semibold tracking-tight text-zinc-950 sm:text-2xl dark:text-white">
               {plan.best.price > 0 ? `You could buy up to ${money(plan.best.price)} today` : 'Let’s get you ready to buy'}
             </h2>
@@ -556,20 +557,25 @@ export default function HomeView({ profile: raw, suite, rvb = {}, market, items,
               </Button>
               <Button onClick={() => onView('ready')}>Get ready to buy</Button>
             </div>
-          </>
-        }
-      >
-        <div className="grid gap-x-10 gap-y-6 text-sm sm:grid-cols-2">
-          <BuyLedger title="A house, on your own" p={p} units={1} ratePct={ratePct} taxPct={taxPct} rentEach={0} insuranceMonthly={insurance(1)} />
-          <BuyLedger title="A duplex, renting one unit" p={p} units={2} ratePct={ratePct} taxPct={taxPct} rentEach={rentEach} insuranceMonthly={insurance(2)} />
-        </div>
-      </SummaryCard>
-
-      <GapCard plan={plan} onHome={onHome} onAccount={onAccount} account={account} />
+      </Card>
 
       <Profile p={raw} onHome={onHome} />
 
       <SectionGroup>
+        <Section
+          id="home-gap"
+          title="The home you want"
+          value={plan.goal.short > 0 ? (plan.goal.readyBy ? `Ready ${monthName(plan.goal.readyBy)}` : `${money(plan.goal.short)} to save`) : 'You have the cash'}
+          meaning="Pick a price and see when you’d have the cash, and the shortcuts."
+        >
+          <GapCard plan={plan} onHome={onHome} onAccount={onAccount} account={account} bare />
+        </Section>
+        <Section id="home-math" title="How we worked it out" meaning="A house on your own next to a duplex, line by line.">
+          <div className="grid gap-x-10 gap-y-6 p-5 text-sm sm:grid-cols-2 sm:px-6">
+            <BuyLedger title="A house, on your own" p={p} units={1} ratePct={ratePct} taxPct={taxPct} rentEach={0} insuranceMonthly={insurance(1)} />
+            <BuyLedger title="A duplex, renting one unit" p={p} units={2} ratePct={ratePct} taxPct={taxPct} rentEach={rentEach} insuranceMonthly={insurance(2)} />
+          </div>
+        </Section>
         <Section id="home-money" title="Money you can get" value={money(b.total)} valueClass="text-emerald-700 dark:text-emerald-400" meaning="Tax refunds, rebates and your own RRSP.">
           <Benefits b={b} />
         </Section>

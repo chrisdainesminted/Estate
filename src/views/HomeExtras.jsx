@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Check, ExternalLink } from 'lucide-react';
+import { Check, ChevronDown, ExternalLink } from 'lucide-react';
 import { Button, NumberField } from '../components/ui.jsx';
 import { buyCheck } from '../lib/firstHome.js';
 import { stepsFor } from '../lib/journey.js';
@@ -99,6 +99,10 @@ export function ReadyChecklist({ p, ready, onReady, ratePct, taxPct, rentEach, b
   const steps = stepsFor(p).map((s) => ({ ...s, auto: s.id === 'save' ? saved : false, body: bodies[s.id] }));
   const done = (s) => s.auto || ready[s.id] === true;
   const count = steps.filter(done).length;
+  // Only the next step is explained; tap any other to read it. Less to take in at once.
+  const next = steps.find((s) => !done(s))?.id;
+  const [openId, setOpenId] = useState(null);
+  const shownId = openId ?? next;
   return (
     <div className="p-5">
       <div className="flex items-center justify-between gap-3 text-sm">
@@ -126,12 +130,21 @@ export function ReadyChecklist({ p, ready, onReady, ratePct, taxPct, rentEach, b
               >
                 {on && <Check className="size-3.5" strokeWidth={3} aria-hidden />}
               </button>
-              <div className="min-w-0">
-                <p className={`text-sm font-semibold ${on ? 'text-zinc-500 line-through decoration-zinc-400/60 dark:text-zinc-400' : 'text-zinc-900 dark:text-white'}`}>
-                  <span className="mr-1.5 tabular-nums text-zinc-400">{i + 1}.</span>
-                  {s.title}
-                </p>
-                <p className="mt-0.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{s.body}</p>
+              <div className="min-w-0 flex-1">
+                <button
+                  type="button"
+                  aria-expanded={shownId === s.id}
+                  onClick={() => setOpenId(shownId === s.id ? '' : s.id)}
+                  className={`flex w-full items-center justify-between gap-2 text-left text-sm font-semibold ${on ? 'text-zinc-500 line-through decoration-zinc-400/60 dark:text-zinc-400' : 'text-zinc-900 dark:text-white'}`}
+                >
+                  <span>
+                    <span className="mr-1.5 tabular-nums text-zinc-400">{i + 1}.</span>
+                    {s.title}
+                    {s.id === next && <span className="ml-2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-bold text-emerald-700 no-underline dark:text-emerald-300">Next</span>}
+                  </span>
+                  <ChevronDown className={`size-4 shrink-0 text-zinc-400 transition-transform ${shownId === s.id ? 'rotate-180' : ''}`} aria-hidden />
+                </button>
+                {shownId === s.id && <p className="mt-1 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{s.body}</p>}
               </div>
             </li>
           );

@@ -24,9 +24,13 @@ const todayIso = () => new Date().toISOString().slice(0, 10);
  * Listings without a published tax bill show last, without a monthly cost:
  * Squarely doesn't guess the tax.
  */
+const PAGE = 8;
+
 export default function HomesForMe({ feedState, indexState, city, onCity, market, profile, alerts = [], onAlerts, onAnalyze, onView, nextStep }) {
   const { status, feed } = feedState;
   const [show, setShow] = useState('all');
+  // Eight at a time: a short list to look through, with the rest a tap away.
+  const [showAll, setShowAll] = useState(false);
   const [noTax, setNoTax] = useState(false);
   const p = useMemo(() => withGift({ ...profile, city }), [profile, city]);
   const hidden = useMemo(() => new Set(market.hidden ?? []), [market.hidden]);
@@ -104,7 +108,7 @@ export default function HomesForMe({ feedState, indexState, city, onCity, market
 
           <Card>
             <ul className="divide-y divide-hairline">
-              {shown.map(({ l, home, fit, taxKnown, rentSource }) => {
+              {(showAll ? shown : shown.slice(0, PAGE)).map(({ l, home, fit, taxKnown }) => {
                 const units = unitsOf(l);
                 const tone = fit ? TONE[FITS[fit.key].tone] : TONE.muted;
                 return (
@@ -118,7 +122,7 @@ export default function HomesForMe({ feedState, indexState, city, onCity, market
                         </span>
                       </div>
                       <p className="mt-1 truncate text-[15px] font-semibold text-zinc-950 dark:text-white">{l.address}</p>
-                      <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">
+                      <p className="mt-0.5 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-400">
                         {fit ? fit.reason : 'The listing doesn’t give the property tax, so we can’t say what it would cost you or whether you’d qualify. Ask the listing agent for the tax bill.'}
                       </p>
                     </div>
@@ -146,14 +150,16 @@ export default function HomesForMe({ feedState, indexState, city, onCity, market
                         </Button>
                       </div>
                     </div>
-                    {units > 1 && rentSource !== 'stated' && taxKnown && (
-                      <p className="text-xs text-zinc-500 sm:col-span-2 dark:text-zinc-400">Rent from the other unit{units > 2 ? 's' : ''} is the average asking rent in {place.name} (estimate): the listing doesn’t say.</p>
-                    )}
                   </li>
                 );
               })}
             </ul>
           </Card>
+          {!showAll && shown.length > PAGE && (
+            <Button className="w-full" onClick={() => setShowAll(true)}>
+              Show {shown.length - PAGE} more
+            </Button>
+          )}
           {show === 'all' && untaxed > 0 && (
             <Button variant="ghost" onClick={() => setNoTax((v) => !v)}>
               {noTax ? 'Hide' : 'Show'} {untaxed} home{untaxed === 1 ? '' : 's'} whose listing doesn’t give the tax bill
@@ -161,7 +167,7 @@ export default function HomesForMe({ feedState, indexState, city, onCity, market
           )}
           <p className="px-1 text-xs text-zinc-500 dark:text-zinc-400">
             Each assumes the least down payment at today’s rate, with mortgage insurance, the listing’s own tax bill, insurance and an allowance for repairs. Fits: you’d qualify and
-            have the cash. Stretch: you’d qualify and could save the rest within a year. A lender makes the real call.
+            have the cash. Stretch: you’d qualify and could save the rest within a year. Where a listing doesn’t give the rent of the other units, it’s the city’s average. A lender makes the real call.
           </p>
         </>
       )}
