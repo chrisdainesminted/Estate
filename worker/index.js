@@ -23,6 +23,7 @@
 //   in Supabase (supabase.js). With all three set, people sign up and sign in
 //   with Supabase Auth and everything they save is kept in its database.
 
+import { lookupAssessment } from './assessment.js';
 import { DurableObject } from 'cloudflare:workers';
 import { COLLECTIONS } from './schema.js';
 import { PHOTO_TYPES, Store, StoreError, hashKey, randomToken } from './store.js';
@@ -729,6 +730,20 @@ async function api(request, env, url) {
       await sendEmail(env, env.OWNER_EMAIL, note.subject, note.text, note.replyTo).catch((e) => console.error('owner email failed', e?.message));
     }
     return answer(saved);
+  }
+
+  // A home's assessed value from its city's open data (Calgary, Edmonton, Winnipeg), kept a day.
+  if (parts[0] === 'assessment' && parts.length === 1 && method === 'GET') {
+    const city = String(url.searchParams.get('city') || '');
+    const address = String(url.searchParams.get('address') || '').slice(0, 120);
+    const cache = typeof caches !== 'undefined' ? caches.default : null;
+    const key = new Request(`https://assessment.cache/${encodeURIComponent(city)}/${encodeURIComponent(address.toLowerCase())}`);
+    const hit = await cache?.match(key);
+    if (hit) return hit;
+    const res = await lookupAssessment(city, address).catch(() => ({ error: 'The city’s assessment data didn’t answer. Try again in a minute.', status: 502 }));
+    const out = answer(res);
+    if (!res.error && cache) await cache.put(key, new Response(out.clone().body, { headers: { 'content-type': 'application/json', 'cache-control': 'max-age=86400' } }));
+    return out;
   }
 
   // Map points for listing addresses ("228 Archibald Street S, Thunder Bay, ON").

@@ -24,8 +24,30 @@ export const DEFAULT_SELL = {
   moving: 2000,
   repairs: 0,
   other: 0,
+  address: '', // the home's street address, for its assessment
+  assessment: null, // { value, valuedAt 'YYYY-MM-DD', source 'city' | 'you', address, yearBuilt, livingArea, hood }
   done: {},
 };
+
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+const posInt = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.round(Number(v)) : null);
+
+/** A saved assessment, or null: its value, the date it values the home at, and where it came from. */
+export function cleanAssessment(a) {
+  const value = posInt(a?.value);
+  if (!value) return null;
+  const hood = a.hood && posInt(a.hood.median) ? { name: String(a.hood.name ?? '').slice(0, 60), count: posInt(a.hood.count), median: posInt(a.hood.median), low: posInt(a.hood.low), high: posInt(a.hood.high) } : null;
+  return {
+    value,
+    valuedAt: ISO.test(String(a.valuedAt ?? '')) ? a.valuedAt : null,
+    source: a.source === 'city' ? 'city' : 'you',
+    address: typeof a.address === 'string' ? a.address.slice(0, 120) : '',
+    yearBuilt: posInt(a.yearBuilt),
+    livingArea: posInt(a.livingArea),
+    lotSqft: posInt(a.lotSqft),
+    hood,
+  };
+}
 
 export function normalizeSell(s) {
   const out = { ...DEFAULT_SELL };
@@ -34,6 +56,8 @@ export function normalizeSell(s) {
   for (const k of ['beds', 'mortgage', 'ratePct', 'commissionPct', 'legal', 'moving', 'repairs', 'other']) if (s && Number.isFinite(Number(s[k]))) out[k] = Math.max(Number(s[k]), 0);
   for (const k of ['price', 'penalty']) out[k] = s?.[k] != null && Number.isFinite(Number(s[k])) ? Math.max(Number(s[k]), 0) : null;
   for (const k of ['fixed', 'privateSale']) if (typeof s?.[k] === 'boolean') out[k] = s[k];
+  out.address = typeof s?.address === 'string' ? s.address.slice(0, 120) : '';
+  out.assessment = cleanAssessment(s?.assessment);
   out.done = Object.fromEntries(Object.entries(s?.done && typeof s.done === 'object' ? s.done : {}).filter(([, v]) => v === true));
   return out;
 }

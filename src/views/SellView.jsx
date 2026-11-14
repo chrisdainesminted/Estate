@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Search, X as Close } from 'lucide-react';
 import { Check, ExternalLink, FileDown } from 'lucide-react';
 import { SELL_STEPS, homeWorth, netProceeds, totalBeds } from '../lib/selling.js';
 import { listingPageUrl, siteName } from '../lib/market.js';
@@ -7,6 +8,7 @@ import { money } from '../lib/format.js';
 import { saveFile } from '../lib/runtime.js';
 import { Button, Card, CardHeader, LedgerLine, NumberField, Segmented, SelectField, SkeletonCard, ViewHeader, signedClass } from '../components/ui.jsx';
 import { Section, SectionGroup } from '../components/Section.jsx';
+import { ASSESSMENT_LOOKUP, CONFIDENCE, valueEstimate } from '../lib/valuation.js';
 import { PlusGate, usePlus } from '../components/Plus.jsx';
 import { CityPicker } from './ListingsView.jsx';
 
@@ -21,13 +23,136 @@ const yesNo = [
  * and what you'd walk away with once commission, the mortgage and the rest
  * are paid. The pricing report as a PDF is part of Plus.
  */
+const CONF_TONE = {
+  high: 'bg-emerald-500/10 text-emerald-800 ring-emerald-600/30 dark:text-emerald-300',
+  medium: 'bg-amber-400/10 text-amber-900 ring-amber-500/30 dark:text-amber-200',
+  low: 'bg-zinc-500/10 text-zinc-700 ring-zinc-500/30 dark:text-zinc-300',
+};
+
+/**
+ * The home's assessment: looked up from its address where the city publishes
+ * every assessment (Calgary, Edmonton, Winnipeg), or typed from the tax bill
+ * or assessment notice anywhere else.
+ */
+function Assessment({ sell, onSell, city, province }) {
+  const [state, setState] = useState({ status: 'idle', matches: [], hood: null, error: '', source: '' });
+  const a = sell.assessment;
+  const canLook = ASSESSMENT_LOOKUP.includes(city);
+  const find = async () => {
+    setState({ status: 'busy', matches: [], hood: null, error: '', source: '' });
+    try {
+      const res = await fetch(`/api/assessment?city=${encodeURIComponent(city)}&address=${encodeURIComponent(sell.address)}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Couldn’t look that up. Try again in a minute.');
+      if (!data.matches?.length) throw new Error('No home at that address in the city’s assessments. Check the number and street.');
+      setState({ status: 'done', matches: data.matches, hood: data.hood, error: '', source: data.source });
+    } catch (e) {
+      setState({ status: 'idle', matches: [], hood: null, error: e.message, source: '' });
+    }
+  };
+  const pick = (m) => {
+    onSell({ assessment: { ...m, source: 'city', hood: state.hood } });
+    setState((s) => ({ ...s, matches: [] }));
+  };
+  const field = 'field w-full px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100';
+  return (
+    <div className="border-t border-hairline px-5 py-4">
+      {a ? (
+        <div className="flex items-start justify-between gap-3 text-sm">
+          <p className="text-zinc-700 dark:text-zinc-300">
+            <span className="font-semibold text-zinc-950 dark:text-white">{a.address || 'Your home'}</span>: assessed at <strong className="tabular">{money(a.value)}</strong>
+            {a.valuedAt ? (a.source === 'city' ? `, its value on ${new Date(`${a.valuedAt}T12:00:00`).toLocaleDateString('en-CA', { month: 'long', day: 'numeric', year: 'numeric' })}` : ` in ${a.valuedAt.slice(0, 4)}`) : ''}
+            {a.yearBuilt ? ` · built ${a.yearBuilt}` : ''}
+            {a.livingArea ? ` · ${a.livingArea.toLocaleString('en-CA')} sq ft` : ''}
+            {a.hood ? `. Homes in ${a.hood.name} are mostly assessed at ${money(a.hood.low)} to ${money(a.hood.high)}.` : '.'}
+          </p>
+          <button type="button" onClick={() => onSell({ assessment: null })} className="grid size-7 shrink-0 place-items-center rounded-md text-zinc-500 hover:bg-well" aria-label="Remove the assessment">
+            <Close className="size-4" aria-hidden />
+          </button>
+        </div>
+      ) : canLook ? (
+        <div>
+          <label htmlFor="sell-address" className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            Your address, for the city’s assessment (optional)
+          </label>
+          <form
+            className="flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (sell.address.trim()) find();
+            }}
+          >
+            <input id="sell-address" className={field} placeholder="15 Deermeade Place SE" value={sell.address} onChange={(e) => onSell({ address: e.target.value })} autoComplete="street-address" />
+            <Button type="submit" disabled={state.status === 'busy' || !sell.address.trim()}>
+              <Search className="size-4" aria-hidden /> {state.status === 'busy' ? 'Looking…' : 'Find'}
+            </Button>
+          </form>
+          {state.error && <p className="mt-2 text-xs text-red-700 dark:text-red-300">{state.error}</p>}
+          {state.matches.length > 0 && (
+            <ul className="mt-2 divide-y divide-hairline rounded-md ring-1 ring-(--line-strong) ring-inset">
+              {state.matches.map((m) => (
+                <li key={`${m.address}-${m.value}`}>
+                  <button type="button" onClick={() => pick(m)} className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-well">
+                    <span>{m.address}</span>
+                    <span className="tabular font-semibold">{money(m.value)}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">From the city’s open assessment data, under its Open Government Licence.</p>
+        </div>
+      ) : (
+        <TypedAssessment province={province} onSave={(assessment) => onSell({ assessment })} />
+      )}
+    </div>
+  );
+}
+
+/** An assessment typed from the notice: the value, and the year it values the home at (it's on the notice). */
+function TypedAssessment({ province, onSave }) {
+  const [value, setValue] = useState(undefined);
+  const [year, setYear] = useState(province === 'ON' ? 2016 : new Date().getFullYear() - 1);
+  const save = () => value > 0 && year >= 2000 && onSave({ value, valuedAt: `${year}-07-01`, source: 'you' });
+  return (
+    <div className="grid grid-cols-[1fr_7rem_auto] items-end gap-3">
+      <NumberField id="sell-assessed" label="Assessed value (optional)" prefix="$" value={value} onChange={setValue} step={5000} decimals={0} />
+      <div>
+        <label htmlFor="sell-assessed-year" className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+          Value as of
+        </label>
+        <input
+          id="sell-assessed-year"
+          type="number"
+          inputMode="numeric"
+          min="2000"
+          max={new Date().getFullYear()}
+          value={year}
+          onChange={(e) => setYear(Number(e.target.value))}
+          className="field w-full px-3 py-2 text-sm tabular-nums text-zinc-900 dark:text-zinc-100"
+        />
+      </div>
+      <Button onClick={save} disabled={!(value > 0)}>
+        Use it
+      </Button>
+      <p className="col-span-3 -mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+        {province === 'ON'
+          ? 'Ontario’s assessments are still at 2016 values, so we show yours but don’t use it as today’s price.'
+          : 'On your assessment notice or tax bill, with the date it values your home at.'}
+      </p>
+    </div>
+  );
+}
+
 export function SellWorth({ sell, onSell, feedState, indexState, city, onCity, nextStep }) {
   const plus = usePlus();
   const { status, feed } = feedState;
   const [error, setError] = useState('');
   const place = cityByKey(city);
   const worth = useMemo(() => homeWorth({ units: sell.units, beds: sell.beds, listings: feed?.listings ?? [] }), [sell.units, sell.beds, feed]);
-  const price = sell.price ?? worth?.estimate ?? 0;
+  // The estimate: the city's assessment where we have it, else similar homes' asking prices, always with a range and how sure we are.
+  const v = useMemo(() => valueEstimate({ assessment: sell.assessment, comps: worth, province: place.province }), [sell.assessment, worth, place.province]);
+  const price = sell.price ?? v?.estimate ?? 0;
   const n = netProceeds({ ...sell, price, province: place.province });
 
   const report = async () => {
@@ -40,8 +165,9 @@ export function SellWorth({ sell, onSell, feedState, indexState, city, onCity, n
           worth && {
             title: 'Likely price',
             rows: [
-              { label: 'Middle of similar homes', value: money(worth.estimate), strong: true },
-              { label: 'Most ask between', value: `${money(worth.low)} and ${money(worth.high)}` },
+              { label: 'Likely price', value: money(v?.estimate ?? worth.estimate), strong: true },
+              { label: 'Similar homes ask between', value: `${money(worth.low)} and ${money(worth.high)}` },
+              ...(v ? [{ label: 'Based on', value: v.basis.join('; ').replace(/^./, (c) => c.toUpperCase()) }, { label: 'How sure', value: CONFIDENCE[v.confidence].label }] : []),
             ],
           },
           worth && {
@@ -80,22 +206,32 @@ export function SellWorth({ sell, onSell, feedState, indexState, city, onCity, n
           </SelectField>
           <NumberField id="sell-beds" label={sell.units > 1 ? 'Bedrooms, all units' : 'Bedrooms'} value={sell.beds} onChange={(v) => onSell({ beds: v })} step={1} decimals={0} hint="Count a basement bedroom" />
         </div>
+        <Assessment sell={sell} onSell={onSell} city={city} province={place.province} />
       </Card>
 
       {status === 'checking' ? (
         <SkeletonCard className="h-64" />
       ) : (
         <Card id="sell-worth" className="px-5 py-5 sm:px-6">
-          {worth ? (
+          {v ? (
             <>
-              <h2 className="text-xl font-semibold tracking-tight text-zinc-950 sm:text-2xl dark:text-white">About {money(worth.estimate)}</h2>
-              <p className="mt-2 text-[15px] text-zinc-700 dark:text-zinc-300">
-                Similar homes in {place.name} are asking {money(worth.low)} to {money(worth.high)}.
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <h2 className="text-xl font-semibold tracking-tight text-zinc-950 sm:text-2xl dark:text-white">About {money(v.estimate)}</h2>
+                <span title={CONFIDENCE[v.confidence].text} className={`rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset ${CONF_TONE[v.confidence]}`}>
+                  {CONFIDENCE[v.confidence].label}
+                </span>
+              </div>
+              {v.low != null && (
+                <p className="mt-2 text-[15px] text-zinc-700 dark:text-zinc-300">
+                  Similar homes in {place.name} are asking {money(v.low)} to {money(v.high)}.
+                </p>
+              )}
+              <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                From {v.basis.join(', and ')}. {v.notes[0]}
               </p>
               <p className="mt-3 text-[15px] text-zinc-700 dark:text-zinc-300">
                 You’d walk away with about <strong className={`tabular font-semibold ${signedClass(n.net)}`}>{money(n.net)}</strong> after the agent and the costs of selling.
               </p>
-              <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">Asking prices, not sales: homes usually sell for a little less.</p>
               <div className="mt-4">
                 {plus.active ? (
                   <Button onClick={report}>
@@ -115,7 +251,7 @@ export function SellWorth({ sell, onSell, feedState, indexState, city, onCity, n
             <>
               <h2 className="text-lg font-semibold text-zinc-950 dark:text-white">Not enough to compare yet</h2>
               <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-                Fewer than three {KINDS[sell.units - 1].toLowerCase()}s are for sale in {place.name} today. Try a nearby city, or check back: listings are found every morning.
+                Fewer than three {KINDS[sell.units - 1].toLowerCase()}s are for sale in {place.name} today. Add your home’s assessed value above, try a nearby city, or check back: listings are found every morning.
               </p>
             </>
           )}

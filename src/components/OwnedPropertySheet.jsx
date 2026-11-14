@@ -108,7 +108,7 @@ export default function OwnedPropertySheet({ open, onClose, onSave, market, home
               <input id="own-bought" type="month" max={thisMonth()} className={field} value={f.bought} onChange={(e) => set('bought')(e.target.value)} />
             </div>
             <NumberField id="own-down" label="Down payment" prefix="$" step={5000} decimals={0} value={f.down} onChange={set('down')} hint={r ? `${percent(r.downPct / 100, 1)} of the price` : 'Blank uses 20%'} />
-            <NumberField id="own-worth" label="Worth today (optional)" prefix="$" step={5000} decimals={0} value={f.worth} onChange={set('worth')} hint="Your best guess. Blank grows it 3% a year" />
+            <NumberField id="own-worth" label="Worth today (optional)" prefix="$" step={5000} decimals={0} value={f.worth} onChange={set('worth')} hint="From your assessment notice or an agent. Blank assumes 3% a year since you bought" />
           </div>
         </section>
 
@@ -158,7 +158,7 @@ export default function OwnedPropertySheet({ open, onClose, onSave, market, home
             )}
             {r.work > 0 && <LedgerLine label="Work you’ve put in" value={money(r.work)} />}
             {r.work > 0 && <LedgerLine label="Of that, adds to its value" value={money(r.added)} />}
-            <LedgerLine label={`Value growth, ${r.growthFrom === 'worth' ? 'from what it’s worth now' : 'typical'}`} value={`${r.appreciationPct}%/yr`} />
+            <LedgerLine label={`Value growth, ${r.growthFrom === 'worth' ? 'from what it’s worth now' : 'assumed, not measured'}`} value={`${r.appreciationPct}%/yr`} />
             <LedgerLine label={r.years > 0 ? `Worth today, after ${r.years < 1 ? `${Math.round(r.years * 12)} months` : `${Math.round(r.years * 10) / 10} years`}` : 'Worth today'} value={money(now.value)} />
             <LedgerLine label="Owed today" value={money(now.balance)} />
             <LedgerLine label="Your equity" value={money(now.equity)} sum />
