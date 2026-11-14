@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import AsOf from '../components/AsOf.jsx';
 import { ArrowRight, BellPlus, BellRing, ExternalLink } from 'lucide-react';
 import { listingPageUrl, listingRent, listingTaxes, listingToDeal, siteName, unitsOf } from '../lib/market.js';
 import { homeFor, withGift } from '../lib/firstHome.js';
@@ -169,6 +170,7 @@ export default function HomesForMe({ feedState, indexState, city, onCity, market
             Each assumes the least down payment at today’s rate, with mortgage insurance, the listing’s own tax bill, insurance and an allowance for repairs. Fits: you’d qualify and
             have the cash. Stretch: you’d qualify and could save the rest within a year. Where a listing doesn’t give the rent of the other units, it’s the city’s average. A lender makes the real call.
           </p>
+          <AsOf className="px-1" />
         </>
       )}
     </div>

@@ -10,6 +10,7 @@ import DealLedgers from './DealLedgers.jsx';
 import CalcInputs from './CalcInputs.jsx';
 import GradeBadge from './GradeBadge.jsx';
 import RiskList from './RiskList.jsx';
+import AsOf from './AsOf.jsx';
 import { isCondoDeal } from '../lib/condo.js';
 import { cityByKey } from '../lib/canada.js';
 
@@ -98,6 +99,7 @@ export default function HeroSummary({ deal, a, base, whatIf, onShare, onChange }
             className="mt-4"
             property={{ units: a.units, condo: isCondoDeal(deal), yearBuilt: deal.yearBuilt, province: deal.country === 'ca' ? (deal.province ?? cityByKey(deal.city).province) : 'US', rentStated: /Rents as listed|Some rents/.test(deal.notes ?? ''), text: deal.notes ?? '' }}
           />
+          {deal.country === 'ca' && <AsOf className="mt-3" />}
           {deal.estimated && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Taxes and insurance are estimated from the price: edit the deal once you know the real numbers.</p>}
 
           {whatIf && (

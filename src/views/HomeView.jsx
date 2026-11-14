@@ -13,6 +13,7 @@ import CitySelect from '../components/CitySelect.jsx';
 import { RentVsBuy } from './HomeExtras.jsx';
 import { sitePage } from '../lib/site.js';
 import { accountLink } from '../lib/account.js';
+import AsOf from '../components/AsOf.jsx';
 
 const checkedOn = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' });
 const KIND = { 1: 'a house', 2: 'a duplex', 3: 'a triplex', 4: 'a fourplex' };
@@ -619,6 +620,7 @@ export default function HomeView({ profile: raw, suite, rvb = {}, market, items,
               {local.city.priceEstimated ? ' (estimate)' : ''}, and there’s about {money(b.total)} in government money you can claim.
             </p>
             <LenderNotes p={raw} />
+            <AsOf className="mt-3" />
             <div className="mt-4 flex flex-wrap gap-2">
               <Button variant="primary" onClick={() => onView('homes')}>
                 Homes that fit me <ArrowRight className="size-4" aria-hidden />
