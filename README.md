@@ -47,7 +47,7 @@ Run it locally with `npm run build && npx wrangler dev`; `npx vitest run worker`
 npm install
 npm run dev             # http://localhost:5173
 npm test                # finance engine unit tests
-npm run build           # static site in dist/
+npm run build           # static site in dist/, then the city pages (scripts/city-pages.mjs)
 npm run build:artifact  # page fragment + assets in dist-artifact/ for the Claude artifact host
 ```
 
@@ -231,3 +231,7 @@ repository and branch):
 Its icons and link preview are made with
 `node brands/real-estate-business/icons.cjs`. The homepage there is its own
 file, so a change to the main homepage doesn't reach it on its own.
+
+## City pages for search
+
+`npm run build` ends with `scripts/city-pages.mjs`, which writes plain-HTML pages from the morning listings in `public/data/` into `dist/homes-for-sale/`: one for every city, and one for each kind of home in it (`/homes-for-sale/thunder-bay/duplexes/`) with at least three listings. Each listing is worked out by the listings engine: 20% down at a bank's rate, stated or average asking rents, and cash flow and a grade only where the listing gives its real tax bill. They're added to the built sitemap, so every daily listings commit refreshes them on deploy. A brand copy sets its own look and whether search engines may list them in `brands/<slug>/src/seo/theme.js`. Homeward's are `noindex`, the same as its other shared pages.

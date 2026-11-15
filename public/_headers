@@ -20,6 +20,8 @@
   Cache-Control: no-cache
 /listing/*
   Cache-Control: no-cache
+/homes-for-sale/*
+  Cache-Control: no-cache
 /rent/*
   Cache-Control: no-cache
 /account/*

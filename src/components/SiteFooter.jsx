@@ -9,6 +9,7 @@ const COLUMNS = [
       ['Find a lender', '/lenders/'],
       ['Homes for sale', '/homes/?kind=sale'],
       ['Morning listings', '/app/?view=listings'],
+      ['Homes for sale by city', '/homes-for-sale/'],
       ['Rental calculator', '/app/?view=analyze'],
     ],
   ],
