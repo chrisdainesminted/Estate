@@ -219,6 +219,8 @@ const VIEWS = [
     label: 'Landlord',
     icon: Building2,
     group: 'invest',
+    // On the back burner: no tab, no command and no link opens it. Delete this line to bring it back.
+    shelved: true,
     keywords: 'tenant applicant viewing booking calendar rent payment late repair maintenance expense t776 tax lease notice deposit',
     about: 'Run your rentals: listing pages where people apply and book viewings, rent tracking, repair requests, expenses for tax time, and your province’s rules.',
   },
@@ -333,7 +335,8 @@ function goSignIn(next = 'profile') {
 /** A view named in the address (?view=listings), as the homepage's links use; read once, then tidied away. */
 function viewFromAddress() {
   const v = new URLSearchParams(window.location.search).get('view');
-  if (!VIEWS.some((x) => x.value === v)) return null;
+  // A shelved view opens only from a link to a workspace you already have (#landlord=…).
+  if (!VIEWS.some((x) => x.value === v && (!x.shelved || window.location.hash.startsWith(`#${v}=`)))) return null;
   const url = new URL(window.location.href);
   url.searchParams.delete('view');
   window.history.replaceState(null, '', url.pathname + url.search + url.hash);
@@ -356,7 +359,7 @@ function useStoredView() {
     if (linked) return linked;
     try {
       const v = localStorage.getItem(VIEW_KEY);
-      return VIEWS.some((x) => x.value === v) ? v : 'home';
+      return VIEWS.some((x) => x.value === v && !x.shelved) ? v : 'home';
     } catch {
       return 'home';
     }
@@ -658,7 +661,7 @@ export default function App() {
   if (viewGroup) lastMode.current = viewGroup;
   const mode = viewGroup ?? lastMode.current;
   const investing = mode === 'invest';
-  const groupViews = VIEWS.filter((v) => v.group === mode && !v.parent && !v.hidden);
+  const groupViews = VIEWS.filter((v) => v.group === mode && !v.parent && !v.hidden && !v.shelved);
   const tabs = investing && !tabsUnlocked ? groupViews.filter((v) => v.basic) : groupViews;
   // A view shown as a switch inside another tab lights up that tab.
   const tabView = VIEWS.find((v) => v.value === view)?.parent ?? view;
@@ -798,7 +801,7 @@ export default function App() {
   const inCompare = compare.some((c) => c.id === activeId);
   const commands = useMemo(() => {
     const list = [
-      ...VIEWS.map((v) => ({ id: `view-${v.value}`, group: 'Go to', label: v.label, icon: v.icon, keywords: `view tab page ${v.keywords ?? ''}`, run: () => setView(v.value) })),
+      ...VIEWS.filter((v) => !v.shelved).map((v) => ({ id: `view-${v.value}`, group: 'Go to', label: v.label, icon: v.icon, keywords: `view tab page ${v.keywords ?? ''}`, run: () => setView(v.value) })),
       ...baseItems.map((x) => ({
         id: `deal-${x.deal.id}`,
         group: 'Deals',

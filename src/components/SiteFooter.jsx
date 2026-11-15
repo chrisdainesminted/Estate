@@ -17,8 +17,6 @@ const COLUMNS = [
     'Rent',
     [
       ['Homes for rent', '/homes/'],
-      ['List a home, free', '/app/?view=landlord'],
-      ['Landlord tools', '/app/?view=landlord'],
     ],
   ],
   [

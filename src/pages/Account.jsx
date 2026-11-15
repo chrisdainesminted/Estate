@@ -479,8 +479,10 @@ export default function Account() {
         </Panel>
       </div>
 
+      {/* Landlord tools are on the back burner: the panel shows only for workspaces someone already has. */}
+      {data.workspaces.length > 0 && (
       <div id="landlord" className="mt-6 scroll-mt-6">
-        <Panel icon={KeyRound} title="Landlord workspaces" subtitle="Listings, applicants, tenants, rent and taxes. Opening one while signed in saves it here." action={<a href="/app/?view=landlord" className="text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400">Start one</a>}>
+        <Panel icon={KeyRound} title="Landlord workspaces" subtitle="Listings, applicants, tenants, rent and taxes. Opening one while signed in saves it here.">
           {data.workspaces.length === 0 ? (
             <Empty>No workspaces yet. List a home or add your rentals to start one.</Empty>
           ) : (
@@ -506,6 +508,7 @@ export default function Account() {
           )}
         </Panel>
       </div>
+      )}
 
       <div id="settings" className="mt-6 scroll-mt-6">
         <Panel icon={UserRound} title="Settings">

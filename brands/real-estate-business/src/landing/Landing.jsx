@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Check, ClipboardCheck, Hammer, KeyRound, Landmark, MapPin, Menu, Plus, Tag, X } from 'lucide-react';
+import { ArrowRight, Check, ClipboardCheck, Hammer, Landmark, MapPin, Menu, Plus, Tag, X } from 'lucide-react';
 import Logo from '../components/Logo.jsx';
 import { DEFAULT_PROFILE, RULES_CHECKED, closingCash, homeFor, maxPrice, minDownPayment, mortgagePlan } from '../lib/firstHome.js';
 import { loanRate, monthlyPI } from '../lib/finance.js';
@@ -595,7 +595,6 @@ const INSIDE = [
   [ClipboardCheck, 'Suite permit guide', 'What your city allows for a basement or backyard suite, what to submit, and whether the rent pays it back.', open('home')],
   [Tag, 'Sell without the guesswork', 'What your home is likely worth, what you’d walk away with, and a free listing of your own.', '/sell/'],
   [Hammer, 'Build or renovate', 'Type in the rooms, or send a blueprint, and get a materials list with prices.', open('build')],
-  [KeyRound, 'Landlord tools', 'List a rental free, then handle applications, viewings, rent, repairs and your tax pack.', open('landlord')],
 ];
 
 /** The rest of the toolbox, one short card each, so nothing in the app is hidden behind the four paths. */
@@ -647,14 +646,6 @@ function Pricing() {
       points: ['Everything in Free', 'Pro deals: tax sales and lender, estate and court sales, with the numbers run', 'Blueprints read for you: send a plan, get the materials list', 'A note when a price drops or a new home fits you', 'A pricing report for your home, ready to print', 'Deal memos and materials lists you can share'],
       cta: ['Start free, upgrade any time', open('home')],
     },
-    {
-      name: 'Landlords',
-      price: '2%',
-      unit: 'of rent tracked',
-      lead: 'A small share of the rent you actually collect, with a ceiling per unit.',
-      points: ['Listings where people apply and book viewings', 'Rent tracking, reminders and receipts', 'Repairs, expenses and your tax pack', 'At most $30 a unit; your first unit is free'],
-      cta: ['Open landlord tools', open('landlord')],
-    },
   ];
   return (
     <section id="pricing" aria-labelledby="pricing-title" className="scroll-mt-24 border-b border-hairline">
@@ -665,7 +656,7 @@ function Pricing() {
           </h2>
           <p className={lede}>Try the calculators without an account. Plus is there when it saves you time.</p>
         </Reveal>
-        <div className="mt-12 grid gap-4 lg:grid-cols-3">
+        <div className="mt-12 grid max-w-4xl gap-4 md:grid-cols-2">
           {plans.map((p) => (
             <div key={p.name} className={`${card} flex flex-col p-7 ${p.tag ? 'border-2 border-emerald-600/70' : ''}`}>
               <div className="flex items-center justify-between gap-3">
@@ -705,7 +696,7 @@ const FAQ = [
   ],
   [
     'What does it cost?',
-    'Looking around, the calculators, listings and plans cost nothing, and listing a home is free. Plus is $12 a month. Landlords who track rent pay 2% of each tenanted unit’s rent, at most $30 a unit, and the first unit is free.',
+    'Looking around, the calculators, listings and plans cost nothing, and listing a home is free. Plus is $12 a month.',
   ],
   [
     'I’ve never talked to a lender. Where do I start?',

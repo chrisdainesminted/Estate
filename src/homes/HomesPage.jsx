@@ -34,7 +34,7 @@ export default function HomesPage() {
             <a href="/app/" className="hidden rounded-md px-3 py-2 font-medium text-zinc-600 hover:bg-well hover:text-zinc-900 sm:inline-block dark:text-zinc-400 dark:hover:text-white">
               Calculators
             </a>
-            <a href="/app/?view=landlord" className="inline-flex items-center gap-1.5 rounded-md bg-(--accent) px-3 py-2 font-semibold text-(--accent-ink) hover:brightness-110">
+            <a href="/app/?view=selllist" className="inline-flex items-center gap-1.5 rounded-md bg-(--accent) px-3 py-2 font-semibold text-(--accent-ink) hover:brightness-110">
               <Plus className="size-4" aria-hidden /> List a home
             </a>
           </nav>
@@ -213,7 +213,7 @@ function Search() {
           <Home className="mx-auto size-8 text-zinc-400" aria-hidden />
           <p className="mt-3 font-medium text-zinc-900 dark:text-white">No homes listed here yet.</p>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Try all of Canada, or be the first: listing is free.</p>
-          <a href="/app/?view=landlord" className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-(--accent-ink)">
+          <a href="/app/?view=selllist" className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-(--accent-ink)">
             <Plus className="size-4" aria-hidden /> List a home
           </a>
         </div>
