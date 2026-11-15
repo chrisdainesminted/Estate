@@ -17,7 +17,9 @@
 //   look: "name" (wins over --name), "css" (a file whose @import lines go at
 //   the top of src/index.css and the rest at the end, so its colours and
 //   fonts win), "colors" (exact colour strings swapped everywhere, e.g. the
-//   logo green in PDFs), "lightByDefault" and "themeColor".
+//   logo green in PDFs), "lightByDefault", "themeColor", and "noindexPages":
+//   pages that are the same as the main site's, kept out of search engines
+//   (and the sitemap) so the two sites don't compete as duplicates.
 // - wrangler.jsonc takes the new Worker name, so its data is its own.
 //
 // It changes files in place: run it on a build checkout, not your working copy
@@ -116,6 +118,22 @@ for (const f of files) {
 const wranglerPath = join(root, 'wrangler.jsonc');
 const wrangler = readFileSync(wranglerPath, 'utf8');
 writeFileSync(wranglerPath, wrangler.replace(/"name":\s*"[^"]*"/, `"name": "${SLUG}"`));
+
+// Pages the same as the main site's: out of search results and the sitemap, so only this brand's own pages compete.
+const noindex = Array.isArray(brand.noindexPages) ? brand.noindexPages.filter((d) => /^[a-z-]+$/.test(d)) : [];
+for (const d of noindex) {
+  const f = join(root, d, 'index.html');
+  if (!existsSync(f)) continue;
+  const html = readFileSync(f, 'utf8');
+  if (!html.includes('name="robots"')) writeFileSync(f, html.replace(/<head>/i, '<head>\n    <meta name="robots" content="noindex, follow" />'));
+}
+if (noindex.length) {
+  const sitemap = join(root, 'public', 'sitemap.xml');
+  if (existsSync(sitemap)) {
+    const xml = readFileSync(sitemap, 'utf8');
+    writeFileSync(sitemap, xml.split('\n').filter((line) => !noindex.some((d) => line.includes(`/${d}/</loc>`))).join('\n'));
+  }
+}
 
 // The brand's look: its fonts at the top of the stylesheet, its colours at the end.
 if (brand.css) {

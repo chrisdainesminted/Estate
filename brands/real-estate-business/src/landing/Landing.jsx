@@ -229,7 +229,7 @@ function Hero({ city, onCity }) {
               See what you can afford, what a home really costs each month, and the homes that fit, in plain numbers.
             </p>
             <ul className="mt-6 flex flex-wrap gap-2 text-sm font-semibold text-zinc-600 max-lg:hidden dark:text-zinc-300">
-              {['Free to use', 'Free account', 'Anywhere in Canada'].map((t) => (
+              {['Free to use', 'No sign-up', 'Anywhere in Canada'].map((t) => (
                 <li key={t} className="inline-flex items-center gap-1.5 rounded-full bg-(--soft) px-3 py-1.5">
                   <Check className="size-3.5 text-emerald-600 dark:text-emerald-300" aria-hidden /> {t}
                 </li>

@@ -124,6 +124,13 @@ const PRIVACY = {
       </p>,
     ],
     [
+      'Looking up your home’s assessment',
+      <p>
+        If you search for your address on the Sell page, we send it to the city’s public assessment data (Calgary, Edmonton or Winnipeg) to find the assessed value, and keep
+        the answer for a day so the same search is fast. The address you typed is saved with your numbers, in your browser or your account.
+      </p>,
+    ],
+    [
       'If you create an account',
       <p>
         An account is optional. It keeps what you choose to save on our server so it follows you to every device: your numbers, deals, checklist and listing alerts; your

@@ -532,11 +532,13 @@ export default function App() {
   }, [lib, homeRules, homeCity, setView, isDesktop, toast]);
 
   // The profile button: your profile when signed in (the Claude page always is); otherwise make an account or sign in.
-  // Signed out while the app is open (sign out, account deleted): back to the account page.
-  // A co-owner's view-only books link (read once, before the link is tidied away) opens without one.
+  // Anyone can use the app without an account. Signing out (or deleting the account) while it's open goes back
+  // to the account page, since what was on screen was the account's. A co-owner's view-only books link opens as before.
   const [booksLink] = useState(() => isBooksLink(window.location.hash));
+  const hadAccount = useRef(Boolean(lib.account));
   useEffect(() => {
-    if (!HOSTED && !lib.account && !booksLink) window.location.replace('/account/');
+    if (!HOSTED && hadAccount.current && !lib.account && !booksLink) window.location.replace('/account/');
+    hadAccount.current = Boolean(lib.account);
   }, [lib.account, booksLink]);
   // A new account's first visit: what they're here for and their numbers, once (it waits for the account's
   // saved settings, so someone who already answered on another device isn't asked again).
@@ -992,6 +994,15 @@ export default function App() {
         </header>
 
         <main id="main" tabIndex={-1} className="gutter mx-auto max-w-[1500px] space-y-6 pt-6 pb-24 outline-none sm:pt-8">
+          {/* Signed out, everything works and stays in this browser; one line offers to keep it. */}
+          {!lib.account && !HOSTED && (
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg bg-emerald-500/[0.07] px-4 py-3 text-sm ring-1 ring-emerald-600/20 ring-inset">
+              <span className="text-zinc-700 dark:text-zinc-300">You’re trying Squarely without an account: your numbers stay in this browser.</span>
+              <Button variant="primary" className="px-3 py-1.5 text-sm" onClick={() => goSignIn(view)}>
+                Save it free
+              </Button>
+            </div>
+          )}
           {/* Portal target for glossary tips; display: contents keeps it out of the layout. */}
           <div id="tip-layer" className="contents" />
           <Suspense fallback={<SkeletonCard className="h-[32rem]" />}>

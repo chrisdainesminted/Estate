@@ -285,7 +285,7 @@ function Hero({ city, onCity }) {
                 Find a home to rent or buy
               </a>
             </div>
-            <p className="mt-5 text-sm text-zinc-500 dark:text-zinc-400">Free · Try it above without an account · Anywhere in Canada</p>
+            <p className="mt-5 text-sm text-zinc-500 dark:text-zinc-400">Free · No sign-up needed · Anywhere in Canada</p>
           </div>
           <Estimator city={city} onCity={onCity} />
         </div>
@@ -768,7 +768,7 @@ function Closing() {
         <h2 id="closing-title" className="mx-auto max-w-3xl text-4xl font-semibold leading-[1.08] tracking-[-0.035em] text-zinc-950 sm:text-5xl dark:text-white">
           Find out how close you are.
         </h2>
-        <p className="mx-auto mt-4 max-w-xl text-lg text-zinc-600 dark:text-zinc-400">Two minutes and a free account.</p>
+        <p className="mx-auto mt-4 max-w-xl text-lg text-zinc-600 dark:text-zinc-400">Two minutes, free, and nothing to sign up for.</p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <a href={open('home')} className={primary}>
             See what you can buy <ArrowRight className="size-4" aria-hidden />

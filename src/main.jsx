@@ -3,21 +3,17 @@ import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
 import { ToastProvider } from './components/toast.jsx';
 import './index.css';
-import { accountLink, initAccounts } from './lib/account.js';
-import { signInRedirect } from './lib/gate.js';
+import { initAccounts } from './lib/account.js';
 
-// On the website the app needs an account: signed out, make one (or sign in) first.
+// Anyone can try the app; an account keeps it on every device (the app offers one).
 // Which kind of account the site uses comes from its server, so ask that first.
 const onWebsite = window.location.pathname.startsWith('/app');
 (onWebsite ? initAccounts() : Promise.resolve()).then(() => {
-  const away = signInRedirect(window.location, accountLink());
-  if (away) window.location.replace(away);
-  else
-    createRoot(document.getElementById('root')).render(
-      <StrictMode>
-        <ToastProvider>
-          <App />
-        </ToastProvider>
-      </StrictMode>,
-    );
+  createRoot(document.getElementById('root')).render(
+    <StrictMode>
+      <ToastProvider>
+        <App />
+      </ToastProvider>
+    </StrictMode>,
+  );
 });
