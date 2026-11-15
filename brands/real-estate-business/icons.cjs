@@ -11,14 +11,13 @@ const LIGHT = '#A3855F';
 const CREAM = '#FAF6EF';
 const INK = '#3A2E22';
 const FONT = '<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">';
-// The same mark as src/lib/brand.js here: a cream key pointing north, on a brown rounded square.
-const KEY = `<circle cx="24" cy="32.5" r="5" fill="none" stroke="${CREAM}" stroke-width="3.6"/><path d="M24 27.5V12.5M17.5 19L24 12.5L30.5 19" fill="none" stroke="${CREAM}" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>`;
-const MARK = `<rect x="2" y="2" width="44" height="44" rx="12" fill="${BROWN}"/>${KEY}`;
+// The same mark as src/lib/brand.js here: a brown rounded square.
+const MARK = `<rect x="2" y="2" width="44" height="44" rx="12" fill="${BROWN}"/>`;
 const markSvg = (size) => `<svg width="${size}" height="${size}" viewBox="0 0 48 48">${MARK}</svg>`;
 
-// App icons: full-bleed brown (the phone rounds the corners) with the north key, a little larger.
+// App icons: full-bleed brown (the phone rounds the corners) with a lighter dot.
 const icon = (size) =>
-  `<body style="margin:0;width:${size}px;height:${size}px;background:${BROWN};display:grid;place-items:center"><svg width="${Math.round(size * 0.9)}" height="${Math.round(size * 0.9)}" viewBox="0 0 48 48">${KEY}</svg></body>`;
+  `<body style="margin:0;width:${size}px;height:${size}px;background:${BROWN};display:grid;place-items:center"><div style="width:${Math.round(size * 0.14)}px;height:${Math.round(size * 0.14)}px;border-radius:50%;background:${LIGHT}"></div></body>`;
 const favicon = (size) => `<body style="margin:0;width:${size}px;height:${size}px;background:transparent">${markSvg(size)}</body>`;
 
 const keys = `data:image/webp;base64,${fs.readFileSync(path.join(OUT, 'landing/hw/keys.webp')).toString('base64')}`;

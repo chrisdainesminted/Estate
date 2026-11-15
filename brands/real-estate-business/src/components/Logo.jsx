@@ -1,6 +1,6 @@
 import { MARK, markSvg } from '../lib/brand.js';
 
-/** The mark alone: a cream key pointing north, on a rounded square in the brand brown. */
+/** The mark alone: a rounded square in the brand brown. */
 export function LogoMark({ className = 'size-7' }) {
   return <svg viewBox="0 0 48 48" className={className} aria-hidden dangerouslySetInnerHTML={{ __html: markSvg(MARK.color) }} />;
 }

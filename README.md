@@ -219,7 +219,7 @@ same files in `src/`, for a brand's own logo or homepage.
 
 The second Worker, `real-estate-business`, is set up this way and now runs as
 **North Key Realty**, the site we grow (it was Homeward until November 2026):
-its name, its north-key logo (a key pointing north) and wordmark, warm cream and brown colours,
+its name, its brown-square logo and North Key Realty wordmark, warm cream and brown colours,
 DM Sans and Manrope, light by default, and its own homepage
 (`brands/real-estate-business/src/landing/Landing.jsx`). Every tool behind it
 (the app, listings, accounts, landlord tools) is the same as the main site's.
