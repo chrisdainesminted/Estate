@@ -14,6 +14,7 @@ import { RentVsBuy } from './HomeExtras.jsx';
 import { sitePage } from '../lib/site.js';
 import { accountLink } from '../lib/account.js';
 import AsOf from '../components/AsOf.jsx';
+import { askBroker } from './GetReady.jsx';
 
 const checkedOn = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' });
 const KIND = { 1: 'a house', 2: 'a duplex', 3: 'a triplex', 4: 'a fourplex' };
@@ -627,6 +628,21 @@ export default function HomeView({ profile: raw, suite, rvb = {}, market, items,
               </Button>
               <Button onClick={() => onView('ready')}>Get ready to buy</Button>
             </div>
+            {plan.best.price > 0 && raw.credit !== 'under600' && (
+              <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
+                Ready to make it real? A mortgage broker compares lenders for you, free (the lender pays them).{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    askBroker();
+                    onView('ready');
+                  }}
+                  className="font-semibold text-emerald-700 hover:underline dark:text-emerald-400"
+                >
+                  Have one call me
+                </button>
+              </p>
+            )}
       </Card>
 
       <Profile p={raw} onHome={onHome} />

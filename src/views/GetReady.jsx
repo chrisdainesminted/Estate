@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Phone } from 'lucide-react';
 import { Button, Card, CardHeader, ViewHeader } from '../components/ui.jsx';
 import BrokerForm from '../components/BrokerForm.jsx';
@@ -11,6 +11,27 @@ import { sitePage } from '../lib/site.js';
  * Get ready: every step from checking your credit to moving day, each
  * explained and ticked off as you go, with a mortgage broker one click away.
  */
+const ASK = 'squarely-broker-ask';
+
+/** Ask Get ready to open its broker form when it next opens (from a button on another view). */
+export function askBroker() {
+  try {
+    sessionStorage.setItem(ASK, '1');
+  } catch {
+    // Without storage the page still opens; the form is one tap away.
+  }
+}
+
+function takeBrokerAsk() {
+  try {
+    const asked = sessionStorage.getItem(ASK) === '1';
+    sessionStorage.removeItem(ASK);
+    return asked;
+  } catch {
+    return false;
+  }
+}
+
 export default function GetReady({ profile, ready = {}, market, onReady, onView, nextStep }) {
   const ratePct = Number(market.rate);
   const plan = useMemo(() => myPlan({ profile, ratePct }), [profile, ratePct]);
@@ -24,6 +45,10 @@ export default function GetReady({ profile, ready = {}, market, onReady, onView,
     broker.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setTimeout(() => broker.current?.querySelector('input, select, textarea')?.focus({ preventScroll: true }), 50);
   };
+  // Arriving from "Have a broker call me" elsewhere in the app: the form, open and in view.
+  useEffect(() => {
+    if (takeBrokerAsk()) setTimeout(toBroker, 100);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="space-y-6">
       <ViewHeader title="Get ready">Every step to moving day, one at a time. Tick each off as you go.</ViewHeader>
