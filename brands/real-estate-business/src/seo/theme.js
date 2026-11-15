@@ -1,6 +1,6 @@
-// Homeward's look for the city pages (replaces src/seo/theme.js on the
-// Homeward copy of the site; see scripts/rebrand.mjs). Homeward is the
-// site search engines list.
+// North Key Realty's look for the city pages (replaces src/seo/theme.js on
+// its copy of the site; see scripts/rebrand.mjs). It's the site search
+// engines list.
 
 export const PAGE_THEME = {
   index: true,

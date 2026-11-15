@@ -218,7 +218,8 @@ logo), and whether it starts light. Files in `brands/<slug>/src/` replace the
 same files in `src/`, for a brand's own logo or homepage.
 
 The second Worker, `real-estate-business`, is set up this way and now runs as
-**Homeward**: its name, its "homeward." logo, warm cream and brown colours,
+**North Key Realty**, the site we grow (it was Homeward until November 2026):
+its name, its north-key logo (a key pointing north) and wordmark, warm cream and brown colours,
 DM Sans and Manrope, light by default, and its own homepage
 (`brands/real-estate-business/src/landing/Landing.jsx`). Every tool behind it
 (the app, listings, accounts, landlord tools) is the same as the main site's.
@@ -234,4 +235,4 @@ file, so a change to the main homepage doesn't reach it on its own.
 
 ## City pages for search
 
-`npm run build` ends with `scripts/city-pages.mjs`, which writes plain-HTML pages from the morning listings in `public/data/` into `dist/homes-for-sale/`: one for every city, and one for each kind of home in it (`/homes-for-sale/thunder-bay/duplexes/`) with at least three listings. Each listing is worked out by the listings engine: 20% down at a bank's rate, stated or average asking rents, and cash flow and a grade only where the listing gives its real tax bill. They're added to the built sitemap, so every daily listings commit refreshes them on deploy. A brand copy sets its own look and whether search engines may list them in `brands/<slug>/src/seo/theme.js`. Homeward is the site we grow, so its pages are listed in search too.
+`npm run build` ends with `scripts/city-pages.mjs`, which writes plain-HTML pages from the morning listings in `public/data/` into `dist/homes-for-sale/`: one for every city, and one for each kind of home in it (`/homes-for-sale/thunder-bay/duplexes/`) with at least three listings. Each listing is worked out by the listings engine: 20% down at a bank's rate, stated or average asking rents, and cash flow and a grade only where the listing gives its real tax bill. They're added to the built sitemap, so every daily listings commit refreshes them on deploy. A brand copy sets its own look and whether search engines may list them in `brands/<slug>/src/seo/theme.js`. North Key Realty is the site we grow, so its pages are listed in search too.

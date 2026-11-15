@@ -1,4 +1,4 @@
-// Renders Homeward's icons and link preview into brands/real-estate-business/public/,
+// Renders North Key Realty's icons and link preview into brands/real-estate-business/public/,
 // which scripts/rebrand.mjs copies over public/. Needs Playwright with Chromium.
 // Usage: node brands/real-estate-business/icons.cjs
 const { chromium } = require('playwright');
@@ -11,18 +11,20 @@ const LIGHT = '#A3855F';
 const CREAM = '#FAF6EF';
 const INK = '#3A2E22';
 const FONT = '<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">';
-// The same mark as src/lib/brand.js here: a brown rounded square.
-const markSvg = (size) => `<svg width="${size}" height="${size}" viewBox="0 0 48 48"><rect x="2" y="2" width="44" height="44" rx="12" fill="${BROWN}"/></svg>`;
+// The same mark as src/lib/brand.js here: a cream key pointing north, on a brown rounded square.
+const KEY = `<circle cx="24" cy="32.5" r="5" fill="none" stroke="${CREAM}" stroke-width="3.6"/><path d="M24 27.5V12.5M17.5 19L24 12.5L30.5 19" fill="none" stroke="${CREAM}" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>`;
+const MARK = `<rect x="2" y="2" width="44" height="44" rx="12" fill="${BROWN}"/>${KEY}`;
+const markSvg = (size) => `<svg width="${size}" height="${size}" viewBox="0 0 48 48">${MARK}</svg>`;
 
-// App icons: full-bleed brown (the phone rounds the corners) with the wordmark's lighter dot.
+// App icons: full-bleed brown (the phone rounds the corners) with the north key, a little larger.
 const icon = (size) =>
-  `<body style="margin:0;width:${size}px;height:${size}px;background:${BROWN};display:grid;place-items:center"><div style="width:${Math.round(size * 0.14)}px;height:${Math.round(size * 0.14)}px;border-radius:50%;background:${LIGHT}"></div></body>`;
+  `<body style="margin:0;width:${size}px;height:${size}px;background:${BROWN};display:grid;place-items:center"><svg width="${Math.round(size * 0.9)}" height="${Math.round(size * 0.9)}" viewBox="0 0 48 48">${KEY}</svg></body>`;
 const favicon = (size) => `<body style="margin:0;width:${size}px;height:${size}px;background:transparent">${markSvg(size)}</body>`;
 
 const keys = `data:image/webp;base64,${fs.readFileSync(path.join(OUT, 'landing/hw/keys.webp')).toString('base64')}`;
 const og = () => `<body style="margin:0;width:1200px;height:630px;background:${CREAM};font-family:Manrope,sans-serif;display:flex;box-sizing:border-box;padding:64px 64px 64px 80px;gap:56px">
   <div style="flex:1 1 0;display:flex;flex-direction:column;justify-content:space-between">
-    <div style="display:flex;align-items:center;gap:16px">${markSvg(52)}<span style="font-family:'DM Sans';font-size:44px;font-weight:600;letter-spacing:-0.03em;color:${INK}">homeward<span style="color:${LIGHT}"> .</span></span></div>
+    <div style="display:flex;align-items:center;gap:16px">${markSvg(52)}<span style="font-family:'DM Sans';font-size:44px;font-weight:600;letter-spacing:-0.03em;color:${INK}">North Key <span style="color:${LIGHT};font-weight:500">Realty</span></span></div>
     <div>
       <div style="font-family:'DM Sans';font-size:68px;line-height:1.02;font-weight:600;letter-spacing:-0.045em;color:${INK}">Real estate shouldn’t be <span style="color:${BROWN}">scary.</span></div>
       <div style="margin-top:24px;font-size:23px;color:#7d6a56">Buying, selling, investing and renting · Anywhere in Canada</div>
@@ -63,6 +65,6 @@ function icoFrom(png, size) {
   await shoot(favicon(32), 32, 32, 'favicon-32.png');
   await shoot(favicon(48), 48, 48, 'favicon.ico');
   await shoot(og(), 1200, 630, 'og.png');
-  fs.writeFileSync(path.join(OUT, 'favicon.svg'), `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect x="2" y="2" width="44" height="44" rx="12" fill="${BROWN}"/></svg>\n`);
+  fs.writeFileSync(path.join(OUT, 'favicon.svg'), `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">${MARK}</svg>\n`);
   await b.close();
 })();
