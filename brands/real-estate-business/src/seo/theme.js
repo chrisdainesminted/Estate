@@ -1,9 +1,9 @@
 // Homeward's look for the city pages (replaces src/seo/theme.js on the
-// Homeward copy of the site; see scripts/rebrand.mjs). They're the same
-// listings as the main site's, so they stay out of search results here.
+// Homeward copy of the site; see scripts/rebrand.mjs). Homeward is the
+// site search engines list.
 
 export const PAGE_THEME = {
-  index: false,
+  index: true,
   themeColor: '#faf6ef',
   colorScheme: 'light',
   vars: {

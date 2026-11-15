@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Check, Menu, Plus, X } from 'lucide-react';
+import { ArrowRight, Check, ClipboardCheck, Hammer, KeyRound, Landmark, MapPin, Menu, Plus, Tag, X } from 'lucide-react';
 import Logo from '../components/Logo.jsx';
 import { DEFAULT_PROFILE, RULES_CHECKED, closingCash, homeFor, maxPrice, minDownPayment, mortgagePlan } from '../lib/firstHome.js';
 import { loanRate, monthlyPI } from '../lib/finance.js';
@@ -113,6 +113,7 @@ export default function Landing() {
         <Hero city={city} onCity={setCity} />
         <Today feed={feed} shown={shown} picked={city} index={index} />
         <Paths />
+        <Inside />
         <Calculators city={city} onCity={setCity} />
         <Pricing />
         <Faq />
@@ -127,8 +128,8 @@ const NAV = [
   ['Explore homes', '/homes/'],
   ['Listings', open('listings')],
   ['Calculators', '#calculator'],
+  ['Find a lender', '/lenders/'],
   ['Pricing', '#pricing'],
-  ['For owners', '#paths'],
   ['Ask a question', '/contact/'],
 ];
 
@@ -588,6 +589,45 @@ function Paths() {
   );
 }
 
+const INSIDE = [
+  [Landmark, 'Money you can get', 'The FHSA, land transfer tax refunds, the buyers’ credit and the RRSP plan, added up for your province.', open('home')],
+  [MapPin, 'Homes for sale by city', 'Every home we found in 27 cities, each worked out: rent, tax, cash flow and the cash to buy.', '/homes-for-sale/'],
+  [ClipboardCheck, 'Suite permit guide', 'What your city allows for a basement or backyard suite, what to submit, and whether the rent pays it back.', open('home')],
+  [Tag, 'Sell without the guesswork', 'What your home is likely worth, what you’d walk away with, and a free listing of your own.', '/sell/'],
+  [Hammer, 'Build or renovate', 'Type in the rooms, or send a blueprint, and get a materials list with prices.', open('build')],
+  [KeyRound, 'Landlord tools', 'List a rental free, then handle applications, viewings, rent, repairs and your tax pack.', open('landlord')],
+];
+
+/** The rest of the toolbox, one short card each, so nothing in the app is hidden behind the four paths. */
+function Inside() {
+  return (
+    <section id="inside" aria-labelledby="inside-title" className="scroll-mt-24 border-b border-hairline">
+      <div className={`${shell} ${section}`}>
+        <Reveal className="max-w-3xl">
+          <p className={eyebrow}>What’s inside</p>
+          <h2 id="inside-title" className={`${h2} mt-3`}>
+            Everything a broker would check, before you call one.
+          </h2>
+        </Reveal>
+        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {INSIDE.map(([Icon, title, body, href], i) => (
+            <Reveal key={title} delay={i * 40}>
+              <a href={href} className={`${card} tile group flex h-full flex-col p-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent)`}>
+                <Icon className="size-5 text-emerald-700 dark:text-emerald-300" aria-hidden />
+                <span className="mt-4 font-display text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">{title}</span>
+                <span className="mt-1.5 text-[15px] leading-relaxed text-zinc-600 dark:text-zinc-400">{body}</span>
+                <span className="mt-auto pt-4">
+                  <ArrowRight className="size-4 text-emerald-700 transition group-hover:translate-x-0.5 dark:text-emerald-300" aria-hidden />
+                </span>
+              </a>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Pricing() {
   const plans = [
     {
@@ -666,6 +706,16 @@ const FAQ = [
   [
     'What does it cost?',
     'Looking around, the calculators, listings and plans cost nothing, and listing a home is free. Plus is $12 a month. Landlords who track rent pay 2% of each tenanted unit’s rent, at most $30 a unit, and the first unit is free.',
+  ],
+  [
+    'I’ve never talked to a lender. Where do I start?',
+    <>
+      Start with our{' '}
+      <a href="/lenders/" className="font-semibold text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-300">
+        guide to finding a lender
+      </a>
+      : who lends, what to bring, what to ask, and how to check a broker’s licence in your province. Or ask us to introduce you to a licensed mortgage broker, free.
+    </>,
   ],
   ['Is this financial advice?', 'No. These are careful estimates so you walk into a broker’s office knowing your numbers. A mortgage broker or lender confirms the real ones.'],
 ];

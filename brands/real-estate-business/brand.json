@@ -1,6 +1,6 @@
 {
   "name": "Homeward",
-  "about": "Homeward's look: its name, logo, warm cream and brown colours, DM Sans and Manrope, light by default, and its own homepage. The tools are the same as the main site's.",
+  "about": "Homeward's look: its name, logo, warm cream and brown colours, DM Sans and Manrope, light by default, and its own homepage. The tools are the same as the main site's. Homeward is the site we grow and the one search engines list.",
   "lightByDefault": true,
   "themeColor": "#faf6ef",
   "css": "theme.css",
@@ -15,19 +15,5 @@
     "115 255 106": "163 133 95",
     "115_255_106": "122_90_60",
     "16_185_129": "122_90_60"
-  },
-  "noindexPages": [
-    "about",
-    "account",
-    "app",
-    "contact",
-    "homes",
-    "lenders",
-    "listing",
-    "methods",
-    "privacy",
-    "rent",
-    "sell",
-    "terms"
-  ]
+  }
 }
