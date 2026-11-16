@@ -16,7 +16,7 @@ import { StoreError, hashKey } from './store.js';
 import { EMAIL, SECTIONS, cleanAlert, plusActive } from './account.js';
 
 const MAX_DATA = 1_500_000; // characters of saved library
-const MAX_ALERTS = 10;
+const MAX_ALERTS = 25; // saved searches and price watches together
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const enc = new TextEncoder();
 const dec = new TextDecoder();

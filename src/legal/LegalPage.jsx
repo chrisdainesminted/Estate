@@ -192,7 +192,9 @@ const PRIVACY = {
       'Cookies and tracking',
       <p>
         Squarely uses no advertising or analytics trackers. It uses your browser’s storage for the things above (your numbers, your theme, your private links), not to
-        follow you around the web.
+        follow you around the web. To see which parts of the site help people, it counts a few steps, like trying the calculator, making an account or starting a
+        trial: a total for each day and nothing else, not who you are, your numbers or your address. Your browser remembers which of those steps it has already
+        counted, so each one counts once.
       </p>,
     ],
     [

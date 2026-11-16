@@ -10,7 +10,7 @@ import { APPLY_FIELDS, clean } from './schema.js';
 
 export const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
 const MAX_DATA = 1_500_000; // characters of saved library
-const MAX_ALERTS = 10;
+const MAX_ALERTS = 25; // saved searches and price watches together
 const CITY = /^[a-z-]{2,30}$/;
 const ID = /^[A-Za-z0-9_-]{6,80}$/;
 
@@ -68,6 +68,8 @@ export function cleanAlert(a, i = 0) {
     fits: a.fits === true, // only homes the person could buy today, with their Home numbers
     minPerDoor: Number.isFinite(Number(a.minPerDoor)) && a.minPerDoor !== '' && a.minPerDoor != null ? Math.round(Number(a.minPerDoor)) : null,
     since: typeof a.since === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(a.since) ? a.since : new Date().toISOString().slice(0, 10),
+    // A price watch on one listing: its id, and its address to name it by.
+    ...(typeof a.listing === 'string' && /^[A-Za-z0-9_.:-]{1,80}$/.test(a.listing) ? { listing: a.listing, address: typeof a.address === 'string' ? a.address.replace(/\s+/g, ' ').trim().slice(0, 120) : '' } : {}),
   };
 }
 

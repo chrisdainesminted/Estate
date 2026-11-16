@@ -10,6 +10,8 @@ import { sitePage } from '../lib/site.js';
 import { Button, Card, CardHeader, DscrChip, NumberField, Segmented, SelectField, SkeletonCard, ViewHeader, signedClass } from '../components/ui.jsx';
 import { InfoTip } from '../components/motion.jsx';
 import { ListingCard, ListingDetail, MoverBanner, TickerStrip, biggestMover } from './MarketCards.jsx';
+import { PlusTag, usePlus } from '../components/Plus.jsx';
+import { track } from '../lib/track.js';
 
 const ListingsMap = lazy(() => import('../components/ListingsMap.jsx'));
 
@@ -123,7 +125,7 @@ const dayAfter = (iso) => new Date(Date.parse(`${iso}T12:00:00Z`) + 86400000).to
 /** New or cheaper homes that match your saved alerts in this city, since you last looked. */
 function AlertBanners({ alerts, feed, market, profile, onSeen, place }) {
   const rows = alerts
-    .map((a) => ({ a, fresh: freshMatches(alertMatches(a, feed, { market, profile, homeFor }), a.seen ? dayAfter(a.seen) : a.since) }))
+    .map((a) => ({ a, fresh: freshMatches(alertMatches(a, feed, { market, profile, homeFor }), a.seen ? dayAfter(a.seen) : a.since, a) }))
     .filter((x) => x.fresh.length);
   if (!rows.length) return null;
   return rows.map(({ a, fresh }) => (
@@ -149,6 +151,36 @@ function AlertBanners({ alerts, feed, market, profile, onSeen, place }) {
       </ul>
     </div>
   ));
+}
+
+/**
+ * For someone without Plus: how many below-market deals are in this city
+ * today, with blurred rows standing in for them, and the way in.
+ */
+export function LockedDeals({ count, place, rows = [], canTry = false, onOpen }) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="rise group relative block w-full overflow-hidden rounded-xl bg-(--panel) p-4 text-left ring-1 ring-(--line-strong) ring-inset transition hover:ring-emerald-500 focus-visible:outline-2 focus-visible:outline-emerald-500"
+    >
+      <div aria-hidden className="pointer-events-none space-y-1.5 blur-[5px] select-none">
+        {/* The real deals, blurred past reading: the shape of what Plus shows. */}
+        {(rows.length ? rows : [null, null]).map((l, i) => (
+          <div key={l?.id ?? i} className="flex justify-between gap-4 text-sm text-zinc-700 dark:text-zinc-300">
+            <span className="truncate">{l ? `${DISTRESS[distressOf(l)].label} · ${l.address}` : 'Tax sale · minimum bid and deadline'}</span>
+            <span>{l ? money(l.price) : ''}</span>
+          </div>
+        ))}
+      </div>
+      <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-(--panel)/60 px-4 text-center">
+        <span className="flex items-center gap-2 text-[15px] font-semibold text-zinc-950 dark:text-white">
+          <PlusTag /> {count} below-market deal{count === 1 ? '' : 's'} in {place.name} today
+        </span>
+        <span className="text-sm text-zinc-600 group-hover:underline dark:text-zinc-400">Lender, estate, court and tax sales with the numbers run. {canTry ? 'Try Plus free for 7 days →' : 'See them with Plus →'}</span>
+      </span>
+    </button>
+  );
 }
 
 /** Save the search: this city, these property types, and the limits you set. */
@@ -550,7 +582,8 @@ export function CityPicker({ city, index, onCity }) {
   );
 }
 
-export default function ListingsView({ feedState, indexState, city, onCity, market, baseMarket, alerts = [], onAlerts, targets, profile, importedIds, onMarket, onAnalyze, onHide, onUnhide }) {
+export default function ListingsView({ feedState, indexState, city, onCity, market, baseMarket, alerts = [], onAlerts, targets, profile, importedIds, onMarket, onAnalyze, onHide, onUnhide, proCount = 0, onView, onOfferPack }) {
+  const plus = usePlus();
   const { status, feed } = feedState;
   const [sort, setSort] = useState('perDoor');
   // Cards (with photos) by default, like a stock screener; the table and map stay a click away.
@@ -663,11 +696,21 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
           onHide={onHide}
           onUnhide={onUnhide}
           onTax={setTax}
+          onOfferPack={onOfferPack}
+          watching={alerts.some((a) => a.listing === opened.listing.id)}
+          onWatch={
+            onAlerts
+              ? (l) => (track('watch'), onAlerts([...alerts, { city, listing: l.id, address: l.address, types: LISTING_TYPES.map((t) => t.key), since: todayIso(), seen: todayIso() }].slice(-25)))
+              : undefined
+          }
         />
       )}
 
       {status === 'ready' && !opened && (
         <>
+          {!plus.active && proCount > 0 && onView && (
+            <LockedDeals count={proCount} place={place} canTry={plus.available && plus.trial} rows={(feed?.listings ?? []).filter((l) => (l.status ?? 'active') === 'active' && distressOf(l)).slice(0, 3)} onOpen={() => onView('pro')} />
+          )}
           <TickerStrip active={active.filter((l) => !hiddenSet.has(l.id))} items={visible} fresh={freshCount} place={place} market={market} city={city} />
           <MoverBanner mover={mover} onOpen={openListing} />
           {stale && (

@@ -76,6 +76,7 @@ import { normalizeProfile } from './lib/firstHome.js';
 import { myPlan, nextStep as nextStepFor } from './lib/journey.js';
 import { sellNextStep } from './lib/selling.js';
 import { distressOf } from './lib/distress.js';
+import { track } from './lib/track.js';
 import { cityByKey } from './lib/canada.js';
 import { cityInAddress, moveToCity, placeLabel } from './lib/place.js';
 import { isBooksLink } from './lib/gate.js';
@@ -696,6 +697,38 @@ export default function App() {
   const importedIds = useMemo(() => new Set(deals.map((d) => d.listingId).filter(Boolean)), [deals]);
   // A listing opens as a deal with the loan its view counts: a DSCR loan on
   // Analyze, or your own 20% down on Cash.
+  // The Offer Pack PDF for a listing: with Plus, any home; without it, one on the house.
+  const openOfferPack = useCallback(
+    async (s, at) => {
+      const FREE_KEY = 'squarely-offer-pack-free';
+      let usedFree = false;
+      if (!plus.active) {
+        try {
+          usedFree = Boolean(localStorage.getItem(FREE_KEY));
+        } catch {
+          usedFree = false;
+        }
+        if (usedFree) {
+          toast({ text: 'Offer Packs for any home are part of Plus. Try it free for 7 days.', action: plus.available ? { label: 'Try Plus', onClick: () => setView('pro') } : undefined });
+          return;
+        }
+      }
+      const { offerPackData, downloadOfferPack } = await import('./lib/offerPack.js');
+      const place = cityByKey(listCity);
+      await downloadOfferPack(offerPackData({ s, at, listings: marketFeed.feed?.listings ?? [], province: place.province }), place);
+      track('offer_pack');
+      if (!plus.active) {
+        try {
+          localStorage.setItem(FREE_KEY, new Date().toISOString());
+        } catch {
+          // Private browsing: the free one just isn't remembered.
+        }
+        toast({ text: 'Your free Offer Pack is downloading. Plus makes one for any home.', action: plus.available ? { label: 'Try Plus', onClick: () => setView('pro') } : undefined });
+      }
+    },
+    [plus.active, plus.available, toast, listCity, marketFeed.feed, setView],
+  );
+
   const analyzeListing = useCallback(
     // `overrides`: an offer tried on the listing's page (price, down payment, rate), carried into the deal.
     (listing, overrides) => {
@@ -1080,6 +1113,7 @@ export default function App() {
                 onOpen={openDeal}
                 onAccount={() => openAccount('profile')}
                 onView={setView}
+                ready={lib.settings.ready}
                 nextStep={step?.view === 'home' && step.id !== 'start' && step.anchor === 'plan-gap' ? null : nextStepCard}
               />
             )}
@@ -1206,6 +1240,9 @@ export default function App() {
                 onAnalyze={analyzeListing}
                 onHide={hideListing}
                 onUnhide={unhideListing}
+                proCount={proCounts.distressed + proCounts.taxSales}
+                onView={setView}
+                onOfferPack={openOfferPack}
               />
             )}
 

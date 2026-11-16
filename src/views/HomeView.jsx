@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, BellRing, Check, CheckCircle2, ChevronDown, ExternalLink, ShieldAlert, XCircle } from 'lucide-react';
+import { ArrowRight, BellRing, Check, CheckCircle2, ChevronDown, ExternalLink, Share2, ShieldAlert, XCircle } from 'lucide-react';
+import { buyShareText, shareResult } from '../lib/shareResult.js';
+import { track } from '../lib/track.js';
+import { SITE_URL } from '../lib/share.js';
 import { RULES, RULES_CHECKED, benefits, buyCheck, liveIn, localFor, maxPrice } from '../lib/firstHome.js';
-import { monthName, myPlan } from '../lib/journey.js';
+import { monthName, myPlan, readiness } from '../lib/journey.js';
 import { SUITE_KINDS, SUITE_RULES_CHECKED, allowedFor, moneyFor, stepsFor, suitePayback } from '../lib/suites.js';
 import { cityByKey, guessCity, provinceName } from '../lib/canada.js';
 import { dealPlace } from '../lib/finance.js';
@@ -546,9 +549,14 @@ function GapCard({ plan, onHome, onAccount, account, bare = false }) {
  * the gap to the home you want with the month you'd be ready and the
  * shortcuts, the government money, and the deeper tools below.
  */
-export default function HomeView({ profile: raw, suite, rvb = {}, market, items, liveDealId, account, onHome, onSuite, onRvb, onPickDeal, onOpen, onAccount, onView, nextStep }) {
+export default function HomeView({ profile: raw, suite, rvb = {}, market, items, liveDealId, account, onHome, onSuite, onRvb, onPickDeal, onOpen, onAccount, onView, nextStep, ready = {} }) {
   const ratePct = Number(market.rate);
   const plan = useMemo(() => myPlan({ profile: raw, ratePct }), [raw, ratePct]);
+  const meter = useMemo(() => readiness({ profile: raw, ready, plan }), [raw, ready, plan]);
+  useEffect(() => {
+    if (raw?.entered) track('plan_done');
+  }, [raw?.entered]);
+  const [shared, setShared] = useState('');
   // A family gift counts as savings everywhere below.
   const p = plan.profile;
   const local = plan.local;
@@ -591,6 +599,7 @@ export default function HomeView({ profile: raw, suite, rvb = {}, market, items,
 
       {/* The answer on its own; how it's worked out and the savings plan fold away below. */}
       <Card id="home-summary" className="px-5 py-5 sm:px-6">
+            {meter && <ReadyMeter meter={meter} onView={onView} />}
             <h2 className="text-xl font-semibold tracking-tight text-zinc-950 sm:text-2xl dark:text-white">
               {plan.best.price > 0 ? `You could buy up to ${money(plan.best.price)} today` : 'Let’s get you ready to buy'}
             </h2>
@@ -627,7 +636,26 @@ export default function HomeView({ profile: raw, suite, rvb = {}, market, items,
                 Homes that fit me <ArrowRight className="size-4" aria-hidden />
               </Button>
               <Button onClick={() => onView('ready')}>Get ready to buy</Button>
+              {plan.best.price > 0 && (
+                <Button
+                  onClick={async () => {
+                    const r = await shareResult({
+                      text: buyShareText(plan.best.price, { withSuite: plan.best.units > 1, place: placeName(local.city) }),
+                      url: `${new URL(SITE_URL).origin}/`,
+                      title: 'What could you buy?',
+                    });
+                    setShared(r === 'copied' ? 'Copied: paste it anywhere.' : r === 'failed' ? 'Couldn’t share from this browser.' : '');
+                  }}
+                >
+                  <Share2 className="size-4" aria-hidden /> Share
+                </Button>
+              )}
             </div>
+            {shared && (
+              <p role="status" className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                {shared}
+              </p>
+            )}
             {plan.best.price > 0 && raw.credit !== 'under600' && (
               <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
                 Ready to make it real? A mortgage broker compares lenders for you, free (the lender pays them).{' '}
@@ -682,6 +710,37 @@ export default function HomeView({ profile: raw, suite, rvb = {}, market, items,
           How we calculate
         </a>
       </p>
+    </div>
+  );
+}
+
+/** How ready you are to buy, as a bar: the cash toward your home and the steps you've ticked. */
+function ReadyMeter({ meter, onView }) {
+  // Months while it's under two years; beyond that, years, and the plan below has the shortcuts.
+  const years = Math.round(meter.months / 12);
+  const span = meter.months <= 24 ? `about ${meter.months} month${meter.months === 1 ? '' : 's'} to go` : `about ${years} years to go at this pace`;
+  const left = meter.months > 0 ? (meter.readyBy ? `${span}${meter.months <= 24 ? `, ready by ${monthName(meter.readyBy)}` : ': see the shortcuts below'}` : 'keep saving to set a date') : 'you have the cash';
+  return (
+    <div className="mb-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm">
+        <p className="font-semibold text-zinc-950 dark:text-white">
+          You’re <span className="tabular-nums text-emerald-700 dark:text-emerald-400">{meter.pct}%</span> ready
+          <span className="font-normal text-zinc-600 dark:text-zinc-400"> · {left}</span>
+        </p>
+        <button type="button" onClick={() => onView('ready')} className="text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+          {meter.done} of {meter.steps} steps done
+        </button>
+      </div>
+      <div
+        role="progressbar"
+        aria-label="How ready you are to buy"
+        aria-valuenow={meter.pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        className="mt-2 h-2.5 overflow-hidden rounded-full bg-(--track)"
+      >
+        <div className="h-full rounded-full bg-emerald-600 transition-[width] duration-700" style={{ width: `${Math.max(meter.pct, 3)}%` }} />
+      </div>
     </div>
   );
 }

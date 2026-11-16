@@ -711,6 +711,15 @@ export function underMarket(listings, { cut = 0.15, minGroup = 4 } = {}) {
  */
 export function alertMatches(alert, feed, { market, profile, homeFor } = {}) {
   const m = localMarket(market, alert.city);
+  // A price watch on one listing: only that home, whatever its type or price.
+  if (alert.listing) {
+    return (feed?.listings ?? [])
+      .filter((l) => l.id === alert.listing && (l.status ?? 'active') === 'active')
+      .map((l) => {
+        const s = scoreListing(l, m);
+        return { listing: l, perDoor: s.needsTax ? null : s.perDoor, costToLive: null, needsTax: s.needsTax, canBuy: false };
+      });
+  }
   return (feed?.listings ?? [])
     .filter((l) => (l.status ?? 'active') === 'active' && listingPageUrl(l.url, l.address))
     .filter((l) => (alert.types ?? LISTING_TYPES.map((t) => t.key)).includes(typeOf(unitsOf(l))))
@@ -726,12 +735,32 @@ export function alertMatches(alert, feed, { market, profile, homeFor } = {}) {
     .filter((x) => alert.minPerDoor == null || (x.perDoor != null && x.perDoor >= alert.minPerDoor));
 }
 
-/** Of an alert's matches, the ones new or cheaper on or after `since` (YYYY-MM-DD). */
-export const freshMatches = (matches, since) =>
-  matches.filter(({ listing: l }) => String(l.firstSeen ?? '') >= since || (priceDrop(l) > 0 && String(l.priceHistory?.at(-1)?.date ?? '') >= since));
+const droppedSince = (l, since) => priceDrop(l) > 0 && String(l.priceHistory?.at(-1)?.date ?? '') >= since;
+
+/**
+ * Of an alert's matches, the ones new or cheaper on or after `since`
+ * (YYYY-MM-DD). A price watch only counts a price cut: the home was already
+ * listed when it was watched.
+ */
+export const freshMatches = (matches, since, alert = null) =>
+  matches.filter(({ listing: l }) => droppedSince(l, since) || (!alert?.listing && String(l.firstSeen ?? '') >= since));
+
+/**
+ * The few best of an alert email's matches, for the free weekly email:
+ * homes you could buy first, then the cheapest to live in, then the most
+ * cash flow per door. One entry per home.
+ */
+export function topPicks(matches, n = 3) {
+  const seen = new Set();
+  return [...matches]
+    .filter((x) => !seen.has(x.listing.id) && seen.add(x.listing.id))
+    .sort((a, b) => (b.canBuy === true) - (a.canBuy === true) || (a.costToLive ?? Infinity) - (b.costToLive ?? Infinity) || (b.perDoor ?? -Infinity) - (a.perDoor ?? -Infinity))
+    .slice(0, n);
+}
 
 /** A plain-words name for an alert: "Duplexes to fourplexes in Hamilton under $2,000/mo to live in". */
 export function alertName(alert, cityName) {
+  if (alert.listing) return `Price watch: ${alert.address || 'a home'} in ${cityName}`;
   const kinds = { single: 'houses', small: '2–4 units', large: '5+ units' };
   const types = (alert.types?.length ?? 3) === 3 ? 'Homes' : alert.types.map((t) => kinds[t]).join(' and ').replace(/^./, (c) => c.toUpperCase());
   const parts = [`${types} in ${cityName}`];

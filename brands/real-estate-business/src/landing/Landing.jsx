@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Check, ClipboardCheck, Hammer, Landmark, MapPin, Menu, Plus, Tag, X } from 'lucide-react';
+import { ArrowRight, Check, ClipboardCheck, Hammer, Landmark, MapPin, Menu, Plus, Share2, Tag, X } from 'lucide-react';
+import { buyShareText, shareResult } from '../lib/shareResult.js';
+import { track } from '../lib/track.js';
 import Logo from '../components/Logo.jsx';
 import { DEFAULT_PROFILE, RULES_CHECKED, closingCash, homeFor, maxPrice, minDownPayment, mortgagePlan } from '../lib/firstHome.js';
 import { loanRate, monthlyPI } from '../lib/finance.js';
@@ -210,6 +212,11 @@ const PHRASES = [
 function Hero({ city, onCity }) {
   const [income, setIncome] = useState(SAMPLE.income);
   const [savings, setSavings] = useState(60000);
+  // Someone typed their own numbers in: the first step of the funnel.
+  const [typed, setTyped] = useState(false);
+  useEffect(() => {
+    if (typed) track('quick_check');
+  }, [typed]);
   const place = cityByKey(city);
   const result = useMemo(() => {
     const profile = { ...SAMPLE, income: n0(income), savings: n0(savings), city: place.key, entered: true };
@@ -217,6 +224,12 @@ function Hero({ city, onCity }) {
     return { alone: maxPrice({ ...common, units: 1 }), suite: maxPrice({ ...common, units: 2, rentPerOtherUnit: suiteRent(place) }) };
   }, [income, savings, place]);
   const gain = result.suite.price - result.alone.price;
+  const [shared, setShared] = useState('');
+  const share = async () => {
+    const best = Math.max(result.suite.price, result.alone.price);
+    const r = await shareResult({ text: buyShareText(best, { withSuite: result.suite.price > result.alone.price, place: placeName(place) }), url: `${window.location.origin}/`, title: 'What could you buy?' });
+    setShared(r === 'copied' ? 'Copied: paste it anywhere.' : r === 'failed' ? 'Couldn’t share from this browser.' : '');
+  };
   return (
     <section id="top" className="border-b border-hairline">
       <div className={`${shell} pb-12 pt-8 sm:pt-14 lg:pb-16`}>
@@ -251,10 +264,10 @@ function Hero({ city, onCity }) {
               <div className="col-span-2">
                 <CitySelect id="try-city" label="Where" value={city} onChange={onCity} />
               </div>
-              <NumberField id="try-income" value={income} onChange={setIncome}>
+              <NumberField id="try-income" value={income} onChange={(v) => (setIncome(v), setTyped(true))}>
                 Income, before tax
               </NumberField>
-              <NumberField id="try-savings" value={savings} onChange={setSavings}>
+              <NumberField id="try-savings" value={savings} onChange={(v) => (setSavings(v), setTyped(true))}>
                 Saved for buying
               </NumberField>
             </div>
@@ -274,7 +287,19 @@ function Hero({ city, onCity }) {
             <a href={open('home')} className={`${primary} mt-5 w-full`}>
               See your full plan <ArrowRight className="size-4" aria-hidden />
             </a>
-            <p className="mt-3 text-center text-xs text-zinc-500 dark:text-zinc-400">Free · Real lending rules at a {DEFAULT_MARKET.rate}% rate</p>
+            <p className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center text-xs text-zinc-500 dark:text-zinc-400">
+              <span>Free · Real lending rules at a {DEFAULT_MARKET.rate}% rate</span>
+              {result.alone.price > 0 && (
+                <button type="button" onClick={share} className="inline-flex items-center gap-1 font-semibold text-emerald-700 hover:underline dark:text-emerald-300">
+                  <Share2 className="size-3.5" aria-hidden /> Share your number
+                </button>
+              )}
+            </p>
+            {shared && (
+              <p role="status" className="mt-1 text-center text-xs text-zinc-500 dark:text-zinc-400">
+                {shared}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -639,12 +664,12 @@ function Pricing() {
     },
     {
       name: 'Plus',
-      tag: 'Most asked about',
+      tag: '7 days free',
       price: '$12',
-      unit: '/ month',
-      lead: 'For when the numbers start turning into an actual plan.',
-      points: ['Everything in Free', 'Pro deals: tax sales and lender, estate and court sales, with the numbers run', 'Blueprints read for you: send a plan, get the materials list', 'A note when a price drops or a new home fits you', 'A pricing report for your home, ready to print', 'Deal memos and materials lists you can share'],
-      cta: ['Start free, upgrade any time', open('home')],
+      unit: '/ month, or $99 a year',
+      lead: 'For when the numbers start turning into an actual offer.',
+      points: ['Know the most to pay: an Offer Pack for any home', 'Find homes under market: tax, lender, estate and court sales', 'Hear first when a price drops or a new home fits you', 'Price your home right with a pricing report', 'Not worth it? A full refund within 30 days'],
+      cta: ['Try Plus free for 7 days', open('pro')],
     },
   ];
   return (
@@ -668,7 +693,7 @@ function Pricing() {
               </p>
               <p className="mt-2 text-[15px] text-zinc-600 dark:text-zinc-400">{p.lead}</p>
               <ul className="mt-6 grid gap-2.5 border-t border-hairline pt-6 text-[15px] text-zinc-700 dark:text-zinc-300">
-                {p.points.slice(0, 4).map((x) => (
+                {p.points.slice(0, 5).map((x) => (
                   <li key={x} className="flex gap-2.5">
                     <Check className="mt-1 size-4 shrink-0 text-emerald-600 dark:text-emerald-300" aria-hidden /> {x}
                   </li>
@@ -696,7 +721,7 @@ const FAQ = [
   ],
   [
     'What does it cost?',
-    'Looking around, the calculators, listings and plans cost nothing, and listing a home is free. Plus is $12 a month.',
+    'Looking around, the calculators, listings and plans cost nothing, and listing a home is free. Plus is $12 a month or $99 a year, with the first 7 days free, and a full refund within 30 days if it isn’t worth it.',
   ],
   [
     'I’ve never talked to a lender. Where do I start?',

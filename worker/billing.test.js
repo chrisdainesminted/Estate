@@ -85,3 +85,27 @@ describe('the free unit, with billing on', () => {
     expect(s.create('units', { label: 'B', rent: 1800, tenantName: 'Ana' }).label).toBe('B');
   });
 });
+
+suite('Plus checkout', () => {
+  const session = async (opts) => {
+    let body = '';
+    const fake = async (_url, init) => {
+      body = init.body;
+      return new Response(JSON.stringify({ url: 'https://checkout.example/x' }));
+    };
+    await stripeClient('sk_test', fake).subscribeSession({ customer: 'cus_1', account: 'a1', successUrl: 'https://s/ok', cancelUrl: 'https://s/no', ...opts });
+    return new URLSearchParams(body);
+  };
+  it('is $12 a month with no trial by default', async () => {
+    const p = await session({});
+    expect(p.get('line_items[0][price_data][unit_amount]')).toBe('1200');
+    expect(p.get('line_items[0][price_data][recurring][interval]')).toBe('month');
+    expect(p.get('subscription_data[trial_period_days]')).toBeNull();
+  });
+  it('is $99 a year, with the free week for a first subscription', async () => {
+    const p = await session({ interval: 'year', trial: true });
+    expect(p.get('line_items[0][price_data][unit_amount]')).toBe('9900');
+    expect(p.get('line_items[0][price_data][recurring][interval]')).toBe('year');
+    expect(p.get('subscription_data[trial_period_days]')).toBe('7');
+  });
+});

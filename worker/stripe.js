@@ -5,6 +5,10 @@
 import { StoreError } from './store.js';
 
 export const PLUS_CENTS = 1200;
+/** A year of Plus paid up front: $99, against $144 at the monthly price. */
+export const PLUS_YEAR_CENTS = 9900;
+/** Days of Plus free before the first charge, for someone who has never subscribed. */
+export const PLUS_TRIAL_DAYS = 7;
 
 /** Stripe's form encoding: { a: { b: 1 }, c: [x] } → a[b]=1&c[0]=x */
 function form(obj, prefix = '', out = new URLSearchParams()) {
@@ -40,15 +44,28 @@ export function stripeClient(secret, fetchImpl = fetch) {
   };
   return {
     createCustomer: (ws, email, metadata) => must('POST', 'customers', { email: email || undefined, metadata: metadata ?? { workspace: ws } }),
-    /** Squarely Plus: $12 a month, through Stripe Checkout. */
+    /**
+     * Squarely Plus through Stripe Checkout: $12 a month, or $99 a year
+     * (`interval: 'year'`), with PLUS_TRIAL_DAYS free first when `trial`.
+     */
     // `metadata` names who it's for: { account } for an older Squarely account, { user } for a Supabase one.
-    subscribeSession: ({ customer, account, metadata = { account }, successUrl, cancelUrl }) =>
+    subscribeSession: ({ customer, account, metadata = { account }, interval = 'month', trial = false, successUrl, cancelUrl }) =>
       must('POST', 'checkout/sessions', {
         mode: 'subscription',
         customer,
         client_reference_id: account,
-        line_items: { 0: { quantity: 1, price_data: { currency: 'cad', unit_amount: PLUS_CENTS, recurring: { interval: 'month' }, product_data: { name: 'Squarely Plus' } } } },
-        subscription_data: { metadata },
+        line_items: {
+          0: {
+            quantity: 1,
+            price_data: {
+              currency: 'cad',
+              unit_amount: interval === 'year' ? PLUS_YEAR_CENTS : PLUS_CENTS,
+              recurring: { interval: interval === 'year' ? 'year' : 'month' },
+              product_data: { name: 'Squarely Plus' },
+            },
+          },
+        },
+        subscription_data: { metadata, trial_period_days: trial ? PLUS_TRIAL_DAYS : undefined },
         metadata,
         allow_promotion_codes: 'true',
         success_url: successUrl,

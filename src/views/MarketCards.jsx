@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { ArrowLeft, ExternalLink, EyeOff, Eye, TrendingDown } from 'lucide-react';
+import { ArrowLeft, BellPlus, BellRing, ExternalLink, EyeOff, Eye, FileText, TrendingDown } from 'lucide-react';
+import { PlusTag, usePlus } from '../components/Plus.jsx';
 import HousePhoto, { useMapsKey } from '../components/HousePhoto.jsx';
 import GradeBadge from '../components/GradeBadge.jsx';
 import RiskList from '../components/RiskList.jsx';
@@ -232,7 +233,8 @@ function Fact({ name, value, tone = '', note }) {
  * One listing, laid out like a stock's page: pictures, the price and how
  * it has moved, what it would pay you, and a ticket to try an offer.
  */
-export function ListingDetail({ s, place, imported, hidden, onBack, onAnalyze, onHide, onUnhide, onTax }) {
+export function ListingDetail({ s, place, imported, hidden, onBack, onAnalyze, onHide, onUnhide, onTax, watching = false, onWatch, onOfferPack }) {
+  const plus = usePlus();
   const l = s.listing;
   const link = listingPageUrl(l.url, l.address);
   const m = lastMove(l);
@@ -359,6 +361,25 @@ export function ListingDetail({ s, place, imported, hidden, onBack, onAnalyze, o
             <Button variant="primary" className="w-full py-3 text-[15px]" onClick={() => onAnalyze(l, { price: offer, downPct, rate, refiRate: rate })}>
               {imported ? 'Open your saved deal' : 'Analyze this deal'}
             </Button>
+            {onOfferPack && (
+              <Button className="w-full" onClick={() => onOfferPack(s, { price: offer, downPct, rate })}>
+                <FileText className="size-4" aria-hidden /> Get the Offer Pack {!plus.active && <PlusTag className="ml-1" />}
+              </Button>
+            )}
+            {onWatch &&
+              (watching ? (
+                <p className="flex items-start gap-2 rounded-md bg-emerald-500/10 px-3 py-2 text-xs text-emerald-900 ring-1 ring-emerald-600/20 ring-inset dark:text-emerald-100">
+                  <BellRing className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                  <span>
+                    Watching this price. A cut shows on the Listings tab
+                    {plus.active ? ', and in your morning email.' : '. Plus emails you the morning it drops.'}
+                  </span>
+                </p>
+              ) : (
+                <Button className="w-full" onClick={() => onWatch(l)}>
+                  <BellPlus className="size-4" aria-hidden /> Tell me if the price drops
+                </Button>
+              ))}
             <div className="grid grid-cols-2 gap-2">
               <a href={link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-zinc-800 ring-1 ring-(--line-strong) ring-inset hover:bg-well dark:text-zinc-100">
                 Listing <ExternalLink className="size-3.5" aria-hidden />

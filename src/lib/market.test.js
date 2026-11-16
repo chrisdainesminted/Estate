@@ -563,3 +563,18 @@ describe('price sorts', () => {
     expect(rankListings(feed, DEFAULT_MARKET, DEFAULT_TARGETS, { sort: 'price', types: ['single', 'small', 'large'] })[0].listing.id).toBe('b');
   });
 });
+
+describe('price watches', () => {
+  it('only count a cut in that one listing', async () => {
+    const { alertMatches, freshMatches, alertName } = await import('./market.js');
+    const home = { id: 'w1', address: '1 Bay St', price: 380000, units: 1, beds: [3], taxes: 3000, status: 'active', url: 'https://example.com/w1', firstSeen: '2026-11-14', priceHistory: [{ date: '2026-11-01', price: 400000 }, { date: '2026-11-14', price: 380000 }] };
+    const other = { ...home, id: 'w2', priceHistory: [] };
+    const watch = { city: 'thunder-bay', listing: 'w1', address: '1 Bay St' };
+    const m = alertMatches(watch, { listings: [home, other] }, {});
+    expect(m.map((x) => x.listing.id)).toEqual(['w1']);
+    expect(freshMatches(m, '2026-11-10', watch)).toHaveLength(1);
+    expect(freshMatches(m, '2026-11-15', watch)).toHaveLength(0);
+    expect(freshMatches([{ listing: { ...home, priceHistory: [] } }], '2026-11-10', watch)).toHaveLength(0);
+    expect(alertName(watch, 'Thunder Bay')).toBe('Price watch: 1 Bay St in Thunder Bay');
+  });
+});

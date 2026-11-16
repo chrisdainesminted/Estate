@@ -13,6 +13,14 @@ const PAGE = 24;
 const DAY = 86400000;
 const INBOX_DAYS = 365;
 
+/**
+ * The steps from a first visit to paying, in order: the homepage answer
+ * tried, the plan's questions answered, an account made, Plus offered and
+ * started, a trial begun and the first payment (both from Stripe), and
+ * the extras that show interest (an Offer Pack, a share, a price watch).
+ */
+export const FUNNEL = ['quick_check', 'plan_done', 'account', 'plus_click', 'trial', 'paid', 'offer_pack', 'share', 'watch'];
+
 /** Contact and broker forms */
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
 const clip = (v, n) => String(v ?? '').trim().slice(0, n);
@@ -77,6 +85,7 @@ export class DirectoryStore {
     // Accounts with listing alerts and a confirmed email, for the daily digest.
     sql.exec('CREATE TABLE IF NOT EXISTS alerting (id TEXT PRIMARY KEY, sent TEXT)');
     sql.exec('CREATE TABLE IF NOT EXISTS inbox (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT, data TEXT, at INTEGER, done INTEGER DEFAULT 0)');
+    sql.exec('CREATE TABLE IF NOT EXISTS funnel (day TEXT, name TEXT, n INTEGER, PRIMARY KEY (day, name))');
   }
 
   // ---- accounts that get alert emails ----
@@ -115,6 +124,31 @@ export class DirectoryStore {
   inboxDone(id, done) {
     this.sql.exec('UPDATE inbox SET done = ? WHERE id = ?', done ? 1 : 0, Number(id));
     return { ok: true };
+  }
+
+  // ---- the funnel: a count a day of each step, nothing about who ----
+
+  /** One more of `name` today. Only the steps in FUNNEL count; at most 120 an hour from one address. */
+  countEvent(name, ip) {
+    if (!FUNNEL.includes(name)) throw new StoreError(400, 'Unknown event.');
+    if (ip) this.limit(ip, 'event', 120);
+    const day = new Date(this.now()).toISOString().slice(0, 10);
+    this.sql.exec('INSERT INTO funnel (day, name, n) VALUES (?, ?, 1) ON CONFLICT(day, name) DO UPDATE SET n = n + 1', day, name);
+    this.sql.exec('DELETE FROM funnel WHERE day < ?', new Date(this.now() - 400 * DAY).toISOString().slice(0, 10));
+    return { ok: true };
+  }
+
+  /** Each step's total over the last `days` days, in funnel order, and day by day. */
+  funnel(days = 30) {
+    const from = new Date(this.now() - (Math.min(Math.max(Number(days) || 30, 1), 400) - 1) * DAY).toISOString().slice(0, 10);
+    const rows = this.sql.exec('SELECT day, name, n FROM funnel WHERE day >= ? ORDER BY day', from).toArray();
+    const totals = Object.fromEntries(FUNNEL.map((k) => [k, 0]));
+    const byDay = {};
+    for (const r of rows) {
+      totals[r.name] = (totals[r.name] ?? 0) + r.n;
+      (byDay[r.day] ??= {})[r.name] = r.n;
+    }
+    return { from, totals, byDay };
   }
 
   // ---- map points for listing addresses ----

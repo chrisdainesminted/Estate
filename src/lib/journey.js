@@ -189,6 +189,22 @@ export function nextStep({ profile, ready = {}, plan }) {
 
 
 /**
+ * How ready someone is to buy, out of 100: their cash toward the home
+ * they want (60) and the checklist steps they've ticked (40), with the
+ * months the savings plan says are left. Null before the questions.
+ */
+export function readiness({ profile, ready = {}, plan }) {
+  const p = normalizeProfile(profile);
+  if (!p.entered || !plan) return null;
+  const need = plan.goal.check?.cashNeeded ?? 0;
+  const cash = need > 0 ? Math.min(Math.max(need - plan.goal.short, 0) / need, 1) : 1;
+  const steps = stepsFor(p).filter((s) => s.id !== 'save');
+  const done = steps.filter((s) => ready[s.id] === true).length;
+  const pct = Math.round(60 * cash + 40 * (steps.length ? done / steps.length : 0));
+  return { pct, cashPct: Math.round(cash * 100), done, steps: steps.length, months: plan.goal.short > 0 ? plan.goal.months : 0, readyBy: plan.goal.readyBy };
+}
+
+/**
  * The email for the month a person's plan said they'd be ready, once per
  * planned month: null until that month comes, if they didn't ask for it, or
  * if it's already been sent (`sent` is the month last emailed).

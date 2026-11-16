@@ -37,6 +37,7 @@ import { readyReminder } from '../src/lib/journey.js';
 import { cityByKey } from '../src/lib/canada.js';
 import { monthlyBill } from './pricing.js';
 import { stripeClient, verifyWebhook } from './stripe.js';
+import { weekBefore, weeklyDay, weeklyEmail } from './weekly.js';
 import { MAX_PLAN_BYTES, readBlueprint } from './blueprint.js';
 import { askSquarely } from './ask.js';
 import { MeStore, compEmails, isUuid, plusOwner, supabaseDb, supabaseOn, supabasePublic, verifyUser } from './supabase.js';
@@ -390,6 +391,10 @@ export class Directory extends DurableObject {
           return this.store.inbox();
         case 'inboxDone':
           return this.store.inboxDone(req.id, req.done);
+        case 'event':
+          return this.store.countEvent(req.name, req.ip);
+        case 'funnel':
+          return this.store.funnel(req.days);
         case 'geocode':
           return await this.geocode(req.queries, req.ip);
         case 'review':
@@ -472,7 +477,8 @@ export class Account extends DurableObject {
             a.setPlus({ customer });
           }
           const back = `${req.origin}/app/`;
-          const session = await stripe.subscribeSession({ customer, account: req.id, successUrl: `${back}?plus=welcome`, cancelUrl: `${back}?plus=cancelled` });
+          // The free week is for someone who has never had a subscription.
+          const session = await stripe.subscribeSession({ customer, account: req.id, interval: planInterval(req.body), trial: !a.plus().subscription, successUrl: `${back}?plus=welcome`, cancelUrl: `${back}?plus=cancelled` });
           return { url: session.url };
         }
         case 'plusManage': {
@@ -528,8 +534,8 @@ export class Account extends DurableObject {
     const r = this.store.read();
     const home = r.data?.settings?.home;
     const remind = home?.remindReady === true && typeof home?.readyBy === 'string';
-    // Listing alert emails are part of Plus; the savings-month email is for everyone.
-    await directory(this.env).setAlerting(id, Boolean(r.emailVerified && r.email && ((r.alerts.length && r.plus.active) || remind)));
+    // Alert emails come daily with Plus and weekly without; the savings-month email is for everyone.
+    await directory(this.env).setAlerting(id, Boolean(r.emailVerified && r.email && (r.alerts.length || remind)));
   }
 
   /** The day's alert email (see sendDigest). */
@@ -554,8 +560,8 @@ export class Account extends DurableObject {
 
 /**
  * One person's email for the day: the savings-month note when it's due,
- * and listings new or cheaper since the last email, for each alert (alerts
- * are part of Plus). `remember` saves { readySent } and { lastSent } as
+ * and listings new or cheaper since the last email, for each alert: every
+ * day with Plus, the week's best three on Mondays without. `remember` saves { readySent } and { lastSent } as
  * soon as each is true, so nothing is sent twice.
  */
 async function sendDigest(env, { data, alerts, email, plus, lastSent, readySent }, today, origin, remember) {
@@ -570,7 +576,11 @@ async function sendDigest(env, { data, alerts, email, plus, lastSent, readySent 
     await remember({ readySent: note.month });
     sent = true;
   }
-  if (!alerts?.length || !plus) return { sent };
+  if (!alerts?.length) return { sent };
+  // Without Plus: one email a week, on Mondays, with the three best homes of the week.
+  const weekly = !plus;
+  if (weekly && !weeklyDay(today)) return { sent };
+  const from = weekly ? weekBefore(today) : since;
   const feeds = new Map();
   const sections = [];
   for (const alert of alerts) {
@@ -578,11 +588,20 @@ async function sendDigest(env, { data, alerts, email, plus, lastSent, readySent 
       const res = await env.ASSETS.fetch(new Request(`${origin}/data/${feedDoc(alert.city)}.json`));
       feeds.set(alert.city, res.ok ? await res.json().catch(() => null) : null);
     }
-    const fresh = freshMatches(alertMatches(alert, feeds.get(alert.city), { market, profile, homeFor }), alert.since > since ? alert.since : since);
+    const fresh = freshMatches(alertMatches(alert, feeds.get(alert.city), { market, profile, homeFor }), alert.since > from ? alert.since : from, alert);
     if (fresh.length) sections.push({ alert, fresh });
   }
   await remember({ lastSent: today });
   if (!sections.length) return { sent };
+  if (weekly) {
+    const mail = weeklyEmail(
+      sections.flatMap((x) => x.fresh),
+      origin,
+    );
+    if (!mail) return { sent };
+    await sendEmail(env, email, mail.subject, mail.text);
+    return { sent: true };
+  }
   const body = sections
     .map(({ alert, fresh }) =>
       [
@@ -756,6 +775,11 @@ async function api(request, env, url) {
   // design; restrict it to this site's address in Google Cloud so it only works here.
   if (parts[0] === 'config' && method === 'GET') return json({ verification: canEmail(env), review: Boolean(env.ADMIN_KEY), billing: canBill(env), mapsKey: String(env.GOOGLE_MAPS_KEY || ''), supabase: supabasePublic(env) });
   if (parts[0] === 'stripe' && parts[1] === 'webhook' && method === 'POST') return stripeWebhook(request, env);
+  // The funnel: one step happened (a name, nothing about who).
+  if (parts[0] === 'event' && method === 'POST') {
+    const body = await readBody(request, 256);
+    return answer(await directory(env).call({ op: 'event', name: String(body?.name || ''), ip }));
+  }
 
   // The site owner's review of reported listings.
   if (parts[0] === 'admin') {
@@ -763,6 +787,7 @@ async function api(request, env, url) {
     if (!env.ADMIN_KEY || !sameText(key, env.ADMIN_KEY)) return json({ error: 'Not allowed.' }, 401);
     if (parts[1] === 'reported' && method === 'GET') return answer(await directory(env).call({ op: 'reported' }));
     if (parts[1] === 'inbox' && method === 'GET') return answer(await directory(env).call({ op: 'inbox' }));
+    if (parts[1] === 'funnel' && method === 'GET') return answer(await directory(env).call({ op: 'funnel', days: Number(url.searchParams.get('days')) || 30 }));
     if (parts[1] === 'inbox' && method === 'POST') {
       const body = await readBody(request);
       return answer(await directory(env).call({ op: 'inboxDone', id: body.id, done: Boolean(body.done) }));
@@ -885,7 +910,7 @@ async function meApi(request, env, url, sub, method) {
       await me.setPlus({ customer });
     }
     const back = `${url.origin}/app/`;
-    const session = await stripe.subscribeSession({ customer, account: user.id, metadata: { user: user.id }, successUrl: `${back}?plus=welcome`, cancelUrl: `${back}?plus=cancelled` });
+    const session = await stripe.subscribeSession({ customer, account: user.id, metadata: { user: user.id }, interval: planInterval(body), trial: !(await me.plus()).subscription, successUrl: `${back}?plus=welcome`, cancelUrl: `${back}?plus=cancelled` });
     return json({ url: session.url });
   }
   if (sub === 'plus/manage' && post) {
@@ -919,6 +944,9 @@ async function meApi(request, env, url, sub, method) {
   return json({ error: 'Not found.' }, 404);
 }
 
+/** Plus by the month (the default) or by the year, as the person picked. */
+const planInterval = (body) => (body?.interval === 'year' ? 'year' : 'month');
+
 /** Stripe tells us when a card is saved and when a charge settles. */
 async function stripeWebhook(request, env) {
   if (!canBill(env)) return json({ error: 'Not set up.' }, 404);
@@ -931,7 +959,19 @@ async function stripeWebhook(request, env) {
   const userId = obj.metadata?.user;
   if ((accountId && ID.test(accountId)) || isUuid(userId)) {
     let patch = null;
-    if (event.type === 'checkout.session.completed' && obj.mode === 'subscription') patch = { status: 'active', customer: obj.customer, subscription: obj.subscription };
+    if (event.type === 'checkout.session.completed' && obj.mode === 'subscription') {
+      patch = { status: 'active', customer: obj.customer, subscription: obj.subscription };
+      // The funnel: a free week starts with nothing charged; anything else is a payment.
+      await directory(env)
+        .call({ op: 'event', name: Number(obj.amount_total) > 0 ? 'paid' : 'trial' })
+        .catch(() => {});
+    }
+    // A trial turning into the first real payment.
+    if (event.type === 'customer.subscription.updated' && obj.status === 'active' && event.data?.previous_attributes?.status === 'trialing') {
+      await directory(env)
+        .call({ op: 'event', name: 'paid' })
+        .catch(() => {});
+    }
     if (event.type.startsWith('customer.subscription.')) {
       const end = obj.current_period_end ?? obj.items?.data?.[0]?.current_period_end;
       patch = {

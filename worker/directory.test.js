@@ -139,3 +139,23 @@ describe('the February reminder list', () => {
     expect(d.dueReminders(2027)).toEqual(['ws1']);
   });
 });
+
+describe('the funnel', () => {
+  it('counts each step a day, nothing about who, and only known steps', () => {
+    now = Date.parse('2026-11-16T15:00:00Z');
+    d.countEvent('quick_check', '1.2.3.4');
+    d.countEvent('quick_check', '5.6.7.8');
+    d.countEvent('trial');
+    now += 864e5;
+    d.countEvent('quick_check', '1.2.3.4');
+    expect(() => d.countEvent('anything', '1.2.3.4')).toThrow(/Unknown event/);
+    const f = d.funnel(30);
+    expect(f.totals).toMatchObject({ quick_check: 3, trial: 1, paid: 0 });
+    expect(f.byDay['2026-11-16']).toEqual({ quick_check: 2, trial: 1 });
+    expect(Object.keys(f.totals)[0]).toBe('quick_check');
+  });
+  it('stops one address from flooding the counts', () => {
+    for (let i = 0; i < 120; i++) d.countEvent('share', '9.9.9.9');
+    expect(() => d.countEvent('share', '9.9.9.9')).toThrow(/Too many/);
+  });
+});

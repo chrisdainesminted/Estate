@@ -39,10 +39,16 @@ describe('accounts', () => {
     expect(a.read()).toMatchObject({ data: { deals: [2] }, updatedAt: 200 });
   });
 
-  it('keeps up to ten clean alerts', () => {
-    const list = a.setAlerts([{ city: 'hamilton', maxLive: '2000', types: ['small', 'bogus'] }, { city: 'Not a city!' }, ...Array(12).fill({ city: 'calgary' })]);
-    expect(list).toHaveLength(9); // ten taken, the bad one dropped
+  it('keeps up to 25 clean alerts, saved searches and price watches together', () => {
+    const list = a.setAlerts([{ city: 'hamilton', maxLive: '2000', types: ['small', 'bogus'] }, { city: 'Not a city!' }, ...Array(30).fill({ city: 'calgary' })]);
+    expect(list).toHaveLength(24); // 25 taken, the bad one dropped
     expect(list[0]).toMatchObject({ city: 'hamilton', maxLive: 2000, types: ['small'], maxPrice: null });
+  });
+
+  it('keeps a price watch on one listing, with its address', () => {
+    const [w] = a.setAlerts([{ city: 'thunder-bay', listing: 'X13684758', address: '228  Archibald Street S' }]);
+    expect(w).toMatchObject({ listing: 'X13684758', address: '228 Archibald Street S' });
+    expect(a.setAlerts([{ city: 'thunder-bay', listing: 'bad id!' }])[0].listing).toBeUndefined();
   });
 
   it('confirms an email with a code before alerts use it', async () => {

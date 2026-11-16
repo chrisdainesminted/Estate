@@ -11,6 +11,7 @@
 //   /api/a/<id>. An old link this browser still has is brought over to the
 //   Supabase account the first time the person signs in.
 
+import { track } from './track.js';
 import { siteConfig } from './siteConfig.js';
 
 const KEY = 'bedrock-account'; // an account link from before Supabase
@@ -348,12 +349,14 @@ export async function signUp(email, password) {
     const sb = await client();
     const { data, error } = await sb.auth.signUp({ email: String(email).trim(), password, options: { emailRedirectTo: comeBackTo() } });
     if (error) throw friendly(error);
+    track('account');
     if (!data.session) return { confirm: true, email: String(email).trim() };
     await bringOver();
     announce();
     return sessionLink();
   }
   const link = await authCall('signup', { email, password, account: legacyLink() });
+  track('account');
   announceAccount({ id: link.id, key: link.key });
   return link;
 }

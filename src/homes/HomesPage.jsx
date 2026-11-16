@@ -301,16 +301,61 @@ function Card({ h, saved, onSave }) {
   );
 }
 
+const STEPS = [
+  ['quick_check', 'Tried the homepage calculator'],
+  ['plan_done', 'Answered the plan’s questions'],
+  ['account', 'Made an account'],
+  ['plus_click', 'Clicked to start Plus'],
+  ['trial', 'Started a free trial'],
+  ['paid', 'Paid'],
+];
+const EXTRAS = [
+  ['offer_pack', 'Offer Packs downloaded'],
+  ['share', 'Results shared'],
+  ['watch', 'Price watches added'],
+];
+
+/** The last 30 days, step by step, with how many made it from each step to the next. */
+function Funnel({ f }) {
+  const t = f.totals ?? {};
+  return (
+    <section className="panel space-y-3 p-4 text-sm">
+      <h2 className="text-xl font-semibold text-zinc-950 dark:text-white">The funnel, last 30 days</h2>
+      <ol className="space-y-1.5">
+        {STEPS.map(([k, name], i) => {
+          const n = t[k] ?? 0;
+          const prev = i ? (t[STEPS[i - 1][0]] ?? 0) : null;
+          return (
+            <li key={k} className="flex items-baseline justify-between gap-3">
+              <span className="text-zinc-700 dark:text-zinc-300">{name}</span>
+              <span className="tabular-nums">
+                <strong className="text-zinc-950 dark:text-white">{n.toLocaleString('en-CA')}</strong>
+                {prev ? <span className="ml-2 text-xs text-zinc-500 dark:text-zinc-400">{Math.round((n / prev) * 100)}% of the step before</span> : null}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+        {EXTRAS.map(([k, name]) => `${name}: ${(t[k] ?? 0).toLocaleString('en-CA')}`).join(' · ')}. Counts only: nothing about who. Steps count once per browser, so
+        one person on two devices counts twice.
+      </p>
+    </section>
+  );
+}
+
 /** The site owner's review of reported listings (needs the ADMIN_KEY set in Cloudflare). */
 function Review() {
   const [key, setKey] = useState(() => sessionStorage.getItem('bedrock-admin') || '');
   const [list, setList] = useState(null);
   const [inbox, setInbox] = useState([]);
+  const [funnel, setFunnel] = useState(null);
   const [error, setError] = useState('');
   const load = async (k = key) => {
     try {
       setList(await call('/admin/reported', { key: k }));
       setInbox(await call('/admin/inbox', { key: k }).catch(() => []));
+      setFunnel(await call('/admin/funnel?days=30', { key: k }).catch(() => null));
       sessionStorage.setItem('bedrock-admin', k);
       setError('');
     } catch (e) {
@@ -331,7 +376,7 @@ function Review() {
         }}
       >
         <h1 className="text-2xl font-semibold text-zinc-950 dark:text-white">Owner’s desk</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">Reported listings, contact messages and broker requests.</p>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">The funnel, reported listings, contact messages and broker requests.</p>
         <div>
           <label htmlFor="adm-key" className={label}>
             Admin key
@@ -354,6 +399,7 @@ function Review() {
   };
   return (
     <div className="space-y-4">
+      {funnel && <Funnel f={funnel} />}
       <h1 className="text-2xl font-semibold text-zinc-950 dark:text-white">Messages and broker requests</h1>
       {inbox.length === 0 && <p className="text-sm text-zinc-600 dark:text-zinc-400">No messages yet.</p>}
       <ul className="space-y-3">

@@ -105,7 +105,7 @@ export default function HomesForMe({ feedState, indexState, city, onCity, market
                 </Button>
               ))}
           </div>
-          {alert && <p className="-mt-3 text-xs text-zinc-500 dark:text-zinc-400">New matches show here. With an account and email (in the menu), you also get them by email each morning.</p>}
+          {alert && <p className="-mt-3 text-xs text-zinc-500 dark:text-zinc-400">New matches show here. With an account and email (in the menu), the week’s best three come by email each Monday, or every morning with Plus.</p>}
 
           <Card>
             <ul className="divide-y divide-hairline">

@@ -128,3 +128,18 @@ describe('myPlan, rent from a second unit', () => {
     expect(plan.duplexHalf.price).toBeGreaterThanOrEqual(plan.solo.price);
   });
 });
+
+describe('readiness', () => {
+  it('is nothing before the questions, then cash and steps out of 100', async () => {
+    const { readiness, myPlan } = await import('./journey.js');
+    expect(readiness({ profile: {}, plan: null })).toBeNull();
+    const profile = { entered: true, income: 90000, savings: 20000, monthlySave: 1000, city: 'thunder-bay', firstTime: true };
+    const plan = myPlan({ profile, ratePct: 5 });
+    const none = readiness({ profile, ready: {}, plan });
+    const some = readiness({ profile, ready: { credit: true, docs: true }, plan });
+    expect(none.pct).toBeGreaterThanOrEqual(0);
+    expect(some.pct).toBeGreaterThan(none.pct);
+    expect(some.done).toBe(2);
+    expect(none.pct).toBeLessThanOrEqual(60);
+  });
+});

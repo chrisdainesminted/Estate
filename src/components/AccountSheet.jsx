@@ -101,7 +101,7 @@ export default function AccountSheet({ open, onClose, hosted, account, onAccount
                   ))}
                 </ul>
               )}
-              <p className="mt-3 text-zinc-600 dark:text-zinc-400">New matches show in the app. With Squarely Plus, add an email to get them each morning too. Your savings-month reminder emails are free.</p>
+              <p className="mt-3 text-zinc-600 dark:text-zinc-400">New matches show in the app. Add an email to get the week’s best three each Monday, free, or every match each morning with Squarely Plus. Your savings-month reminder emails are free too.</p>
               {remote?.emailVerified ? (
                 <div className="mt-3 flex flex-wrap items-center gap-3">
                   <span className="text-emerald-700 dark:text-emerald-400">Emailing {remote.email}</span>
