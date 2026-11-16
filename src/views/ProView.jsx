@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ArrowRight, ExternalLink, FileDown, Gavel, Hammer, MessageCircleQuestion, Repeat, BellRing } from 'lucide-react';
+import { ArrowRight, Coins, ExternalLink, FileDown, Gavel, Hammer, MessageCircleQuestion, Repeat, BellRing } from 'lucide-react';
 import { DISTRESS, TAX_SALE_STEPS, distressOf } from '../lib/distress.js';
 import { rankBrrrr } from '../lib/brrrr.js';
 import { cityByKey } from '../lib/canada.js';
@@ -8,6 +8,7 @@ import { money } from '../lib/format.js';
 import { Button, Card, CardHeader, SkeletonCard, ViewHeader, signedClass } from '../components/ui.jsx';
 import { PlusOffer, PlusTag, usePlus } from '../components/Plus.jsx';
 import { CityPicker } from './ListingsView.jsx';
+import CashSplit from './CashSplit.jsx';
 
 const dateLabel = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-CA', { month: 'long', day: 'numeric', year: 'numeric' });
 // Where each city publishes its tax sales, where we know it.
@@ -19,7 +20,7 @@ const TAX_SALE_PAGES = { 'thunder-bay': 'https://www.thunderbay.ca/en/news/tax-s
  * BRRRR numbers; the city's tax sales with their minimum bids; and the
  * other Plus tools in one place.
  */
-export default function ProView({ feedState, indexState, city, onCity, market, plan, taxSales, onView, onAnalyze }) {
+export default function ProView({ feedState, indexState, city, onCity, market, plan, taxSales, onView, onAnalyze, savings = 0, onAnalyzeListing }) {
   const plus = usePlus();
   const { status, feed } = feedState;
   const place = cityByKey(city);
@@ -49,8 +50,10 @@ export default function ProView({ feedState, indexState, city, onCity, market, p
         }
         aside={<CityPicker city={city} index={indexState?.feed} onCity={onCity} />}
       >
-        Below-market properties in {place.name}: lender, estate and court sales, and the city’s tax sales, with the numbers already run.
+        The best ways to put your cash to work in {place.name}, and below-market properties: lender, estate and court sales, and the city’s tax sales, with the numbers already run.
       </ViewHeader>
+
+      {status === 'ready' && <CashSplit listings={feed?.listings ?? []} market={market} place={place} savings={savings} onAnalyze={onAnalyzeListing} />}
 
       {!plus.active ? (
         <Card className="p-5">
@@ -178,6 +181,7 @@ export default function ProView({ feedState, indexState, city, onCity, market, p
             [Hammer, 'Blueprint to materials list', 'Upload a floor plan; get quantities and where to buy.', () => onView('build')],
             [FileDown, 'Pricing report', 'What a home is worth, as a PDF to share.', () => onView('sell')],
             [MessageCircleQuestion, 'Ask Squarely', 'Questions answered from your own numbers: the button in the corner.', null],
+            [Coins, 'Your cash, compared', 'One home or two or three: the best split of your savings, at the top of this page.', () => window.scrollTo({ top: 0, behavior: 'smooth' })],
             [BellRing, 'Daily emails', 'New listings that fit and price drops, every morning.', () => onView('listings')],
           ].map(([Icon, t, b, go]) => (
             <li key={t} className="bg-(--panel)">

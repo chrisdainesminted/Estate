@@ -668,7 +668,7 @@ function Pricing() {
       price: '$12',
       unit: '/ month, or $99 a year',
       lead: 'For when the numbers start turning into an actual offer.',
-      points: ['Know the most to pay: an Offer Pack for any home', 'Find homes under market: tax, lender, estate and court sales', 'Hear first when a price drops or a new home fits you', 'Price your home right with a pricing report', 'Not worth it? A full refund within 30 days'],
+      points: ['Know the most to pay: an Offer Pack for any home', 'One home or three? See the best way to invest your savings', 'Find homes under market: tax, lender, estate and court sales', 'Hear first when a price drops or a new home fits you', 'Price your home right with a pricing report', 'Not worth it? A full refund within 30 days'],
       cta: ['Try Plus free for 7 days', open('pro')],
     },
   ];
@@ -693,7 +693,7 @@ function Pricing() {
               </p>
               <p className="mt-2 text-[15px] text-zinc-600 dark:text-zinc-400">{p.lead}</p>
               <ul className="mt-6 grid gap-2.5 border-t border-hairline pt-6 text-[15px] text-zinc-700 dark:text-zinc-300">
-                {p.points.slice(0, 5).map((x) => (
+                {p.points.slice(0, 6).map((x) => (
                   <li key={x} className="flex gap-2.5">
                     <Check className="mt-1 size-4 shrink-0 text-emerald-600 dark:text-emerald-300" aria-hidden /> {x}
                   </li>

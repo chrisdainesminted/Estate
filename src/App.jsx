@@ -1177,6 +1177,8 @@ export default function App() {
                 taxSales={taxSales}
                 onView={setView}
                 onAnalyze={openBrrrr}
+                savings={Number(lib.settings.home?.savings) || 0}
+                onAnalyzeListing={analyzeListing}
               />
             )}
 

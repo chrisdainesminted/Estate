@@ -14,6 +14,7 @@ export const TRIAL_DAYS = 7;
 // Each one says what you get, not what the tool is called.
 export const PLUS_FEATURES = [
   { key: 'offer', text: 'Know the most to pay: an Offer Pack for any home, to take to your agent or lender' },
+  { key: 'split', text: 'Put your savings to work: see whether one home, or two or three, makes you more' },
   { key: 'pro', text: 'Find homes under market: tax, lender, estate and court sales, with the numbers run' },
   { key: 'alerts', text: 'Hear first: a daily email when a price drops or a new home fits you' },
   { key: 'report', text: 'Price your home right: a pricing report as a PDF to share' },
