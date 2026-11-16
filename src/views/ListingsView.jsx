@@ -9,7 +9,7 @@ import { money, percent } from '../lib/format.js';
 import { sitePage } from '../lib/site.js';
 import { Button, Card, CardHeader, DscrChip, NumberField, Segmented, SelectField, SkeletonCard, ViewHeader, signedClass } from '../components/ui.jsx';
 import { InfoTip } from '../components/motion.jsx';
-import { ListingCard, ListingDetail, MoverBanner, TickerStrip, biggestMover } from './MarketCards.jsx';
+import { DdfNotice, ListingCard, ListingDetail, MoverBanner, TickerStrip, biggestMover } from './MarketCards.jsx';
 import { PlusTag, usePlus } from '../components/Plus.jsx';
 import { track } from '../lib/track.js';
 
@@ -956,10 +956,15 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
             </Notice>
           )}
 
+          {active.some((l) => l.ddf) && (
+            <div className="px-1">
+              <DdfNotice />
+            </div>
+          )}
           <p className="px-1 text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-            Found by searching public listing sites, so some listings will be missing. Each one links to its own listing page and was confirmed for sale by a
-            search in the last week; listings that can’t be confirmed drop off. Search results can lag a few days, and this isn’t from REALTOR.ca or the MLS®
-            system directly. Rents marked estimated come from your rent table; property tax is always the real bill. Confirm everything with the listing agent before you make an offer.
+            {active.some((l) => l.ddf) && 'Listings with photos and a listing brokerage come from the MLS® System through CREA’s DDF®, updated every few hours. The rest are '}
+            {active.some((l) => l.ddf) ? 'found' : 'Found'} by searching public listing sites, so some listings will be missing. Each one links to its own listing page and was confirmed for sale by a
+            search in the last week; listings that can’t be confirmed drop off. Search results can lag a few days{active.some((l) => l.ddf) ? '' : ', and this isn’t from REALTOR.ca or the MLS® system directly'}. Rents marked estimated come from your rent table; property tax is always the real bill. Confirm everything with the listing agent before you make an offer.
           </p>
           <p className="px-1 text-sm">
             <a href={sitePage('/lenders/')} className="inline-flex items-center gap-1 font-medium text-emerald-700 hover:underline dark:text-emerald-400">

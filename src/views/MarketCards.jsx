@@ -13,6 +13,7 @@ import { CITY_VACANCY, daysListed, isNew, listingPageUrl, siteName, unitsOf } fr
 import { DISTRESS, distressOf } from '../lib/distress.js';
 import { listingSentence } from '../lib/explain.js';
 import { fitFor } from '../lib/journey.js';
+import { DDF_NOTICE } from '../lib/ddf.js';
 
 const KIND = { 1: 'House', 2: 'Duplex', 3: 'Triplex', 4: 'Fourplex' };
 export const kindOf = (l) => KIND[unitsOf(l)] ?? `${unitsOf(l)} units`;
@@ -108,8 +109,8 @@ const FIT_BADGE = { fits: ['good', 'Fits you'], stretch: ['plain', 'A stretch'],
 
 /** One listing as a card: its photo, price, what it pays you and how its price has moved. */
 export function ListingCard({ s, feed, below, place, onOpen, buy = false, home = null, profile = null }) {
-  const hasPhotos = Boolean(useMapsKey());
   const l = s.listing;
+  const hasPhotos = Boolean(useMapsKey()) || Boolean(l.photos?.length);
   const m = lastMove(l);
   // Buying to live in: whether it fits you leads, not whether it beats an investor's targets.
   const fit = buy && home?.known ? fitFor(home, profile) : null;
@@ -128,7 +129,7 @@ export function ListingCard({ s, feed, below, place, onOpen, buy = false, home =
       className="group flex flex-col overflow-hidden rounded-2xl bg-white text-left ring-1 ring-(--line-strong) transition ring-inset hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgb(0_0_0/0.5)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:bg-[#101012]"
     >
       {hasPhotos ? (
-      <HousePhoto address={l.address} place={place} className="aspect-[16/10] w-full" label="Street View photo" width={640} height={400}>
+      <HousePhoto address={l.address} place={place} photo={l.photos?.[0]} className="aspect-[16/10] w-full" label="Street View photo" width={640} height={400}>
           {badges.length > 0 && (
             <span className="absolute top-3 left-3 flex flex-wrap gap-1.5">
               {badges.slice(0, 2).map(([tone, text]) => (
@@ -165,6 +166,7 @@ export function ListingCard({ s, feed, below, place, onOpen, buy = false, home =
             {kindOf(l)}
             {l.yearBuilt ? ` · built ${l.yearBuilt}` : ''} · {daysListed(l) ?? 0} days listed
           </span>
+          {l.ddf && l.brokerage && <span className="block truncate text-[11px] text-zinc-500 dark:text-zinc-400">Listed by {l.brokerage}</span>}
         </span>
         {buy ? (
           <span className="tabular grid grid-cols-3 gap-2 border-t border-hairline pt-2.5 text-xs">
@@ -277,9 +279,9 @@ export function ListingDetail({ s, place, imported, hidden, onBack, onAnalyze, o
       </button>
 
       <div className="grid gap-3 lg:grid-cols-3">
-        <HousePhoto address={l.address} place={place} className="min-h-64 rounded-2xl lg:col-span-2 lg:min-h-[22rem]" label="Street View of the front" width={640} height={420} iconSize="size-12" />
+        <HousePhoto address={l.address} place={place} photo={l.photos?.[0]} className="min-h-64 rounded-2xl lg:col-span-2 lg:min-h-[22rem]" label="Street View of the front" width={640} height={420} iconSize="size-12" />
         <div className="grid gap-3 max-lg:grid-cols-2">
-          <HousePhoto address={l.address} place={place} kind="satellite" className="min-h-40 rounded-2xl" label="Satellite view of the lot" width={640} height={360} />
+          <HousePhoto address={l.address} place={place} photo={l.photos?.[1]} kind="satellite" className="min-h-40 rounded-2xl" label="Satellite view of the lot" width={640} height={360} />
           <a
             href={link}
             target="_blank"
@@ -302,6 +304,7 @@ export function ListingDetail({ s, place, imported, hidden, onBack, onAnalyze, o
               {l.yearBuilt ? ` · built ${l.yearBuilt}` : ''}
               {l.mls ? ` · MLS® ${l.mls}` : ''}
             </p>
+            {l.ddf && l.brokerage && <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">Listed by {l.brokerage}</p>}
             <h2 className="mt-1 text-3xl font-bold tracking-tight text-zinc-950 dark:text-white">{l.address}</h2>
             <p className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
               <span className="tabular text-5xl font-bold tracking-tight text-zinc-950 dark:text-white">{money(s.a.price)}</span>
@@ -440,6 +443,12 @@ export function ListingDetail({ s, place, imported, hidden, onBack, onAnalyze, o
           </div>
         </aside>
       </div>
+      {l.ddf && <DdfNotice />}
     </div>
   );
+}
+
+/** CREA's notice, wherever listings from its DDF® feed are shown. */
+export function DdfNotice() {
+  return <p className="text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">Listing data from the MLS® System via CREA’s DDF®. {DDF_NOTICE}</p>;
 }

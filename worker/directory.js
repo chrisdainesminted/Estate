@@ -104,6 +104,29 @@ export class DirectoryStore {
     sql.exec('CREATE TABLE IF NOT EXISTS alerting (id TEXT PRIMARY KEY, sent TEXT)');
     sql.exec('CREATE TABLE IF NOT EXISTS inbox (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT, data TEXT, at INTEGER, done INTEGER DEFAULT 0)');
     sql.exec('CREATE TABLE IF NOT EXISTS funnel (day TEXT, name TEXT, n INTEGER, PRIMARY KEY (day, name))');
+    // Listings from CREA's DDF® feed, one feed per city (ddf.js), and the last sync's report (doc '_status').
+    sql.exec('CREATE TABLE IF NOT EXISTS ddf (doc TEXT PRIMARY KEY, data TEXT, at INTEGER)');
+  }
+
+  // ---- MLS® listings from DDF® ----
+
+  ddfGet(doc) {
+    const row = this.sql.exec('SELECT data FROM ddf WHERE doc = ?', doc).toArray()[0];
+    return row ? JSON.parse(row.data) : null;
+  }
+
+  ddfSet(doc, data) {
+    this.sql.exec('INSERT INTO ddf (doc, data, at) VALUES (?, ?, ?) ON CONFLICT(doc) DO UPDATE SET data = excluded.data, at = excluded.at', doc, JSON.stringify(data), this.now());
+  }
+
+  /** Each city's DDF feed at a glance, for the listings index: { doc: { at, count } }. */
+  ddfSummary() {
+    const out = {};
+    for (const r of this.sql.exec("SELECT doc, data FROM ddf WHERE doc != '_status'").toArray()) {
+      const feed = JSON.parse(r.data);
+      out[r.doc] = { at: feed?.lastRun?.at ?? null, date: feed?.lastRun?.date ?? null, count: (feed?.listings ?? []).filter((l) => (l.status ?? 'active') === 'active').length };
+    }
+    return out;
   }
 
   // ---- accounts that get alert emails ----

@@ -193,6 +193,17 @@ The page does the full analysis live, so changing an assumption re-ranks the lis
 
 At about 6:34 am a second scheduled step, running in a session that has this repository checked out, copies the saved feed into `public/data/thunderbay.json` and pushes it. Cloudflare rebuilds the website from that push, so its Listings tab shows the same morning list. (The 6 am run itself can't push: scheduled runs start without repository access.)
 
+## MLS® listings from CREA's DDF®
+
+The official listings feed, ready to switch on once a REALTOR® partner signs up for CREA's Data Distribution Facility (DDF®) and names this site as their technology provider. CREA then gives a client id and secret.
+
+1. In Cloudflare (Workers → this worker → Settings → Variables), add `DDF_CLIENT_ID` and `DDF_CLIENT_SECRET` as secrets, and optionally `DDF_CITIES` (city keys, comma-separated, e.g. `thunder-bay,sudbury`; Thunder Bay when unset).
+2. Every four hours the worker (`worker/ddf.js`) signs in, pulls each city's active listings with their photos, the listing brokerage and the tax bill, and keeps them as a feed with first-seen dates and price history. A listing missing from DDF for two days drops off.
+3. When the site asks for `/data/<city>.json`, the worker joins those listings to the morning search's (`combineFeeds` in `src/lib/ddf.js`): a home both found shows once, as the MLS® listing. Listing cards and pages then show the listing's photos, "Listed by" the brokerage, and CREA's trademark notice.
+4. To sync straight away and see the result: `POST /api/admin/ddf` with `Authorization: Bearer <ADMIN_KEY>`. `GET` shows the last sync's report.
+
+Before switching it on, read CREA's DDF® terms with the partner: they set how listings must be shown (attribution, refresh times, what may be changed).
+
 ## Brand
 
 - Name: Squarely. Tagline: "Cash flow you can build on."

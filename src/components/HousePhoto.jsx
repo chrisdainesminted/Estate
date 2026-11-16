@@ -28,12 +28,13 @@ export function useMapsKey() {
  * A picture of the house: Street View of its front (kind "street") or the
  * lot from above (kind "satellite"). Falls back to a quiet drawn placeholder
  * when there's no key, no address or no picture there. `label` says what the
- * placeholder stands for; `children` sit on top (badges).
+ * placeholder stands for; `children` sit on top (badges). `photo`: the
+ * listing's own photo (from the MLS® feed), shown instead when there is one.
  */
-export default function HousePhoto({ address, place, kind = 'street', width = 640, height = 400, className = '', label, iconSize = 'size-8', children }) {
+export default function HousePhoto({ address, place, kind = 'street', width = 640, height = 400, className = '', label, iconSize = 'size-8', photo = '', children }) {
   const key = useMapsKey();
   const where = photoPlace(address, place);
-  const src = photoUrl({ kind, where, key, width, height });
+  const src = photo || photoUrl({ kind, where, key, width, height });
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [src]);
   const Icon = kind === 'satellite' ? Satellite : Home;
@@ -43,7 +44,7 @@ export default function HousePhoto({ address, place, kind = 'street', width = 64
       {show ? (
         <img
           src={src}
-          alt={kind === 'satellite' ? `Satellite view of ${address}` : `Street view of ${address}`}
+          alt={photo ? `Listing photo of ${address}` : kind === 'satellite' ? `Satellite view of ${address}` : `Street view of ${address}`}
           loading="lazy"
           decoding="async"
           onError={() => setFailed(true)}

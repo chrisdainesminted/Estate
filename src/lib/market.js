@@ -343,6 +343,16 @@ export function cleanListing(raw) {
     // A distressed sale the listing states: power-of-sale, bank-owned, receivership, estate or as-is.
     distress: DISTRESS_KINDS.includes(raw.distress) ? raw.distress : null,
     status: STATUSES.includes(raw.status) ? raw.status : 'active',
+    // From the official MLS® feed (src/lib/ddf.js): its photos, the listing brokerage and a map point.
+    ...(raw.ddf === true
+      ? {
+          ddf: true,
+          photos: (Array.isArray(raw.photos) ? raw.photos : []).map((u) => safeHttpUrl(u)).filter((u) => u && u.startsWith('https://')).slice(0, 12),
+          brokerage: text(raw.brokerage, 120) || null,
+          lat: Number.isFinite(raw.lat) && Math.abs(raw.lat) <= 90 ? raw.lat : null,
+          lng: Number.isFinite(raw.lng) && Math.abs(raw.lng) <= 180 ? raw.lng : null,
+        }
+      : {}),
   };
 }
 const DISTRESS_KINDS = ['power-of-sale', 'bank-owned', 'receivership', 'estate', 'as-is', 'tax-sale'];

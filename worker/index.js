@@ -19,6 +19,8 @@
 // - STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET: landlord billing (pricing.js).
 //   A daily job charges each landlord with a card once a month; the webhook
 //   at /api/stripe/webhook hears when a card is saved or a charge settles.
+// - DDF_CLIENT_ID and DDF_CLIENT_SECRET (and optionally DDF_CITIES): MLS®
+//   listings from CREA's DDF® feed, pulled every few hours (ddf.js).
 // - SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY: accounts
 //   in Supabase (supabase.js). With all three set, people sign up and sign in
 //   with Supabase Auth and everything they save is kept in its database.
@@ -31,7 +33,9 @@ import { DirectoryStore, REPORT_REASONS, cleanInbox, inboxEmail } from './direct
 import { taxReminder } from '../src/lib/landlord.js';
 import { AccountStore } from './account.js';
 import { LoginStore, normalEmail } from './auth.js';
-import { alertMatches, alertName, feedDoc, freshMatches, normalizeMarket } from '../src/lib/market.js';
+import { LISTING_CITIES, alertMatches, alertName, feedDoc, freshMatches, normalizeMarket } from '../src/lib/market.js';
+import { combineFeeds } from '../src/lib/ddf.js';
+import { ddfOn, syncDdf } from './ddf.js';
 import { homeFor, withGift } from '../src/lib/firstHome.js';
 import { readyReminder } from '../src/lib/journey.js';
 import { cityByKey } from '../src/lib/canada.js';
@@ -297,6 +301,18 @@ export class Directory extends DurableObject {
       if (e instanceof StoreError) return { error: e.message, status: e.status };
       throw e;
     }
+  }
+
+  ddfGet(doc) {
+    return this.store.ddfGet(doc);
+  }
+
+  ddfSet(doc, data) {
+    this.store.ddfSet(doc, data);
+  }
+
+  ddfSummary() {
+    return this.store.ddfSummary();
   }
 
   upsert(summary, province) {
@@ -585,8 +601,7 @@ async function sendDigest(env, { data, alerts, email, plus, lastSent, readySent 
   const sections = [];
   for (const alert of alerts) {
     if (!feeds.has(alert.city)) {
-      const res = await env.ASSETS.fetch(new Request(`${origin}/data/${feedDoc(alert.city)}.json`));
-      feeds.set(alert.city, res.ok ? await res.json().catch(() => null) : null);
+      feeds.set(alert.city, await cityFeed(env, origin, feedDoc(alert.city)));
     }
     const fresh = freshMatches(alertMatches(alert, feeds.get(alert.city), { market, profile, homeFor }), alert.since > from ? alert.since : from, alert);
     if (fresh.length) sections.push({ alert, fresh });
@@ -787,6 +802,9 @@ async function api(request, env, url) {
     if (!env.ADMIN_KEY || !sameText(key, env.ADMIN_KEY)) return json({ error: 'Not allowed.' }, 401);
     if (parts[1] === 'reported' && method === 'GET') return answer(await directory(env).call({ op: 'reported' }));
     if (parts[1] === 'inbox' && method === 'GET') return answer(await directory(env).call({ op: 'inbox' }));
+    // DDF®: the last sync's report (GET), or sync now (POST).
+    if (parts[1] === 'ddf' && method === 'GET') return json({ on: ddfOn(env), last: await directory(env).ddfGet('_status') });
+    if (parts[1] === 'ddf' && method === 'POST') return json(await runDdf(env));
     if (parts[1] === 'funnel' && method === 'GET') return answer(await directory(env).call({ op: 'funnel', days: Number(url.searchParams.get('days')) || 30 }));
     if (parts[1] === 'inbox' && method === 'POST') {
       const body = await readBody(request);
@@ -1079,13 +1097,73 @@ async function sendAlerts(env) {
   }
 }
 
+// Every four hours: MLS® listings from DDF® (wrangler.jsonc lists this schedule).
+const DDF_CRON = '41 */4 * * *';
+
+const ddfStore = (env) => ({ get: (doc) => directory(env).ddfGet(doc), set: (doc, feed) => directory(env).ddfSet(doc, feed) });
+
+async function runDdf(env) {
+  if (!ddfOn(env)) return { ok: false, reason: 'DDF_CLIENT_ID and DDF_CLIENT_SECRET are not set.' };
+  let report;
+  try {
+    report = await syncDdf(env, ddfStore(env));
+  } catch (e) {
+    report = { ok: false, at: Date.now(), reason: String(e?.message || e).slice(0, 200) };
+  }
+  await directory(env).ddfSet('_status', report);
+  return report;
+}
+
+/** One city's listings: the morning run's file, joined with its DDF® listings when there are any. */
+async function cityFeed(env, origin, doc) {
+  const res = await env.ASSETS.fetch(new Request(`${origin}/data/${doc}.json`));
+  const search = res.ok ? await res.json().catch(() => null) : null;
+  const ddf = ddfOn(env) ? await directory(env).ddfGet(doc).catch(() => null) : null;
+  return combineFeeds(Array.isArray(search?.listings) ? search : null, ddf);
+}
+
+/** /data/<doc>.json with DDF® listings joined in; the index counts them too. */
+async function serveData(request, env, url) {
+  const doc = url.pathname.slice('/data/'.length, -'.json'.length);
+  if (!ddfOn(env) || request.method !== 'GET') return env.ASSETS.fetch(request);
+  const headers = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-cache' };
+  if (doc === 'markets') {
+    const res = await env.ASSETS.fetch(request);
+    const index = res.ok ? await res.json().catch(() => null) : null;
+    const summary = await directory(env).ddfSummary();
+    const cities = { ...(index?.cities ?? {}) };
+    for (const [d, s] of Object.entries(summary)) {
+      const key = LISTING_CITIES.find((k) => feedDoc(k) === d);
+      if (!key) continue;
+      const cur = cities[key];
+      // Counted roughly: homes both found are counted once only when the page joins them.
+      cities[key] = { doc: d, date: [cur?.date, s.date].filter(Boolean).sort().at(-1) ?? null, at: Math.max(cur?.at ?? 0, s.at ?? 0) || null, count: Math.max(cur?.count ?? 0, s.count) };
+    }
+    return new Response(JSON.stringify({ schema: 1, ...(index ?? {}), cities }), { headers });
+  }
+  const feed = await cityFeed(env, url.origin, doc);
+  if (!feed) return env.ASSETS.fetch(request);
+  return new Response(JSON.stringify(feed), { headers });
+}
+
 export default {
   async scheduled(event, env, ctx) {
+    if (event.cron === DDF_CRON) {
+      ctx.waitUntil(runDdf(env));
+      return;
+    }
     ctx.waitUntil(Promise.all([chargeMonth(env), sendAlerts(env), sendSupabaseAlerts(env), sendTaxReminders(env)]));
   },
 
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (/^\/data\/[a-z]+\.json$/.test(url.pathname)) {
+      try {
+        return await serveData(request, env, url);
+      } catch {
+        return env.ASSETS.fetch(request);
+      }
+    }
     if (url.pathname.startsWith('/api/')) {
       try {
         return await api(request, env, url);

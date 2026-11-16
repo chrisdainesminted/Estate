@@ -13,7 +13,7 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": ["/api/*", "/data/*"]
   },
   "durable_objects": {
     "bindings": [
@@ -23,7 +23,8 @@
     ]
   },
   // Daily: charges landlords not yet billed this month, and emails listing alerts (worker/index.js).
-  "triggers": { "crons": ["17 14 * * *"] },
+  // Every four hours: MLS® listings from DDF®, once its keys are set (worker/ddf.js).
+  "triggers": { "crons": ["17 14 * * *", "41 */4 * * *"] },
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["Workspace"] },
     { "tag": "v2", "new_sqlite_classes": ["Directory"] },
