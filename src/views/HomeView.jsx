@@ -81,13 +81,13 @@ function LenderNotes({ p }) {
   if (p.credit === 'under600')
     notes.push([
       'bad',
-      'Mortgages with under 20% down are insured, and the insurers need a credit score of at least 600 for one of you. Below that it’s usually 20% down with an alternative lender, at a higher rate, so these numbers are out of reach for now. Paying every bill on time and keeping cards under a third of their limit raises a score within months.',
+      'Under 600, most lenders want 20% down, at a higher rate. To raise your score: pay every bill on time and keep cards under a third of their limit.',
     ]);
   else if (p.credit === '600')
-    notes.push(['warn', 'A score from 600 to 679 can get an insured mortgage, but some lenders save their best rates for 680 and up, so your rate may be a little higher than the one used here.']);
-  else if (!p.credit) notes.push(['plain', 'Check your credit score (free from Equifax or TransUnion). Under 600 changes everything here, so it’s worth knowing first.']);
+    notes.push(['warn', 'With a score of 600 to 679, your rate may be a little higher than the one used here.']);
+  else if (!p.credit) notes.push(['plain', 'Check your credit score first. It’s free from Equifax or TransUnion.']);
   if (p.selfEmployed)
-    notes.push(['warn', 'Lenders use the average of your last two years of income from your tax returns (line 15000 of your Notice of Assessment), not this year’s. If that’s lower than what you typed, use it.']);
+    notes.push(['warn', 'Self-employed: lenders use your average income over the last two tax years. If that’s lower, use it here.']);
   if (!notes.length) return null;
   const tone = { bad: 'text-red-800 dark:text-red-300', warn: 'text-amber-900 dark:text-amber-200', plain: 'text-zinc-600 dark:text-zinc-400' };
   return (
@@ -664,7 +664,7 @@ export default function HomeView({ profile: raw, suite, rvb = {}, market, items,
                   {duplex.price > solo.price && <span className="text-emerald-700 dark:text-emerald-400"> ({money(duplex.price - solo.price)} more)</span>}
                   {plan.duplexHalf.price < duplex.price && (
                     <span className="block text-sm text-zinc-500 dark:text-zinc-400">
-                      {money(plan.duplexHalf.price)} if your lender counts only half the rent: lenders differ, so ask.
+                      Some lenders count only half the rent: then {money(plan.duplexHalf.price)}.
                     </span>
                   )}
                 </li>
@@ -673,12 +673,11 @@ export default function HomeView({ profile: raw, suite, rvb = {}, market, items,
                 </li>
               </ul>
             ) : (
-              <p className="mt-2 text-[15px] text-zinc-700 dark:text-zinc-300">Your savings don’t cover a down payment yet. The plan below shows how long until they do.</p>
+              <p className="mt-2 text-[15px] text-zinc-700 dark:text-zinc-300">Not enough saved for a down payment yet. See below for when you will be.</p>
             )}
             <p className="mt-3 flex items-start gap-1.5 text-sm text-zinc-600 dark:text-zinc-400">
               <Check className="mt-0.5 size-4 shrink-0 text-emerald-600" aria-hidden />
-              Held back by your {plan.best.limit === 'income' ? 'income' : 'savings'}. A typical house in {placeName(local.city)} is about {money(local.city.price)}
-              {local.city.priceEstimated ? ' (estimate)' : ''}, and there’s about {money(b.total)} in government money you can claim.
+              About {money(b.total)} in government money can help. Your {plan.best.limit === 'income' ? 'income' : 'savings'} set the limit.
             </p>
             <LenderNotes p={raw} />
             <AsOf className="mt-3" />
@@ -709,7 +708,7 @@ export default function HomeView({ profile: raw, suite, rvb = {}, market, items,
             )}
             {plan.best.price > 0 && raw.credit !== 'under600' && (
               <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
-                Ready to make it real? A mortgage broker compares lenders for you, free (the lender pays them).{' '}
+                Next: get pre-approved. A broker can help, free.{' '}
                 <button
                   type="button"
                   onClick={() => {

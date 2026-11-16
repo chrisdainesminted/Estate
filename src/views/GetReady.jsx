@@ -35,7 +35,7 @@ function takeBrokerAsk() {
   }
 }
 
-export default function GetReady({ profile, ready = {}, market, onReady, onView, nextStep }) {
+export default function GetReady({ profile, ready = {}, market, onReady, onView }) {
   const ratePct = Number(market.rate);
   const plan = useMemo(() => myPlan({ profile, ratePct }), [profile, ratePct]);
   const p = plan.profile;
@@ -72,8 +72,8 @@ export default function GetReady({ profile, ready = {}, market, onReady, onView,
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="space-y-6">
-      <ViewHeader title="Get ready">Every step to moving day, one at a time. Tick each off as you go.</ViewHeader>
-      {nextStep}
+      <ViewHeader title="Get ready">Every step to your keys. Tick each one off as you go.</ViewHeader>
+      {/* The checklist below already marks the next step, so the "next step" card isn't repeated here. */}
       <div className="grid gap-6 lg:grid-cols-12">
         <Card className="lg:col-span-7 xl:col-span-8">
           <ReadyChecklist p={p} ready={ready} onReady={onReady} ratePct={ratePct} taxPct={plan.local.taxPct} rentEach={plan.local.rent} benefitsTotal={b.total} onBroker={toBroker} onAgent={() => toAgent()} onView={onView} />

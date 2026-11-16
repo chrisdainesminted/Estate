@@ -211,9 +211,13 @@ export function readiness({ profile, ready = {}, plan }) {
   if (!p.entered || !plan) return null;
   const need = plan.goal.check?.cashNeeded ?? 0;
   const cash = need > 0 ? Math.min(Math.max(need - plan.goal.short, 0) / need, 1) : 1;
-  const steps = stepsFor(p).filter((s) => s.id !== 'save');
-  const done = steps.filter((s) => ready[s.id] === true).length;
-  const pct = Math.round(60 * cash + 40 * (steps.length ? done / steps.length : 0));
+  // Shown as the same count Get ready shows, saving included (done once the cash is there);
+  // the score counts saving once, in the cash part.
+  const steps = stepsFor(p);
+  const done = steps.filter((s) => (s.id === 'save' ? plan.goal.short === 0 : ready[s.id] === true)).length;
+  const others = steps.filter((s) => s.id !== 'save');
+  const ticked = others.filter((s) => ready[s.id] === true).length;
+  const pct = Math.round(60 * cash + 40 * (others.length ? ticked / others.length : 0));
   return { pct, cashPct: Math.round(cash * 100), done, steps: steps.length, months: plan.goal.short > 0 ? plan.goal.months : 0, readyBy: plan.goal.readyBy };
 }
 

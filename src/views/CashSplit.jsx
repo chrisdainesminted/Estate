@@ -32,7 +32,7 @@ export default function CashSplit({ listings, market, place, savings = 0, onAnal
             <Coins className="size-4 text-emerald-600" aria-hidden /> Your cash, compared
           </span>
         }
-        subtitle={`One home, or two or three? The best ways to put your cash to work in ${place.name}, from today’s listings, by what each makes you in the first year.`}
+        subtitle={`One home, or two or three? What each makes you in the first year, from today’s homes in ${place.name}.`}
       />
       <div className="grid gap-3 border-t border-hairline px-5 py-4 sm:grid-cols-2">
         <NumberField id="split-cash" label="Cash you could invest" value={cash} onChange={(v) => setCash(Math.max(Number(v) || 0, 0))} prefix="$" step={5000} decimals={0} />
@@ -109,16 +109,16 @@ export default function CashSplit({ listings, market, place, savings = 0, onAnal
       )}
 
       <div className="space-y-1.5 border-t border-hairline px-5 py-4 text-xs text-zinc-500 dark:text-zinc-400">
-        <p>
-          Each home bought as a rental: 20% down at a bank’s 5-year fixed rate, with land transfer tax and closing costs in the cash. Only homes that give their real tax bill and
-          leave at least $0 a month after the mortgage and every cost. The first year counts the cash flow and the mortgage your tenants pay down; not price changes, which nobody
-          can promise.
-        </p>
-        {estimated && <p>Most rents here are estimates from {place.name}’s average asking rents, not the listing: check each one before you rely on it.</p>}
-        <p>
-          More homes means more mortgages: a lender has to approve each one on your income and credit, and two or three vacancies or repairs can land in the same month. Keep a
-          cushion.
-        </p>
+        {estimated && <p>Most rents are estimates. Check each one.</p>}
+        <p>More homes means more mortgages to get approved, and more repairs. Keep a cushion.</p>
+        <details>
+          <summary className="cursor-pointer font-medium text-emerald-700 dark:text-emerald-400">How this works</summary>
+          <p className="mt-1">
+            Each home is bought as a rental: 20% down at a bank’s 5-year fixed rate, with land transfer tax and closing costs included. Only homes that list their tax bill and
+            pay for themselves are used. The first year counts what you keep each month and the mortgage your tenants pay down, not price changes. Estimated rents are{' '}
+            {place.name}’s average asking rents.
+          </p>
+        </details>
         {plus.active && homesOnly.length > 0 && (
           <Button variant="ghost" className="-ml-2 px-2" onClick={() => onAnalyze?.(best?.homes?.[0]?.listing)} disabled={!best?.homes?.length}>
             Open the best option’s first home <ArrowRight className="size-3.5" aria-hidden />

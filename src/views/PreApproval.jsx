@@ -38,7 +38,7 @@ export default function PreApproval({ p, plan, onSend }) {
 
   return (
     <Card id="preapproval" className="scroll-mt-24">
-      <CardHeader title="Get pre-approved, faster" subtitle="Answer five things, gather the papers on your list, and send a broker everything at once." />
+      <CardHeader title="Get pre-approved, faster" subtitle="Answer a few questions. Get your list of papers. Send it all to a broker." />
       <div className="grid gap-4 border-t border-hairline p-5 text-sm sm:grid-cols-2">
         <label className="block">
           <span className="mb-1 block font-medium text-zinc-800 dark:text-zinc-200">How you’re paid</span>

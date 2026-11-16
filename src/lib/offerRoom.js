@@ -54,35 +54,35 @@ export function marketSignals({ listing: l, listings = [], offMarket = [], sold 
   if (days != null && typicalDays) {
     if (days >= typicalDays * 1.5 && days >= 21) {
       leverage += 1;
-      out.push({ key: 'days', tone: 'buyer', text: `Listed ${days} days, longer than most like it (${Math.round(typicalDays)}): the seller may take less.` });
+      out.push({ key: 'days', tone: 'buyer', text: `For sale ${days} days, longer than most (${Math.round(typicalDays)}). The seller may take less.` });
     } else if (days <= Math.max(typicalDays * 0.5, 7)) {
       leverage -= 1;
-      out.push({ key: 'days', tone: 'seller', text: `New: listed ${days} day${days === 1 ? '' : 's'}. Sellers rarely cut in the first weeks, and others may offer too.` });
-    } else out.push({ key: 'days', tone: 'even', text: `Listed ${days} days, about usual for homes like it (${Math.round(typicalDays)}).` });
+      out.push({ key: 'days', tone: 'seller', text: `New: listed ${days} day${days === 1 ? '' : 's'} ago. Others may offer too.` });
+    } else out.push({ key: 'days', tone: 'even', text: `For sale ${days} days, about normal (${Math.round(typicalDays)}).` });
   }
   if (cuts.count > 0) {
     leverage += 1;
-    out.push({ key: 'cuts', tone: 'buyer', text: `Cut ${cuts.count} time${cuts.count === 1 ? '' : 's'}, ${Math.round(cuts.pct * 100)}% below where it started: the seller is already moving.` });
+    out.push({ key: 'cuts', tone: 'buyer', text: `Price cut ${cuts.count === 1 ? 'once' : `${cuts.count} times`}, ${Math.round(cuts.pct * 100)}% in all. The seller is flexible.` });
   }
   if (askMid && same.length >= 4) {
     const vs = (l.price - askMid) / askMid;
     if (vs >= 0.08) {
       leverage += 1;
-      out.push({ key: 'ask', tone: 'buyer', text: `Asks ${Math.round(vs * 100)}% more than the middle of ${same.length} similar homes for sale: room to offer less if it isn’t better than them.` });
+      out.push({ key: 'ask', tone: 'buyer', text: `${Math.round(vs * 100)}% pricier than similar homes. Room to offer less.` });
     } else if (vs <= -0.08) {
       leverage -= 1;
-      out.push({ key: 'ask', tone: 'seller', text: `Asks ${Math.round(-vs * 100)}% less than the middle of ${same.length} similar homes for sale: priced to sell, so expect competition.` });
-    } else out.push({ key: 'ask', tone: 'even', text: `Priced close to ${same.length} similar homes for sale now.` });
+      out.push({ key: 'ask', tone: 'seller', text: `${Math.round(-vs * 100)}% cheaper than similar homes. Expect other offers.` });
+    } else out.push({ key: 'ask', tone: 'even', text: 'Priced like similar homes.' });
   }
   if (gone.length >= 2 && goneDays != null) {
     if (goneDays <= 14) leverage -= 1;
     out.push({
       key: 'gone',
       tone: goneDays <= 14 ? 'seller' : 'even',
-      text: `${gone.length} similar homes left the market lately (sold or withdrawn) after about ${Math.round(goneDays)} days${goneDays <= 14 ? ': good homes are going fast' : ''}.`,
+      text: `Similar homes have been selling in about ${Math.round(goneDays)} days${goneDays <= 14 ? '. They go fast here' : ''}.`,
     });
   }
-  if (soldMid) out.push({ key: 'sold', tone: soldMid < l.price ? 'buyer' : 'seller', text: `Sold prices you added: middle ${Math.round(soldMid).toLocaleString('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })} from ${soldSame.length}.` });
+  if (soldMid) out.push({ key: 'sold', tone: soldMid < l.price ? 'buyer' : 'seller', text: `Similar homes sold for about ${Math.round(soldMid).toLocaleString('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })} (${soldSame.length} sales you added).` });
   return { signals: out, leverage: clamp(leverage, -2, 3), days, typicalDays, cuts, askMid, gone, soldMid, soldCount: soldSame.length };
 }
 
@@ -102,10 +102,10 @@ export function offerRange(listing, m) {
 }
 
 export const LEVELS = [
-  { min: 72, key: 'strong', label: 'Strong', text: 'Likely to be taken seriously, and may win outright.' },
-  { min: 52, key: 'good', label: 'Good', text: 'A real chance, especially if no one else offers.' },
-  { min: 34, key: 'fair', label: 'Fair', text: 'Expect a counter-offer, or to lose to a stronger one.' },
-  { min: 0, key: 'long', label: 'Long shot', text: 'Likely turned down unless the seller is under pressure.' },
+  { min: 72, key: 'strong', label: 'Strong', text: 'A good chance the seller says yes.' },
+  { min: 52, key: 'good', label: 'Good', text: 'A real chance, if no one else offers more.' },
+  { min: 34, key: 'fair', label: 'Fair', text: 'Expect the seller to ask for more.' },
+  { min: 0, key: 'long', label: 'Long shot', text: 'Likely a no, unless the seller needs to sell.' },
 ];
 
 /**
@@ -127,15 +127,15 @@ export function offerStrength(price, range, m, terms = {}) {
   if (terms.inspection) score -= 5;
   if (!terms.financing && !terms.inspection) {
     score += 8;
-    reasons.push({ good: true, text: 'No conditions (firm): stronger, but you lose your way out. Only with financing approved and an inspection done.' });
-  } else reasons.push({ good: false, text: `Conditional on ${[terms.financing && 'financing', terms.inspection && 'an inspection'].filter(Boolean).join(' and ')}: protects you, and a seller weighs it.` });
+    reasons.push({ good: true, text: 'No conditions: stronger, but you can’t back out. Only do this with your mortgage approved and an inspection done.' });
+  } else reasons.push({ good: false, text: `With ${[terms.financing && 'a mortgage', terms.inspection && 'an inspection'].filter(Boolean).join(' and ')} condition: safer for you, a little weaker to a seller.` });
   const dep = Number(terms.depositPct) || 0;
   if (dep >= 5) score += 5;
   else if (dep < 2) score -= 5;
-  reasons.push({ good: dep >= 5, text: dep >= 5 ? `A ${dep}% deposit shows you’re serious.` : `A ${dep}% deposit is on the light side; 5% is common.` });
+  reasons.push({ good: dep >= 5, text: dep >= 5 ? `A ${dep}% deposit shows you’re serious.` : `A ${dep}% deposit is small. 5% is common.` });
   if (terms.flexible) {
     score += 4;
-    reasons.push({ good: true, text: 'A closing date that suits the seller helps.' });
+    reasons.push({ good: true, text: 'Moving on the seller’s date helps.' });
   }
   score = Math.round(clamp(score, 3, 97));
   return { score, ...LEVELS.find((x) => score >= x.min), reasons };
@@ -149,16 +149,16 @@ export function offerStrength(price, range, m, terms = {}) {
 export function offerTimeline(today, terms = {}) {
   const accepted = addDays(today, 1);
   const steps = [
-    { key: 'offer', date: today, title: 'Your offer goes in', text: 'Your agent sends it with a time it expires, often the next evening.' },
-    { key: 'deposit', date: addDays(accepted, 1), title: 'Deposit', text: 'Within a day of acceptance, by bank draft or transfer, held in trust (not lost unless you walk away without a condition).' },
+    { key: 'offer', date: today, title: 'Your offer goes in', text: 'Your agent sends it. It usually expires the next evening.' },
+    { key: 'deposit', date: addDays(accepted, 1), title: 'Deposit', text: 'Due within a day. It’s held safely and goes toward your down payment.' },
   ];
-  if (terms.inspection) steps.push({ key: 'inspection', date: addDays(accepted, 5), title: 'Inspection condition ends', text: 'Book the inspector the day it’s accepted. If it finds something big, renegotiate or walk away before this date.' });
-  if (terms.financing) steps.push({ key: 'financing', date: addDays(accepted, Number(terms.financingDays) || 7), title: 'Financing condition ends', text: 'Your lender appraises the home and gives final approval. Waive the condition only once you have it in writing.' });
+  if (terms.inspection) steps.push({ key: 'inspection', date: addDays(accepted, 5), title: 'Inspection condition ends', text: 'Book an inspector right away. Big problem? Ask for less, or walk away by this date.' });
+  if (terms.financing) steps.push({ key: 'financing', date: addDays(accepted, Number(terms.financingDays) || 7), title: 'Financing condition ends', text: 'Your lender gives final approval. Get it in writing first.' });
   const closing = Number(terms.closingDays) || 60;
   steps.push(
-    { key: 'insurance', date: addDays(accepted, Math.max(closing - 10, 3)), title: 'Home insurance in place', text: 'Your lender needs proof before closing.' },
-    { key: 'lawyer', date: addDays(accepted, Math.max(closing - 7, 4)), title: 'Sign with your lawyer, send the rest of your cash', text: 'The down payment (less the deposit), land transfer tax and closing costs.' },
-    { key: 'closing', date: addDays(accepted, closing), title: 'Closing: you get the keys', text: 'Usually around midday, once the money has moved.' },
+    { key: 'insurance', date: addDays(accepted, Math.max(closing - 10, 3)), title: 'Home insurance in place', text: 'Your lender needs proof.' },
+    { key: 'lawyer', date: addDays(accepted, Math.max(closing - 7, 4)), title: 'Sign with your lawyer', text: 'Send the rest of your down payment and closing costs.' },
+    { key: 'closing', date: addDays(accepted, closing), title: 'Closing: you get the keys', text: 'Usually around midday.' },
   );
   return steps;
 }

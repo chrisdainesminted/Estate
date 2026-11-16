@@ -31,7 +31,7 @@ export default function OfferRoom({ s, offer, onOffer, listings = [], offMarket 
         <h3 id="offer-room" className="flex items-center gap-2 text-lg font-bold text-zinc-950 dark:text-white">
           <Gavel className="size-5 text-emerald-600" aria-hidden /> Make an offer
         </h3>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">What to offer, how strong it is, and what happens next.</p>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Pick a price, see how strong it is, and what happens next.</p>
       </div>
 
       {/* The range, and what it's built on. */}
@@ -62,9 +62,7 @@ export default function OfferRoom({ s, offer, onOffer, listings = [], offMarket 
         ))}
       </ul>
       <p className="text-xs text-zinc-500 dark:text-zinc-400">
-        {range.basis === 'sold'
-          ? 'Built on the sold prices you added, kept between 88% and 105% of asking.'
-          : 'Built on this listing’s own history and similar homes asking now. Sold prices belong to the real estate boards: ask an agent for the last few sales nearby and add them below for a sharper range.'}
+        {range.basis === 'sold' ? 'Based on the sold prices you added.' : 'Based on this listing and similar homes for sale. For a sharper range, add sold prices from an agent below.'}
       </p>
 
       {/* Your offer and its terms. */}
@@ -72,10 +70,10 @@ export default function OfferRoom({ s, offer, onOffer, listings = [], offMarket 
         <NumberField id="room-offer" label="Your offer" value={offer} onChange={(v) => onOffer(Math.max(Number(v) || 0, 0))} prefix="$" step={1000} decimals={0} />
         <NumberField id="room-deposit" label="Deposit" value={terms.depositPct} onChange={(v) => set('depositPct')(Number(v) || 0)} suffix="%" step={0.5} max={20} decimals={1} hint={money((offer * terms.depositPct) / 100)} />
         <fieldset className="space-y-2 text-sm">
-          <legend className="mb-1 font-medium text-zinc-800 dark:text-zinc-200">Conditions</legend>
+          <legend className="mb-1 font-medium text-zinc-800 dark:text-zinc-200">Only buy…</legend>
           {[
-            ['financing', 'On financing (your lender’s final approval)'],
-            ['inspection', 'On a home inspection'],
+            ['financing', 'If my mortgage is approved'],
+            ['inspection', 'If the inspection is OK'],
           ].map(([k, label]) => (
             <label key={k} className="flex items-start gap-2 text-zinc-700 dark:text-zinc-300">
               <input type="checkbox" className="mt-1" checked={terms[k]} onChange={(e) => set(k)(e.target.checked)} /> {label}
@@ -94,7 +92,7 @@ export default function OfferRoom({ s, offer, onOffer, listings = [], offMarket 
             ))}
           </select>
           <label className="flex items-start gap-2 text-zinc-700 dark:text-zinc-300">
-            <input type="checkbox" className="mt-1" checked={terms.flexible} onChange={(e) => set('flexible')(e.target.checked)} /> I can close when the seller wants
+            <input type="checkbox" className="mt-1" checked={terms.flexible} onChange={(e) => set('flexible')(e.target.checked)} /> I can move on the seller’s date
           </label>
         </div>
       </div>
@@ -105,7 +103,7 @@ export default function OfferRoom({ s, offer, onOffer, listings = [], offMarket 
           <p className="font-semibold text-zinc-950 dark:text-white">
             Offer strength: <span className="text-emerald-700 dark:text-emerald-400">{strength.label}</span>
           </p>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">Our read, to compare your choices: not a prediction</p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">Our estimate, not a guarantee</p>
         </div>
         <div role="meter" aria-label="Offer strength" aria-valuenow={strength.score} aria-valuemin={0} aria-valuemax={100} aria-valuetext={strength.label} className="mt-2 h-2.5 overflow-hidden rounded-full bg-(--track)">
           <div className={`h-full rounded-full transition-[width] duration-500 ${METER[strength.key]}`} style={{ width: `${strength.score}%` }} />
@@ -133,7 +131,7 @@ export default function OfferRoom({ s, offer, onOffer, listings = [], offMarket 
             </li>
           ))}
         </ol>
-        <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">Typical dates in most provinces. Your agent writes the real ones into the offer.</p>
+        <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">Typical dates. Your agent sets the real ones.</p>
       </div>
 
       {onSold && <SoldPrices sold={soldHere} units={unitsOf(l)} onChange={(list) => onSold([...sold.filter((x) => !soldHere.includes(x)), ...list])} />}
@@ -141,7 +139,7 @@ export default function OfferRoom({ s, offer, onOffer, listings = [], offMarket 
       {onAgent && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl p-4 ring-1 ring-(--line-strong) ring-inset">
           <p className="text-sm text-zinc-700 dark:text-zinc-300">
-            <span className="font-semibold text-zinc-950 dark:text-white">An agent writes and sends the offer.</span> In most of Canada the seller pays the buyer’s agent, so it usually costs you nothing.
+            <span className="font-semibold text-zinc-950 dark:text-white">An agent sends your offer.</span> The seller usually pays them, so it’s free to you.
           </p>
           <Button variant="primary" onClick={() => onAgent(l, { offer, ...terms })}>
             <UserRound className="size-4" aria-hidden /> Talk to an agent about this home
@@ -158,8 +156,8 @@ function SoldPrices({ sold, units, onChange }) {
   const [address, setAddress] = useState('');
   return (
     <details className="rounded-xl p-4 ring-1 ring-(--line-strong) ring-inset" open={sold.length > 0}>
-      <summary className="cursor-pointer text-sm font-semibold text-zinc-950 dark:text-white">Add sold prices your agent sends you {sold.length > 0 && `(${sold.length})`}</summary>
-      <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">Agents can pull what similar homes nearby sold for. Two or more, and the range above is built on them. They stay with your numbers.</p>
+      <summary className="cursor-pointer text-sm font-semibold text-zinc-950 dark:text-white">Add sold prices from an agent {sold.length > 0 && `(${sold.length})`}</summary>
+      <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">Ask an agent what similar homes nearby sold for. Add two or more and the range uses them.</p>
       {sold.length > 0 && (
         <ul className="mt-2 divide-y divide-hairline text-sm">
           {sold.map((x, i) => (

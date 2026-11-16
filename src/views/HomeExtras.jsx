@@ -36,15 +36,15 @@ export function ReadyChecklist({ p, ready, onReady, ratePct, taxPct, rentEach, b
   const bodies = {
     credit: (
       <>
-        Lenders want a score around 680 or higher for the best rates; 600 is about the least most will take. Your report is free from Equifax and TransUnion:{' '}
-        <Ext href="https://www.canada.ca/en/financial-consumer-agency/services/credit-reports-score/order-credit-report.html">how to get it</Ext>. Fix any mistakes, pay every bill
-        on time, and keep card balances under a third of the limit.
+        Aim for 680 or more for the best rates. It’s free from Equifax and TransUnion:{' '}
+        <Ext href="https://www.canada.ca/en/financial-consumer-agency/services/credit-reports-score/order-credit-report.html">how to get it</Ext>. Fix any mistakes. Pay bills on
+        time, and keep cards under a third of their limit.
       </>
     ),
     fhsa: (
       <>
-        Up to $8,000 a year comes off your taxable income and comes out tax-free to buy. Open one now even with a little in it: the room starts the year you open it. Any bank or
-        online brokerage can open one. <Ext href="https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/first-home-savings-account.html">FHSA rules</Ext>
+        Save up to $8,000 a year, cut your taxes, and take it out tax-free to buy. Open one now, even with a little: your room starts the year you open it. Any bank can do it.{' '}
+        <Ext href="https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/first-home-savings-account.html">FHSA rules</Ext>
       </>
     ),
     save: saved ? (
@@ -58,29 +58,35 @@ export function ReadyChecklist({ p, ready, onReady, ratePct, taxPct, rentEach, b
         . There’s also about {money(benefitsTotal)} in government money.
       </>
     ),
-    docs: 'Two years of T4s or Notices of Assessment, your two latest pay stubs, a letter from your employer with your salary and start date, 90 days of bank statements showing the down payment, and photo ID. Self-employed: two years of T1 Generals. A gift: a signed letter saying it isn’t a loan.',
+    docs: (
+      <>
+        Pay stubs, a job letter, tax slips, 90 days of bank statements, and ID.{' '}
+        <a href="#preapproval" className={link} onClick={(e) => (e.preventDefault(), document.getElementById('preapproval')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))}>
+          See your exact list
+        </a>
+        .
+      </>
+    ),
     preapproval: (
       <>
-        A pre-approval checks your income and credit, holds a rate for 90 to 120 days, and tells sellers you’re serious. Do it once you’re within a few months of buying. A
-        mortgage broker compares many lenders at once and is usually free to you.{' '}
+        It holds a rate for about 4 months and shows sellers you’re serious. Do it a few months before you buy. A broker is free to you.{' '}
         <a href="#preapproval" className={link} onClick={(e) => (e.preventDefault(), document.getElementById('preapproval')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))}>
-          Build your pre-approval packet
-        </a>{' '}
-        (your document list and a summary for the lender),
+          Get your papers ready
+        </a>
+        ,{' '}
         <button type="button" onClick={onBroker} className={link}>
-          Get a broker to call you
-        </button>{' '}
-        or read{' '}
+          have a broker call you
+        </button>
+        , or{' '}
         <a href={sitePage('/lenders/')} className={link}>
-          how to find a lender
+          find a lender yourself
         </a>
         .
       </>
     ),
     realtor: (
       <>
-        A buyer’s agent finds homes, books showings, pulls what similar homes sold for, writes your offer and negotiates. The seller usually pays their commission. Talk to two
-        or three: ask how many first-time buyers they helped last year, and how they price an offer. You’ll sign a buyer agreement: read how long it lasts.{' '}
+        An agent shows you homes, finds what similar ones sold for, and writes your offer. The seller usually pays them. Talk to two or three before you sign with one.{' '}
         {onAgent && (
           <button type="button" onClick={onAgent} className={link}>
             Have an agent contact me
@@ -93,22 +99,20 @@ export function ReadyChecklist({ p, ready, onReady, ratePct, taxPct, rentEach, b
         <a href="#homes" onClick={go('homes')} className={link}>
           Homes for me
         </a>{' '}
-        shows today’s listings with what each would cost you a month and the cash to close, marked fits, stretch or not yet. Go to viewings with your realtor; look at the roof,
-        windows, furnace age and water in the basement.{rental ? ' For a rental unit, check it has its own entrance and is legal.' : ''}
+        shows what each home would cost you. At viewings, check the roof, windows, furnace age and the basement for water.{rental ? ' For a rental unit, make sure it’s legal.' : ''}
       </>
     ),
-    offer: `Your realtor writes it. Put in conditions: financing (5 to 7 days for your lender to approve this home) and inspection, so you can walk away and keep your deposit if either fails. The deposit, often 2 to 5% of the price, is due within a day of acceptance and comes out of your down payment.${rental ? ' Ask for the current rent and leases if a unit is rented.' : ''}`,
-    inspection: `A home inspector spends two or three hours checking the structure, roof, plumbing, wiring and heating, for about $400 to $600. Go along. If something big turns up, ask for a lower price or walk away before the condition ends.${rental ? ' Ask them to look at fire separation and exits for the rental unit.' : ''}`,
-    insurance: `Your lender needs proof of home insurance before closing. Get two or three quotes once your offer is firm.${rental ? ' Tell the insurer you’ll rent out a unit: it needs landlord coverage.' : ''}`,
+    offer: `Your agent writes it. Add conditions for your mortgage and an inspection, so you can back out safely. The deposit (often 2 to 5%) is due within a day and counts toward your down payment. Each listing’s “Make an offer” helps you pick a price.${rental ? ' Ask for the leases if a unit is rented.' : ''}`,
+    inspection: `About $400 to $600, two or three hours. Go along. Big problem? Ask for less, or walk away before the condition ends.${rental ? ' Have them check the rental unit’s fire safety and exits.' : ''}`,
+    insurance: `Your lender needs it before closing. Get two or three quotes once your offer is firm.${rental ? ' Tell them you’ll rent out a unit.' : ''}`,
     lawyer: (
       <>
-        {quebec ? 'In Québec a notary' : 'A real estate lawyer'} checks the title, moves the money and registers the home in your name, for about $1,500 to $2,500. Have this ready
-        for closing day, on top of the down payment: {money(c.ltt)} land transfer tax
+        {quebec ? 'A notary' : 'A lawyer'} makes the home legally yours, for about $1,500 to $2,500. On top of the down payment, have ready: {money(c.ltt)} land transfer tax
         {c.refund > 0 ? `, less ${money(c.refund)} first-time buyer rebate` : ''}, about {money(c.other)} in legal and other costs
         {c.premiumPst > 0 ? `, and ${money(c.premiumPst)} sales tax on the mortgage insurance` : ''}. That’s {money(c.total)} in all for a {money(p.targetPrice)} home.
       </>
     ),
-    moving: 'Book movers early for month-end. Put hydro, gas, water and internet in your name from closing day. Change your address with Canada Post and the CRA. Keep a cushion for the first repairs, and claim the $1,500 home buyers’ tax credit on your next return.',
+    moving: 'Book movers early. Put utilities in your name from closing day. Update your address with Canada Post and the CRA. Claim the $1,500 home buyers’ tax credit on your next return.',
   };
   const steps = stepsFor(p).map((s) => ({ ...s, auto: s.id === 'save' ? saved : false, body: bodies[s.id] }));
   const done = (s) => s.auto || ready[s.id] === true;

@@ -61,15 +61,15 @@ export default function HomesForMe({ feedState, indexState, city, onCity, market
   return (
     <div className="space-y-6">
       <ViewHeader title="Homes for me" aside={<CityPicker city={city} index={indexState?.feed} onCity={onCity} />}>
-        Today’s listings in {place.name} you could live in, run through your numbers{profile.gift > 0 ? ' (your family gift counted)' : ''}.
+        Homes for sale in {place.name} today, and what each would cost you{profile.gift > 0 ? ' (your family gift counted)' : ''}.
       </ViewHeader>
       {nextStep}
 
       {!profile.entered && (
         <Card className="p-5 text-sm text-zinc-700 dark:text-zinc-300">
-          These use example numbers until you answer the questions on My plan.{' '}
+          These use example numbers for now.{' '}
           <button type="button" onClick={() => onView('home')} className="font-medium text-emerald-700 hover:underline dark:text-emerald-400">
-            Answer them now
+            Use your own
           </button>
         </Card>
       )}
@@ -105,7 +105,7 @@ export default function HomesForMe({ feedState, indexState, city, onCity, market
                 </Button>
               ))}
           </div>
-          {alert && <p className="-mt-3 text-xs text-zinc-500 dark:text-zinc-400">New matches show here. With an account and email (in the menu), the week’s best three come by email each Monday, or every morning with Plus.</p>}
+          {alert && <p className="-mt-3 text-xs text-zinc-500 dark:text-zinc-400">New matches show here. Add your email in the menu to get them by email too.</p>}
 
           <Card>
             <ul className="divide-y divide-hairline">
@@ -124,7 +124,7 @@ export default function HomesForMe({ feedState, indexState, city, onCity, market
                       </div>
                       <p className="mt-1 truncate text-[15px] font-semibold text-zinc-950 dark:text-white">{l.address}</p>
                       <p className="mt-0.5 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-400">
-                        {fit ? fit.reason : 'The listing doesn’t give the property tax, so we can’t say what it would cost you or whether you’d qualify. Ask the listing agent for the tax bill.'}
+                        {fit ? fit.reason : 'No property tax on the listing, so we can’t work out your cost yet.'}
                       </p>
                     </div>
                     <div className="flex flex-wrap items-end gap-x-6 gap-y-2 sm:justify-end">
@@ -167,9 +167,15 @@ export default function HomesForMe({ feedState, indexState, city, onCity, market
             </Button>
           )}
           <p className="px-1 text-xs text-zinc-500 dark:text-zinc-400">
-            Each assumes the least down payment at today’s rate, with mortgage insurance, the listing’s own tax bill, insurance and an allowance for repairs. Fits: you’d qualify and
-            have the cash. Stretch: you’d qualify and could save the rest within a year. Where a listing doesn’t give the rent of the other units, it’s the city’s average. A lender makes the real call.
+            <strong className="font-semibold">Fits:</strong> you could buy it now. <strong className="font-semibold">Stretch:</strong> within a year of saving.
           </p>
+          <details className="px-1 text-xs text-zinc-500 dark:text-zinc-400">
+            <summary className="cursor-pointer font-medium text-emerald-700 dark:text-emerald-400">How this works</summary>
+            <p className="mt-1">
+              Each home uses the smallest down payment allowed, today’s rate, mortgage insurance, the listing’s tax bill, home insurance and money for repairs. Rent from other units is
+              the listing’s, or the city’s average. A lender makes the final call.
+            </p>
+          </details>
           <AsOf className="px-1" />
         </>
       )}
