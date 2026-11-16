@@ -1,7 +1,7 @@
-// The North Key Realty mark: a filled rounded square in the brand brown, on a
+// The NorthKey mark: a filled rounded square in the brand brown, on a
 // 48-unit square. Logo.jsx, the PDFs,
 // public/favicon.svg and the app icons all draw this geometry, in COLOR.
-// (This file replaces src/lib/brand.js on the North Key Realty copy of the site;
+// (This file replaces src/lib/brand.js on the NorthKey copy of the site;
 // see scripts/rebrand.mjs.)
 export const MARK = {
   color: '#7A5A3C',

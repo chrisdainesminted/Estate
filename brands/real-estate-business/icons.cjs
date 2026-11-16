@@ -1,4 +1,4 @@
-// Renders North Key Realty's icons and link preview into brands/real-estate-business/public/,
+// Renders NorthKey's icons and link preview into brands/real-estate-business/public/,
 // which scripts/rebrand.mjs copies over public/. Needs Playwright with Chromium.
 // Usage: node brands/real-estate-business/icons.cjs
 const { chromium } = require('playwright');
@@ -23,7 +23,7 @@ const favicon = (size) => `<body style="margin:0;width:${size}px;height:${size}p
 const keys = `data:image/webp;base64,${fs.readFileSync(path.join(OUT, 'landing/hw/keys.webp')).toString('base64')}`;
 const og = () => `<body style="margin:0;width:1200px;height:630px;background:${CREAM};font-family:Manrope,sans-serif;display:flex;box-sizing:border-box;padding:64px 64px 64px 80px;gap:56px">
   <div style="flex:1 1 0;display:flex;flex-direction:column;justify-content:space-between">
-    <div style="display:flex;align-items:center;gap:16px">${markSvg(52)}<span style="font-family:'DM Sans';font-size:44px;font-weight:600;letter-spacing:-0.03em;color:${INK}">North Key <span style="color:${LIGHT};font-weight:500">Realty</span></span></div>
+    <div style="display:flex;align-items:center;gap:16px">${markSvg(52)}<span style="font-family:'DM Sans';font-size:44px;font-weight:600;letter-spacing:-0.03em;color:${INK}">North<span style="color:${BROWN}">Key</span></span></div>
     <div>
       <div style="font-family:'DM Sans';font-size:68px;line-height:1.02;font-weight:600;letter-spacing:-0.045em;color:${INK}">Real estate shouldn’t be <span style="color:${BROWN}">scary.</span></div>
       <div style="margin-top:24px;font-size:23px;color:#7d6a56">Buying, selling, investing and renting · Anywhere in Canada</div>

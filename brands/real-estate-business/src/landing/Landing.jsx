@@ -12,10 +12,10 @@ import { DEFAULT_MARKET, INDEX_DOC, dedupeListings, feedDoc, listingCity, listin
 import { money } from '../lib/format.js';
 
 /**
- * North Key Realty's front page at /. The look and words are its own; every
+ * NorthKey's front page at /. The look and words are its own; every
  * number comes from the same engine as the app (the buying rules, the
  * mortgage maths, the morning run's listings), and every link opens the
- * real tool. (This file replaces src/landing/Landing.jsx on the North Key Realty
+ * real tool. (This file replaces src/landing/Landing.jsx on the NorthKey
  * copy of the site; see scripts/rebrand.mjs.)
  */
 
@@ -144,7 +144,7 @@ function Nav() {
   return (
     <header className="sticky top-0 z-30 border-b border-hairline bg-(--page)/90 backdrop-blur supports-[backdrop-filter]:bg-(--page)/80">
       <div className={`${shell} flex h-[84px] items-center justify-between gap-4`}>
-        <a href="/" aria-label="North Key Realty home" className="min-w-0 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--accent)">
+        <a href="/" aria-label="NorthKey home" className="min-w-0 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--accent)">
           <Logo />
         </a>
         <nav aria-label="Sections" className="hidden items-center gap-5 text-sm font-semibold text-zinc-600 lg:flex dark:text-zinc-400">

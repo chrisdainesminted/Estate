@@ -1,4 +1,4 @@
-/* North Key Realty: warm cream pages, brown accents, DM Sans headings over Manrope.
+/* NorthKey: warm cream pages, brown accents, DM Sans headings over Manrope.
    scripts/rebrand.mjs puts the @import lines at the top of src/index.css and
    the rest at the end, so these win over the Squarely look. */
 @import '@fontsource-variable/dm-sans';
@@ -138,7 +138,7 @@ html.dark .shot {
   }
 }
 
-/* North Key Realty keeps its calm look: no grid, corner ticks or glow from the app's HUD, and its own fonts for labels and ranks. */
+/* NorthKey keeps its calm look: no grid, corner ticks or glow from the app's HUD, and its own fonts for labels and ranks. */
 :root,
 html.dark {
   --hud-grid: transparent;
