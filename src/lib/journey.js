@@ -189,6 +189,19 @@ export function nextStep({ profile, ready = {}, plan }) {
 
 
 /**
+ * The home a new plan aims at: what the person could buy today (the
+ * dearer of on their own or with a rental unit, rounded down to $5,000),
+ * never above a typical home in their city. With nothing they could buy
+ * yet, the typical home. { targetPrice, targetUnits? }
+ */
+export function startingTarget(profile, ratePct) {
+  const plan = myPlan({ profile: { ...profile, entered: true }, ratePct });
+  const typical = plan.local.city.price;
+  if (!(plan.best.price > 0)) return { targetPrice: typical };
+  return { targetPrice: Math.min(Math.floor(plan.best.price / 5000) * 5000, typical), targetUnits: plan.best.units };
+}
+
+/**
  * How ready someone is to buy, out of 100: their cash toward the home
  * they want (60) and the checklist steps they've ticked (40), with the
  * months the savings plan says are left. Null before the questions.

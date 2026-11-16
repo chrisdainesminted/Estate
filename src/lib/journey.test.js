@@ -143,3 +143,23 @@ describe('readiness', () => {
     expect(none.pct).toBeLessThanOrEqual(60);
   });
 });
+
+describe('startingTarget', () => {
+  it('aims a new plan at what you could buy today, never above a typical home', async () => {
+    const { startingTarget, myPlan } = await import('./journey.js');
+    const profile = { income: 90000, savings: 40000, rentNow: 1500, city: 'toronto', firstTime: true };
+    const t = startingTarget(profile, 5);
+    const best = myPlan({ profile: { ...profile, entered: true }, ratePct: 5 }).best;
+    expect(t.targetPrice).toBe(Math.floor(best.price / 5000) * 5000);
+    expect(t.targetUnits).toBe(best.units);
+    // With that target, the plan says you're ready now.
+    const plan = myPlan({ profile: { ...profile, ...t, entered: true }, ratePct: 5 });
+    expect(plan.goal.short).toBe(0);
+    // A big earner in a cheap city aims at the typical home, not past it.
+    expect(startingTarget({ income: 400000, savings: 500000, rentNow: 1000, city: 'thunder-bay' }, 5).targetPrice).toBe(390000);
+  });
+  it('keeps the typical home when nothing is affordable yet', async () => {
+    const { startingTarget } = await import('./journey.js');
+    expect(startingTarget({ income: 20000, savings: 0, rentNow: 1500, city: 'toronto' }, 5)).toEqual({ targetPrice: 1563000 });
+  });
+});

@@ -4,7 +4,7 @@ import { buyShareText, shareResult } from '../lib/shareResult.js';
 import { track } from '../lib/track.js';
 import { SITE_URL } from '../lib/share.js';
 import { RULES, RULES_CHECKED, benefits, buyCheck, liveIn, localFor, maxPrice } from '../lib/firstHome.js';
-import { monthName, myPlan, readiness } from '../lib/journey.js';
+import { monthName, myPlan, readiness, startingTarget } from '../lib/journey.js';
 import { SUITE_KINDS, SUITE_RULES_CHECKED, allowedFor, moneyFor, stepsFor, suitePayback } from '../lib/suites.js';
 import { cityByKey, guessCity, provinceName } from '../lib/canada.js';
 import { dealPlace } from '../lib/finance.js';
@@ -377,7 +377,7 @@ const STEPS = [
   { title: 'A sharper answer (optional)', need: [] },
 ];
 
-function Start({ onHome }) {
+function Start({ onHome, ratePct }) {
   const [v, setV] = useState({ income: null, savings: null, debts: null, rentNow: null, monthlySave: null });
   const [lender, setLender] = useState({ credit: null, selfEmployed: false });
   const [city, setCity] = useState(guessCity);
@@ -387,8 +387,11 @@ function Start({ onHome }) {
     setV((x) => ({ ...x, [key]: n }));
     setMissing((m) => m.filter((k) => k !== key));
   };
-  const finish = () =>
-    onHome({ city, rentOther: null, taxPct: null, targetPrice: cityByKey(city).price, income: v.income, savings: v.savings, debts: Number.isFinite(v.debts) ? v.debts : 0, rentNow: v.rentNow, ...(Number.isFinite(v.monthlySave) ? { monthlySave: v.monthlySave } : {}), ...lender, entered: true });
+  const finish = () => {
+    const answers = { city, rentOther: null, taxPct: null, income: v.income, savings: v.savings, debts: Number.isFinite(v.debts) ? v.debts : 0, rentNow: v.rentNow, ...(Number.isFinite(v.monthlySave) ? { monthlySave: v.monthlySave } : {}), ...lender };
+    // The plan starts at the home they could buy today, so the first answer is one they can act on.
+    onHome({ ...answers, ...startingTarget(answers, ratePct), entered: true });
+  };
   const submit = (e) => {
     e.preventDefault();
     const gaps = STEPS[step].need.filter((k) => !Number.isFinite(v[k]));
@@ -487,7 +490,7 @@ function GapCard({ plan, onHome, onAccount, account, bare = false }) {
       {!bare && (
         <div className="border-b border-hairline px-5 py-4 sm:px-6">
           <h2 className="text-base font-semibold text-zinc-950 dark:text-white">The home you want, and when you’ll get there</h2>
-          <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">Start from a typical home in {placeName(plan.local.city)}, or set your own.</p>
+          <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">It starts at the home you could buy today. Aim higher to see when you’d get there, and the shortcuts.</p>
         </div>
       )}
       <div className="grid gap-6 p-5 sm:px-6 @3xl:grid-cols-2">
@@ -630,7 +633,7 @@ export default function HomeView({ profile: raw, suite, rvb = {}, market, items,
     return (
       <div className="space-y-6">
         {header}
-        <Start onHome={onHome} />
+        <Start onHome={onHome} ratePct={ratePct} />
         <SectionGroup>
           <Section id="home-suite" title="Add a suite or backyard home" meaning="What’s allowed where you are, the permits, and whether it pays.">
             <SuiteGuide s={suite} onSuite={onSuite} city={guessCity()} />
