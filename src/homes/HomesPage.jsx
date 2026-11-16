@@ -406,14 +406,24 @@ function Review() {
         {inbox.map((m) => (
           <li key={m.id} className={`panel space-y-1.5 p-4 text-sm ${m.done ? 'opacity-60' : ''}`}>
             <p className="font-semibold text-zinc-950 dark:text-white">
-              {m.kind === 'broker' ? 'Broker request' : `Message${m.topic ? ` · ${m.topic}` : ''}`} · {m.name} ·{' '}
+              {m.kind === 'agent' ? `Agent request (${m.side === 'sell' ? 'selling' : 'buying'})` : m.kind === 'broker' ? 'Broker request' : `Message${m.topic ? ` · ${m.topic}` : ''}`} · {m.name} ·{' '}
               <a className="underline" href={`mailto:${m.email}`}>
                 {m.email}
               </a>
               {m.phone ? ` · ${m.phone}` : ''}
             </p>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">{new Date(m.at).toLocaleString('en-CA')}</p>
-            {m.kind === 'broker' && (
+            {m.kind === 'agent' && (m.home || m.url) && (
+              <p className="text-zinc-700 dark:text-zinc-300">
+                {m.home}{' '}
+                {m.url && (
+                  <a className="underline" href={m.url} target="_blank" rel="noreferrer">
+                    listing
+                  </a>
+                )}
+              </p>
+            )}
+            {(m.kind === 'broker' || m.kind === 'agent') && (
               <p className="text-zinc-700 dark:text-zinc-300">
                 {[m.city, m.timeline, m.price > 0 && `could buy ${money(m.price)}`, m.income > 0 && `income ${money(m.income)}`].filter(Boolean).join(' · ')}
               </p>

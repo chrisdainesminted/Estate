@@ -22,7 +22,7 @@ const Ext = ({ href, children }) => (
  * order. Saving ticks itself from the person's numbers; the rest they tick,
  * and the ticks are saved with their numbers (and their account, if any).
  */
-export function ReadyChecklist({ p, ready, onReady, ratePct, taxPct, rentEach, benefitsTotal, onBroker, onView }) {
+export function ReadyChecklist({ p, ready, onReady, ratePct, taxPct, rentEach, benefitsTotal, onBroker, onAgent, onView }) {
   const place = cityByKey(p.city);
   const target = buyCheck({ profile: p, price: p.targetPrice, units: p.targetUnits, ratePct, taxesMonthly: (p.targetPrice * taxPct) / 1200, rentFromOthers: rentEach * (p.targetUnits - 1), city: p.city });
   const saved = p.savings >= target.cashNeeded;
@@ -63,6 +63,10 @@ export function ReadyChecklist({ p, ready, onReady, ratePct, taxPct, rentEach, b
       <>
         A pre-approval checks your income and credit, holds a rate for 90 to 120 days, and tells sellers you’re serious. Do it once you’re within a few months of buying. A
         mortgage broker compares many lenders at once and is usually free to you.{' '}
+        <a href="#preapproval" className={link} onClick={(e) => (e.preventDefault(), document.getElementById('preapproval')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))}>
+          Build your pre-approval packet
+        </a>{' '}
+        (your document list and a summary for the lender),
         <button type="button" onClick={onBroker} className={link}>
           Get a broker to call you
         </button>{' '}
@@ -73,7 +77,17 @@ export function ReadyChecklist({ p, ready, onReady, ratePct, taxPct, rentEach, b
         .
       </>
     ),
-    realtor: 'A buyer’s agent finds homes, books showings, writes your offer and negotiates. The seller usually pays their commission. Talk to two or three: ask how many first-time buyers they helped last year, and how they price an offer. You’ll sign a buyer agreement: read how long it lasts.',
+    realtor: (
+      <>
+        A buyer’s agent finds homes, books showings, pulls what similar homes sold for, writes your offer and negotiates. The seller usually pays their commission. Talk to two
+        or three: ask how many first-time buyers they helped last year, and how they price an offer. You’ll sign a buyer agreement: read how long it lasts.{' '}
+        {onAgent && (
+          <button type="button" onClick={onAgent} className={link}>
+            Have an agent contact me
+          </button>
+        )}
+      </>
+    ),
     search: (
       <>
         <a href="#homes" onClick={go('homes')} className={link}>

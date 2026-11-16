@@ -159,3 +159,14 @@ describe('the funnel', () => {
     expect(() => d.countEvent('share', '9.9.9.9')).toThrow(/Too many/);
   });
 });
+
+describe('agent requests', () => {
+  it('keep which home and side, and need consent', () => {
+    expect(cleanInbox('agent', { name: 'Sam', email: 's@x.ca', consent: false }).error).toMatch(/an agent/);
+    const d = cleanInbox('agent', { name: 'Sam', email: 's@x.ca', consent: true, side: 'buy', home: '12 Elm St, Thunder Bay', url: 'javascript:alert(1)', price: 400000 });
+    expect(d).toMatchObject({ side: 'buy', home: '12 Elm St, Thunder Bay', url: '', price: 400000 });
+    const mail = inboxEmail('agent', { ...d, url: 'https://example.com/l/1' });
+    expect(mail.subject).toContain('Agent request from Sam');
+    expect(mail.text).toContain('About this home: 12 Elm St');
+  });
+});

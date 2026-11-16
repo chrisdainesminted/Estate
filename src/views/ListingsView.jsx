@@ -582,7 +582,7 @@ export function CityPicker({ city, index, onCity }) {
   );
 }
 
-export default function ListingsView({ feedState, indexState, city, onCity, market, baseMarket, alerts = [], onAlerts, targets, profile, importedIds, onMarket, onAnalyze, onHide, onUnhide, proCount = 0, onView, onOfferPack }) {
+export default function ListingsView({ feedState, indexState, city, onCity, market, baseMarket, alerts = [], onAlerts, targets, profile, importedIds, onMarket, onAnalyze, onHide, onUnhide, proCount = 0, onView, onOfferPack, onAgent }) {
   const plus = usePlus();
   const { status, feed } = feedState;
   const [sort, setSort] = useState('perDoor');
@@ -697,6 +697,11 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
           onUnhide={onUnhide}
           onTax={setTax}
           onOfferPack={onOfferPack}
+          listings={feed?.listings ?? []}
+          offMarket={feed?.offMarket ?? []}
+          sold={baseMarket?.sold?.[city] ?? []}
+          onSold={onMarket ? (list) => onMarket({ sold: { ...(baseMarket?.sold ?? {}), [city]: list } }) : undefined}
+          onAgent={onAgent}
           watching={alerts.some((a) => a.listing === opened.listing.id)}
           onWatch={
             onAlerts

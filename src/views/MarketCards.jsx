@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ArrowLeft, BellPlus, BellRing, ExternalLink, EyeOff, Eye, FileText, TrendingDown } from 'lucide-react';
 import { PlusTag, usePlus } from '../components/Plus.jsx';
+import OfferRoom from './OfferRoom.jsx';
 import HousePhoto, { useMapsKey } from '../components/HousePhoto.jsx';
 import GradeBadge from '../components/GradeBadge.jsx';
 import RiskList from '../components/RiskList.jsx';
@@ -233,7 +234,7 @@ function Fact({ name, value, tone = '', note }) {
  * One listing, laid out like a stock's page: pictures, the price and how
  * it has moved, what it would pay you, and a ticket to try an offer.
  */
-export function ListingDetail({ s, place, imported, hidden, onBack, onAnalyze, onHide, onUnhide, onTax, watching = false, onWatch, onOfferPack }) {
+export function ListingDetail({ s, place, imported, hidden, onBack, onAnalyze, onHide, onUnhide, onTax, watching = false, onWatch, onOfferPack, listings = [], offMarket = [], sold = [], onSold, onAgent }) {
   const plus = usePlus();
   const l = s.listing;
   const link = listingPageUrl(l.url, l.address);
@@ -328,6 +329,7 @@ export function ListingDetail({ s, place, imported, hidden, onBack, onAnalyze, o
               </Button>
             </form>
           )}
+          <OfferRoom s={s} offer={offer} onOffer={setOffer} listings={listings} offMarket={offMarket} sold={sold} onSold={onSold} onAgent={onAgent} />
         </section>
 
         <aside className="min-w-0 flex-[1_1_320px]">

@@ -7,18 +7,29 @@ import { sitePage } from '../lib/site.js';
 const input = 'field w-full px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100';
 const label = 'mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400';
 
-/** Ask to be put in touch with a mortgage broker, with your numbers attached if you want. */
-export default function BrokerForm({ p, maxPrice, guide = false, note = '' }) {
+/**
+ * Ask to be put in touch with a mortgage broker (`kind` 'broker') or a
+ * real estate agent ('agent'), with your numbers attached if you want. An
+ * agent request can name the home it's about (`home`: { address, url, price }).
+ */
+export default function BrokerForm({ p, maxPrice, guide = false, note = '', kind = 'broker', home = null }) {
   const place = cityByKey(p.city);
-  const [f, setF] = useState({ name: '', email: '', phone: '', timeline: '3-6 months', note, share: true, consent: false, website: '' });
+  const agent = kind === 'agent';
+  const [f, setF] = useState({ name: '', email: '', phone: '', timeline: home ? 'Within 3 months' : '3-6 months', note, share: true, consent: false, website: '', side: 'buy' });
   const [state, setState] = useState({ status: 'idle', error: '' });
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
   const send = async (e) => {
     e.preventDefault();
     setState({ status: 'sending', error: '' });
     try {
-      const body = { ...f, city: place.name, ...(f.share && p.entered ? { price: maxPrice, income: p.income } : {}) };
-      const res = await fetch('/api/broker', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      const body = {
+        ...f,
+        // About one home: its city, not the one in the person's own numbers.
+        city: (agent && home?.city) || place.name,
+        ...(f.share && p.entered ? { price: maxPrice, income: p.income } : {}),
+        ...(agent && home ? { home: home.address, url: home.url, price: home.price || maxPrice } : {}),
+      };
+      const res = await fetch(`/api/${agent ? 'agent' : 'broker'}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Couldn’t send that. Try again in a minute.');
       setState({ status: 'sent', error: '' });
@@ -30,12 +41,21 @@ export default function BrokerForm({ p, maxPrice, guide = false, note = '' }) {
     return (
       <div className="m-5 rounded-md bg-emerald-500/10 p-4 text-sm text-emerald-900 ring-1 ring-emerald-600/20 ring-inset dark:text-emerald-100">
         <p className="font-semibold">Thanks, {f.name.split(' ')[0]}. Your request is in.</p>
-        <p className="mt-1">We’ll email you at {f.email} to introduce a licensed mortgage broker in {provinceName(place.province)}. There’s no cost and no obligation.</p>
+        <p className="mt-1">
+          We’ll email you at {f.email} to introduce a licensed {agent ? 'real estate agent' : 'mortgage broker'} in {provinceName(place.province)}. There’s no cost and no obligation.
+        </p>
       </div>
     );
   }
   return (
     <form onSubmit={send} className="space-y-4 p-5">
+      {agent ? (
+        <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+          A buyer’s agent books showings, pulls what similar homes sold for, writes your offer and negotiates it. In most of Canada the seller pays them, so it usually costs you
+          nothing. Ask, and we’ll introduce you to a licensed agent in {place.name}.
+          {home && <span className="mt-1 block font-medium text-zinc-950 dark:text-white">About: {home.address}</span>}
+        </p>
+      ) : (
       <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
         A mortgage broker compares many lenders at once, gets you pre-approved, and is usually paid by the lender, not you. Ask, and we’ll introduce you to a licensed broker in{' '}
         {provinceName(place.province)}.{' '}
@@ -45,6 +65,19 @@ export default function BrokerForm({ p, maxPrice, guide = false, note = '' }) {
           </a>
         )}
       </p>
+      )}
+      {agent && !home && (
+        <div role="radiogroup" aria-label="Buying or selling" className="inline-flex rounded-md p-0.5 text-sm ring-1 ring-(--line-strong) ring-inset">
+          {[
+            ['buy', 'Buying'],
+            ['sell', 'Selling'],
+          ].map(([v, t]) => (
+            <button key={v} type="button" role="radio" aria-checked={f.side === v} onClick={() => setF((x) => ({ ...x, side: v }))} className={`rounded px-3 py-1 ${f.side === v ? 'bg-emerald-600 text-white' : 'text-zinc-700 dark:text-zinc-300'}`}>
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label htmlFor="br-name" className={label}>
@@ -85,14 +118,16 @@ export default function BrokerForm({ p, maxPrice, guide = false, note = '' }) {
       {p.entered && (
         <label className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
           <input type="checkbox" checked={f.share} onChange={set('share')} className="mt-1 accent-emerald-600" />
-          Include my income ({money(p.income)}) and what I could buy ({money(maxPrice)}) so the broker can start faster.
+          Include my income ({money(p.income)}) and what I could buy ({money(maxPrice)}) so the {agent ? 'agent' : 'broker'} can start faster.
         </label>
       )}
       <label className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
         <input type="checkbox" required checked={f.consent} onChange={set('consent')} className="mt-1 accent-emerald-600" />
         <span>
-          Pass my details to one licensed mortgage broker so they can contact me. Squarely may be paid a referral fee by the broker; it never changes your rate or costs you
-          anything. <a href={sitePage('/privacy/')} className="underline underline-offset-2">Privacy</a>
+          {agent
+            ? 'Pass my details to one licensed real estate agent so they can contact me. Squarely isn’t paid by agents for this. '
+            : 'Pass my details to one licensed mortgage broker so they can contact me. Squarely may be paid a referral fee by the broker; it never changes your rate or costs you anything. '}
+          <a href={sitePage('/privacy/')} className="underline underline-offset-2">Privacy</a>
         </span>
       </label>
       {state.error && (

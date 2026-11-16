@@ -37,8 +37,11 @@ export function cleanInbox(kind, b) {
     if (message.length < 5) return { error: 'Add a message.' };
     return { name, email, topic: clip(b.topic, 40), message };
   }
-  if (b.consent !== true) return { error: 'Tick the box so we can pass your details to a broker.' };
-  return { name, email, phone, city: clip(b.city, 60), timeline: clip(b.timeline, 40), price: Math.max(Number(b.price) || 0, 0), income: Math.max(Number(b.income) || 0, 0), note: clip(b.note, 1000), consent: true };
+  const who = kind === 'agent' ? 'an agent' : 'a broker';
+  if (b.consent !== true) return { error: `Tick the box so we can pass your details to ${who}.` };
+  const base = { name, email, phone, city: clip(b.city, 60), timeline: clip(b.timeline, 40), price: Math.max(Number(b.price) || 0, 0), income: Math.max(Number(b.income) || 0, 0), note: clip(b.note, 2000), consent: true };
+  // An agent request can name the home it's about, and whether they're buying or selling.
+  return kind === 'agent' ? { ...base, side: b.side === 'sell' ? 'sell' : 'buy', home: clip(b.home, 160), url: /^https?:\/\//i.test(String(b.url || '')) ? clip(b.url, 400) : '' } : base;
 }
 
 const cad = (n) => '$' + Math.round(n).toLocaleString('en-CA');
@@ -46,7 +49,22 @@ const cad = (n) => '$' + Math.round(n).toLocaleString('en-CA');
 /** The note to the site's owner about a new request: { subject, text, replyTo }. */
 export function inboxEmail(kind, d, origin = '') {
   const lines =
-    kind === 'broker'
+    kind === 'agent'
+      ? [
+          `${d.name} asked to be introduced to a real estate agent, to ${d.side === 'sell' ? 'sell' : 'buy'}.`,
+          '',
+          `Email: ${d.email}`,
+          d.phone && `Phone: ${d.phone}`,
+          d.city && `Where: ${d.city}`,
+          d.timeline && `When: ${d.timeline}`,
+          d.home && `About this home: ${d.home}`,
+          d.url && `Listing: ${d.url}`,
+          d.price > 0 && `Budget or offer: ${cad(d.price)}`,
+          d.note && `Note: ${d.note}`,
+          '',
+          'They agreed to have their details passed to one licensed agent. Reply to this email to reach them.',
+        ]
+      : kind === 'broker'
       ? [
           `${d.name} asked to be introduced to a mortgage broker.`,
           '',
@@ -61,7 +79,7 @@ export function inboxEmail(kind, d, origin = '') {
           'They agreed to have their details passed to one licensed broker. Reply to this email to reach them.',
         ]
       : [`${d.name} sent a message${d.topic ? ` about ${d.topic}` : ''}.`, '', `Email: ${d.email}`, '', d.message];
-  const subject = kind === 'broker' ? `Broker request from ${d.name}${d.city ? ` (${d.city})` : ''}` : `Message from ${d.name}`;
+  const subject = kind === 'agent' ? `Agent request from ${d.name}${d.city ? ` (${d.city})` : ''}` : kind === 'broker' ? `Broker request from ${d.name}${d.city ? ` (${d.city})` : ''}` : `Message from ${d.name}`;
   const text = [...lines.filter((l) => l !== false && l !== undefined && l !== null), '', origin && `All requests: ${origin}/homes/#admin (sign in with your admin key)`].filter((l, i, a) => l !== '' || a[i - 1] !== '').join('\n').trim();
   return { subject: `Squarely: ${subject}`.replace(/[\r\n\t]+/g, ' ').slice(0, 200), text, replyTo: d.email };
 }

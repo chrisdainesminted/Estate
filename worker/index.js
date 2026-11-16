@@ -737,8 +737,8 @@ async function api(request, env, url) {
     if (typeof body.key !== 'string' || body.key.length > 140) return json({ error: 'Not found.' }, 404);
     return answer(await directory(env).call({ op: 'report', key: body.key, ip, reason: REPORT_REASONS.includes(body.reason) ? body.reason : 'other', note: body.note }));
   }
-  // A note to the site's owner, or a request to be put in touch with a mortgage broker.
-  if ((parts[0] === 'contact' || parts[0] === 'broker') && parts.length === 1 && method === 'POST') {
+  // A note to the site's owner, or a request to be put in touch with a mortgage broker or a real estate agent.
+  if (['contact', 'broker', 'agent'].includes(parts[0]) && parts.length === 1 && method === 'POST') {
     const body = await readBody(request);
     if (body.website) return json({ ok: true }); // the honeypot field people never see
     const data = cleanInbox(parts[0], body);

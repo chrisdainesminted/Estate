@@ -78,6 +78,7 @@ import { myPlan, nextStep as nextStepFor } from './lib/journey.js';
 import { sellNextStep } from './lib/selling.js';
 import { distressOf } from './lib/distress.js';
 import { track } from './lib/track.js';
+import { askAgent } from './lib/asks.js';
 import { cityByKey } from './lib/canada.js';
 import { cityInAddress, moveToCity, placeLabel } from './lib/place.js';
 import { isBooksLink } from './lib/gate.js';
@@ -1268,6 +1269,10 @@ export default function App() {
                 proCount={proCounts.distressed + proCounts.taxSales}
                 onView={setView}
                 onOfferPack={openOfferPack}
+                onAgent={(l, terms) => {
+                  askAgent({ address: `${l.address}, ${cityByKey(listCity).name}`, city: cityByKey(listCity).name, url: l.url || '', price: terms?.offer || l.price });
+                  setView('ready');
+                }}
               />
             )}
 

@@ -638,6 +638,54 @@ export function mergeFeed(prev, found, { today, now = Date.now(), keepDays = 7, 
   };
 }
 
+const daysBetween = (a, b) => Math.max(Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 864e5), 0);
+
+/** One home's record once it leaves the market (or goes conditional): what it last asked, and how long it took. */
+function offRecord(l, status, today) {
+  const h = Array.isArray(l.priceHistory) ? l.priceHistory : [];
+  const first = Number(h[0]?.price) || Number(l.price);
+  return {
+    id: l.id,
+    address: l.address,
+    units: unitsOf(l),
+    beds: Array.isArray(l.beds) ? l.beds : [],
+    price: Number(l.price),
+    firstPrice: first,
+    cuts: h.filter((x, i) => i > 0 && Number(x.price) < Number(h[i - 1].price)).length,
+    firstSeen: l.firstSeen ?? null,
+    lastSeen: l.lastSeen ?? today,
+    days: l.firstSeen ? daysBetween(l.firstSeen, l.lastSeen ?? today) : null,
+    // 'conditional': an offer was accepted, waiting on its conditions. 'left': sold or withdrawn; the listing doesn't say which.
+    status,
+  };
+}
+
+/**
+ * Homes that came off the market, kept with the feed for a year: every
+ * listing in `prev` that isn't in `next` any more, and every listing in
+ * `next` gone conditional. These are as close to sales as public listings
+ * get (sold prices belong to the real estate boards): what each last
+ * asked, its price cuts, and how many days it took. Returns `next` with
+ * them as `offMarket`, newest first.
+ */
+export function carryOffMarket(prev, next, today, { keepDays = 365, max = 600 } = {}) {
+  const now = new Map((next?.listings ?? []).map((l) => [l.id, l]));
+  const nowAddr = new Set((next?.listings ?? []).map((l) => addressKey(l.address)));
+  const out = new Map();
+  for (const r of [...(next?.offMarket ?? []), ...(prev?.offMarket ?? [])]) if (r?.id && !out.has(r.id)) out.set(r.id, r);
+  for (const l of prev?.listings ?? []) {
+    if (!l?.id || now.has(l.id) || nowAddr.has(addressKey(l.address)) || !(Number(l.price) > 0)) continue;
+    out.set(l.id, offRecord(l, l.status === 'conditional' ? 'conditional' : 'left', today));
+  }
+  for (const l of next?.listings ?? []) if (l.status === 'conditional' && Number(l.price) > 0) out.set(l.id, offRecord({ ...l, lastSeen: l.lastSeen ?? today }, 'conditional', today));
+  const cutoff = addDays(today, -keepDays);
+  const offMarket = [...out.values()]
+    .filter((r) => String(r.lastSeen ?? '') >= cutoff)
+    .sort((a, b) => String(b.lastSeen).localeCompare(String(a.lastSeen)))
+    .slice(0, max);
+  return { ...next, offMarket };
+}
+
 /**
  * The index after one city's run: for each city, the date it was last
  * searched and how many listings its feed holds.
