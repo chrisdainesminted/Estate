@@ -8,17 +8,18 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 /**
  * The listings on a map. Addresses become points through the site's /api/geo,
  * which remembers each one, so the first visit to a city fills in a few at a
- * time. Green dots make money each month (per door); grey ones don't.
+ * time. Investing: green dots make money each month (per door). Buying: green
+ * dots are homes you could buy today.
  */
-export default function ListingsMap({ items, place, homes }) {
+export default function ListingsMap({ items, place, homes, buy = false }) {
   const box = useRef(null);
   const map = useRef(null);
   const layer = useRef(null);
   const [state, setState] = useState({ status: 'loading', shown: 0, pending: 0 });
   const where = `${place.name.replace(/^Elsewhere in /, '')}, ${place.province}`;
   // The parent rebuilds its list each render; redraw only when the listings themselves change.
-  const latest = useRef({ items, homes });
-  latest.current = { items, homes };
+  const latest = useRef({ items, homes, buy });
+  latest.current = { items, homes, buy };
   const idsKey = items.map((s) => `${s.listing.id}:${s.needsTax ? 'x' : s.perDoor}`).join('|');
 
   useEffect(() => {
@@ -38,7 +39,7 @@ export default function ListingsMap({ items, place, homes }) {
 
   useEffect(() => {
     let dead = false;
-    const { items, homes } = latest.current;
+    const { items, homes, buy } = latest.current;
     const queries = items.map((s) => `${s.listing.address}, ${where}`);
     const draw = (points) => {
       layer.current.clearLayers();
@@ -47,12 +48,20 @@ export default function ListingsMap({ items, place, homes }) {
         const p = points[queries[i]];
         if (!p) return;
         bounds.push(p);
-        const good = !s.needsTax && s.perDoor >= 0;
         const home = homes?.get(s.listing.id);
+        // Buying to live in: green where you could buy it today. Investing: green where it pays for itself.
+        const good = buy ? Boolean(home?.canBuy) : !s.needsTax && s.perDoor >= 0;
+        const line = buy
+          ? home
+            ? `Costs you ${esc(money(home.costToLive))}/mo · ${esc(money(home.cashNeeded))} to close`
+            : 'Tax not listed yet, so no monthly cost shown'
+          : s.needsTax
+            ? 'Tax not listed yet, so no cash flow shown'
+            : `${esc(money(s.perDoor, { signed: true }))}/door a month${home ? `<br>Live in: ${esc(money(home.costToLive))}/mo` : ''}`;
         L.circleMarker(p, { radius: 8, weight: 2, color: good ? '#32a72c' : '#71717a', fillColor: good ? '#73ff6a' : '#a1a1aa', fillOpacity: 0.85 })
           .bindPopup(
             `<strong>${esc(s.listing.address)}</strong><br>${esc(money(s.a.price))} · ${esc(s.a.units)} unit${s.a.units === 1 ? '' : 's'}<br>` +
-              (s.needsTax ? 'Tax not listed yet, so no cash flow shown' : `${esc(money(s.perDoor, { signed: true }))}/door a month${home ? `<br>Live in: ${esc(money(home.costToLive))}/mo` : ''}`) +
+              line +
               (s.listing.url ? `<br><a href="${esc(s.listing.url)}" target="_blank" rel="noopener noreferrer">Listing page</a>` : ''),
           )
           .addTo(layer.current);
@@ -81,7 +90,7 @@ export default function ListingsMap({ items, place, homes }) {
     return () => {
       dead = true;
     };
-  }, [idsKey, where]);
+  }, [idsKey, where, buy]);
 
   return (
     <div className="relative">

@@ -13,6 +13,14 @@ import { ListingCard, ListingDetail, MoverBanner, TickerStrip, biggestMover } fr
 import { PlusTag, usePlus } from '../components/Plus.jsx';
 import { track } from '../lib/track.js';
 
+// Buying to live in: what it costs you, then price and age. No cash-flow sorts.
+const BUY_SORTS = {
+  cost: { label: 'Lowest monthly cost' },
+  priceLow: SORTS.priceLow,
+  priceHigh: SORTS.priceHigh,
+  newest: SORTS.newest,
+};
+
 const ListingsMap = lazy(() => import('../components/ListingsMap.jsx'));
 
 const KIND = { 1: 'House', 2: 'Duplex', 3: 'Triplex', 4: 'Fourplex' };
@@ -585,7 +593,14 @@ export function CityPicker({ city, index, onCity }) {
 export default function ListingsView({ feedState, indexState, city, onCity, market, baseMarket, alerts = [], onAlerts, targets, profile, importedIds, onMarket, onAnalyze, onHide, onUnhide, proCount = 0, onView, onOfferPack, onAgent }) {
   const plus = usePlus();
   const { status, feed } = feedState;
-  const [sort, setSort] = useState('perDoor');
+  // Buying a home to live in, or investing: each keeps its own sort, and only investing shows cash flow.
+  const buy = market.purpose === 'buy';
+  const [investSort, setInvestSort] = useState('perDoor');
+  const [buySort, setBuySort] = useState('cost');
+  const sort = buy ? buySort : investSort;
+  const setSort = buy ? setBuySort : setInvestSort;
+  // A home to live in is bought with a regular mortgage, never a loan qualified on rent.
+  const lensMarket = useMemo(() => (buy && market.lens !== 'own' ? { ...market, lens: 'own' } : market), [market, buy]);
   // Cards (with photos) by default, like a stock screener; the table and map stay a click away.
   const [layout, setLayout] = useState('cards');
   // The listing opened on its own page, by id.
@@ -612,12 +627,18 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
     [active, market, profile],
   );
   const ranked = useMemo(() => {
-    return rankListings(active, market, targets, { sort, showHidden });
-  }, [active, market, targets, sort, showHidden]);
+    if (!buy) return rankListings(active, lensMarket, targets, { sort, showHidden });
+    const list = rankListings(active, lensMarket, targets, { sort: sort === 'cost' ? 'priceLow' : sort, showHidden });
+    if (sort !== 'cost') return list;
+    // Lowest monthly cost first; homes without a tax bill (so no cost yet) after, cheapest first.
+    const cost = (s) => homes.get(s.listing.id)?.costToLive ?? Infinity;
+    return [...list].sort((x, y) => cost(x) - cost(y));
+  }, [active, lensMarket, targets, sort, showHidden, buy, homes]);
   const hiddenSet = useMemo(() => new Set(market.hidden), [market.hidden]);
   const belowMap = useMemo(() => underMarket(active), [active]);
   const visible = ranked.filter((s) => !hiddenSet.has(s.listing.id));
-  const shown = onlyMeets ? ranked.filter((s) => s.meets) : ranked;
+  const shown = onlyMeets && !buy ? ranked.filter((s) => s.meets) : ranked;
+  const shownLayout = buy && layout === 'list' ? 'cards' : layout;
   const hiddenCount = active.filter((l) => hiddenSet.has(l.id)).length;
   const countOf = (key) => active.filter((l) => typeOf(unitsOf(l)) === key && !hiddenSet.has(l.id)).length;
   const run = feed?.lastRun;
@@ -688,6 +709,9 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
       {status === 'ready' && opened && (
         <ListingDetail
           s={opened}
+          buy={buy}
+          home={homes.get(opened.listing.id)}
+          profile={profile}
           place={place}
           imported={importedIds.has(opened.listing.id)}
           hidden={hiddenSet.has(opened.listing.id)}
@@ -713,10 +737,25 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
 
       {status === 'ready' && !opened && (
         <>
-          {!plus.active && proCount > 0 && onView && (
+          <div className="space-y-1.5">
+            <Segmented
+              label="I’m"
+              stretch
+              value={buy ? 'buy' : 'invest'}
+              onChange={(purpose) => onMarket({ purpose })}
+              options={[
+                { value: 'buy', label: 'Buying a home' },
+                { value: 'invest', label: 'Investing' },
+              ]}
+            />
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              {buy ? 'What each home would cost you to live in, and whether you could buy it today.' : 'What each home would pay you as a rental: cash flow, return and the lender’s test.'}
+            </p>
+          </div>
+          {!buy && !plus.active && proCount > 0 && onView && (
             <LockedDeals count={proCount} place={place} canTry={plus.available && plus.trial} rows={(feed?.listings ?? []).filter((l) => (l.status ?? 'active') === 'active' && distressOf(l)).slice(0, 3)} onOpen={() => onView('pro')} />
           )}
-          <TickerStrip active={active.filter((l) => !hiddenSet.has(l.id))} items={visible} fresh={freshCount} place={place} market={market} city={city} />
+          <TickerStrip active={active.filter((l) => !hiddenSet.has(l.id))} items={visible} fresh={freshCount} place={place} market={market} city={city} buy={buy} />
           <MoverBanner mover={mover} onOpen={openListing} />
           {stale && (
             <p className="rise flex items-start gap-2 rounded-md bg-amber-500/10 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-600/20 ring-inset dark:text-amber-100 dark:ring-amber-300/20">
@@ -752,6 +791,7 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
                 );
               })}
             </div>
+            {!buy && (
             <div className={moreFilters ? '' : 'max-sm:hidden'}>
               <Segmented
                 label="Financing"
@@ -763,6 +803,8 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
                 ]}
               />
             </div>
+            )}
+            {!buy && (
             <button
               type="button"
               aria-pressed={onlyMeets}
@@ -773,6 +815,7 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
               {onlyMeets && <Check className="size-3.5" aria-hidden />}
               Beats my targets <span className="tabular text-emerald-700 dark:text-emerald-400">{visible.filter((x) => x.meets).length}</span>
             </button>
+            )}
             {hiddenCount > 0 && (
               <button type="button" aria-pressed={showHidden} onClick={() => setShowHidden((v) => !v)} className={`${toggle(showHidden)} ${moreFilters || showHidden ? '' : 'max-sm:hidden'}`}>
                 {showHidden && <Check className="size-3.5" aria-hidden />}
@@ -784,7 +827,7 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
                 Sort
               </label>
               <select id="listing-sort" value={sort} onChange={(e) => setSort(e.target.value)} className="field px-3 py-1.5 text-sm text-zinc-900 dark:text-zinc-100">
-                {Object.entries(SORTS).map(([key, s]) => (
+                {Object.entries(buy ? BUY_SORTS : SORTS).map(([key, s]) => (
                   <option key={key} value={key}>
                     {s.label}
                   </option>
@@ -792,11 +835,11 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
               </select>
               <Segmented
                 label="Show as"
-                value={layout}
+                value={shownLayout}
                 onChange={setLayout}
                 options={[
                   { value: 'cards', label: 'Cards' },
-                  { value: 'list', label: 'List' },
+                  ...(buy ? [] : [{ value: 'list', label: 'List' }]),
                   { value: 'map', label: 'Map' },
                 ]}
               />
@@ -823,17 +866,17 @@ export default function ListingsView({ feedState, indexState, city, onCity, mark
 
           {editing && <Assumptions market={market} onMarket={onMarket} />}
 
-          {layout === 'map' && shown.length > 0 ? (
+          {shownLayout === 'map' && shown.length > 0 ? (
             <Card className="p-3 sm:p-4">
               <Suspense fallback={<div className="skeleton h-[28rem] rounded-md" />}>
-                <ListingsMap items={shown} place={place} homes={homes} />
+                <ListingsMap items={shown} place={place} homes={homes} buy={buy} />
               </Suspense>
             </Card>
-          ) : layout === 'cards' && shown.length > 0 ? (
+          ) : shownLayout === 'cards' && shown.length > 0 ? (
             <div>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {(showAll ? shown : shown.slice(0, 12)).map((s) => (
-                  <ListingCard key={s.listing.id} s={s} feed={feed} below={belowMap.get(s.listing.id)} place={place} onOpen={openListing} />
+                  <ListingCard key={s.listing.id} s={s} feed={feed} below={belowMap.get(s.listing.id)} place={place} onOpen={openListing} buy={buy} home={homes.get(s.listing.id)} profile={profile} />
                 ))}
               </div>
               {!showAll && shown.length > 12 && (

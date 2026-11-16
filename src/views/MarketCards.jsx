@@ -12,6 +12,7 @@ import { money, percent } from '../lib/format.js';
 import { CITY_VACANCY, daysListed, isNew, listingPageUrl, siteName, unitsOf } from '../lib/market.js';
 import { DISTRESS, distressOf } from '../lib/distress.js';
 import { listingSentence } from '../lib/explain.js';
+import { fitFor } from '../lib/journey.js';
 
 const KIND = { 1: 'House', 2: 'Duplex', 3: 'Triplex', 4: 'Fourplex' };
 export const kindOf = (l) => KIND[unitsOf(l)] ?? `${unitsOf(l)} units`;
@@ -46,7 +47,7 @@ const down = 'text-red-700 dark:text-[#ff8a80]';
 const label = 'text-[11px] text-zinc-500 dark:text-zinc-400';
 
 /** A row of the city's figures, like a market ticker. */
-export function TickerStrip({ active, items, fresh, place, market, city }) {
+export function TickerStrip({ active, items, fresh, place, market, city, buy = false }) {
   const cuts = active.filter((l) => (lastMove(l)?.change ?? 0) < 0).length;
   const vacancy = CITY_VACANCY[city];
   const cells = [
@@ -54,7 +55,7 @@ export function TickerStrip({ active, items, fresh, place, market, city }) {
     ['For sale', String(active.length)],
     ['New', `+${fresh}`, fresh ? up : ''],
     ['Price cuts', String(cuts), cuts ? down : ''],
-    ...(vacancy != null ? [['Vacancy', `${vacancy}%`]] : []),
+    ...(vacancy != null && !buy ? [['Vacancy', `${vacancy}%`]] : []),
   ];
   return (
     <div className="tabular thin-scroll flex items-baseline gap-x-7 gap-y-2 overflow-x-auto rounded-xl max-sm:whitespace-nowrap sm:flex-wrap bg-zinc-950/[0.03] px-4 py-3 text-[13px] ring-1 ring-(--line-strong) ring-inset dark:bg-white/[0.03]">
@@ -103,13 +104,18 @@ function Badge({ tone = 'good', children }) {
   return <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold shadow-sm ${tones[tone]}`}>{children}</span>;
 }
 
+const FIT_BADGE = { fits: ['good', 'Fits you'], stretch: ['plain', 'A stretch'], notYet: ['plain', 'Not yet'] };
+
 /** One listing as a card: its photo, price, what it pays you and how its price has moved. */
-export function ListingCard({ s, feed, below, place, onOpen }) {
+export function ListingCard({ s, feed, below, place, onOpen, buy = false, home = null, profile = null }) {
   const hasPhotos = Boolean(useMapsKey());
   const l = s.listing;
   const m = lastMove(l);
+  // Buying to live in: whether it fits you leads, not whether it beats an investor's targets.
+  const fit = buy && home?.known ? fitFor(home, profile) : null;
   const badges = [
-    s.meets && ['good', 'Beats your targets'],
+    fit && FIT_BADGE[fit.key],
+    !buy && s.meets && ['good', 'Beats your targets'],
     m && m.change < 0 && ['bad', `▼ Price cut ${percent(-m.pct, 1)}`],
     isNew(l, feed) && ['good', 'New'],
     below > 0 && ['plain', `${Math.round(below * 100)}% under going rate`],
@@ -148,10 +154,10 @@ export function ListingCard({ s, feed, below, place, onOpen }) {
       <span className="flex flex-col gap-2.5 p-4">
         <span className="flex items-baseline justify-between gap-2">
           <span className="flex items-center gap-2.5">
-            {!s.needsTax && <GradeBadge a={s.a} size="sm" />}
+            {!buy && !s.needsTax && <GradeBadge a={s.a} size="sm" />}
             <span className="tabular text-[22px] font-bold tracking-tight text-zinc-950 dark:text-white">{money(s.a.price)}</span>
           </span>
-          {!s.needsTax && <span className={`tabular text-sm font-bold ${s.a.coc >= 0 ? up : down}`}>{percent(s.a.coc, 1)}</span>}
+          {!buy && !s.needsTax && <span className={`tabular text-sm font-bold ${s.a.coc >= 0 ? up : down}`}>{percent(s.a.coc, 1)}</span>}
         </span>
         <span>
           <span className="block font-semibold text-zinc-950 dark:text-white">{l.address}</span>
@@ -160,6 +166,22 @@ export function ListingCard({ s, feed, below, place, onOpen }) {
             {l.yearBuilt ? ` · built ${l.yearBuilt}` : ''} · {daysListed(l) ?? 0} days listed
           </span>
         </span>
+        {buy ? (
+          <span className="tabular grid grid-cols-3 gap-2 border-t border-hairline pt-2.5 text-xs">
+            <span>
+              <span className={`block ${label}`}>Costs you</span>
+              <span className="block font-bold text-zinc-950 dark:text-white">{home ? `${money(home.costToLive)}/mo` : s.needsTax ? 'Needs tax' : '—'}</span>
+            </span>
+            <span>
+              <span className={`block ${label}`}>Cash to close</span>
+              <span className="block font-bold text-zinc-950 dark:text-white">{home ? money(home.cashNeeded) : '—'}</span>
+            </span>
+            <span>
+              <span className={`block ${label}`}>Tax bill</span>
+              <span className="block font-bold text-zinc-950 dark:text-white">{s.needsTax ? 'Not listed' : money(s.a.taxes * 12)}</span>
+            </span>
+          </span>
+        ) : (
         <span className="tabular grid grid-cols-3 gap-2 border-t border-hairline pt-2.5 text-xs">
           <span>
             <span className={`block ${label}`}>Cash flow</span>
@@ -174,6 +196,7 @@ export function ListingCard({ s, feed, below, place, onOpen }) {
             <span className="block font-bold text-zinc-950 dark:text-white">{s.needsTax ? 'Not listed' : money(s.a.taxes * 12)}</span>
           </span>
         </span>
+        )}
       </span>
     </button>
   );
@@ -234,7 +257,7 @@ function Fact({ name, value, tone = '', note }) {
  * One listing, laid out like a stock's page: pictures, the price and how
  * it has moved, what it would pay you, and a ticket to try an offer.
  */
-export function ListingDetail({ s, place, imported, hidden, onBack, onAnalyze, onHide, onUnhide, onTax, watching = false, onWatch, onOfferPack, listings = [], offMarket = [], sold = [], onSold, onAgent }) {
+export function ListingDetail({ s, place, imported, hidden, onBack, onAnalyze, onHide, onUnhide, onTax, watching = false, onWatch, onOfferPack, listings = [], offMarket = [], sold = [], onSold, onAgent, buy = false, home = null, profile = null }) {
   const plus = usePlus();
   const l = s.listing;
   const link = listingPageUrl(l.url, l.address);
@@ -245,7 +268,8 @@ export function ListingDetail({ s, place, imported, hidden, onBack, onAnalyze, o
   const [tax, setTax] = useState('');
   const run = useMemo(() => analyzeDeal({ ...s.deal, price: offer, downPct, rate, refiRate: rate }), [s.deal, offer, downPct, rate]);
   const max = Number.isFinite(s.offer.price) ? s.offer.price : null;
-  const sentence = listingSentence(s);
+  const sentence = buy ? null : listingSentence(s);
+  const fit = buy && home?.known ? fitFor(home, profile) : null;
   return (
     <div className="space-y-6">
       <button type="button" onClick={onBack} className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 hover:underline dark:text-[#73ff6a]">
@@ -299,6 +323,20 @@ export function ListingDetail({ s, place, imported, hidden, onBack, onAnalyze, o
 
           <PriceChart l={l} />
 
+          {buy ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <Fact name="Costs you to live in" value={home ? `${money(home.costToLive)}/mo` : 'Needs the tax bill'} note={home ? (unitsOf(l) > 1 ? 'all costs, less rent from the other units' : 'mortgage, tax, insurance and upkeep') : null} />
+              <Fact name="Cash to close" value={home ? money(home.cashNeeded) : '—'} note={home ? `${money(home.down)} down, plus closing costs` : null} />
+              <Fact name="Mortgage payment" value={`${money(s.a.pi)}/mo`} note={`${s.deal.downPct}% down at ${s.deal.rate}%`} />
+              <Fact
+                name="Could you buy it?"
+                value={!home ? '—' : !home.known ? 'Add your numbers' : home.canBuy ? 'Yes, today' : home.qualifies ? 'Not yet: cash' : 'Not yet'}
+                tone={home?.known && home.canBuy ? up : ''}
+                note={fit ? fit.reason.replace(/^Not yet: /, '') : home && !home.known ? 'on the Home tab' : null}
+              />
+              <Fact name="Tax bill" value={s.needsTax ? 'Not listed' : `${money(s.a.taxes * 12)}/yr`} />
+            </div>
+          ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Fact
               name={`Cash flow, ${s.lens === 'own' ? `${s.deal.downPct}% down` : 'DSCR loan'}`}
@@ -311,6 +349,7 @@ export function ListingDetail({ s, place, imported, hidden, onBack, onAnalyze, o
             <Fact name={`Rent${s.rentSource === 'stated' ? '' : ' (estimated)'}`} value={`${money(s.a.grossRent)}/mo`} />
             <Fact name="Tax bill" value={s.needsTax ? 'Not listed' : `${money(s.a.taxes * 12)}/yr`} />
           </div>
+          )}
           {s.needsTax && onTax && (
             <form
               className="flex flex-wrap items-end gap-2 rounded-xl bg-amber-500/10 p-4 ring-1 ring-amber-600/20 ring-inset"
@@ -349,11 +388,13 @@ export function ListingDetail({ s, place, imported, hidden, onBack, onAnalyze, o
                 <span className="text-zinc-600 dark:text-zinc-400">Mortgage payment</span>
                 <strong className="text-zinc-950 dark:text-white">{money(run.pi)}/mo</strong>
               </p>
+              {!buy && (
               <p className="flex justify-between">
                 <span className="text-zinc-600 dark:text-zinc-400">Left each month</span>
                 <strong className={s.needsTax ? 'text-zinc-500' : run.netCashFlow >= 0 ? up : down}>{s.needsTax ? 'Needs tax' : money(run.netCashFlow, { signed: true })}</strong>
               </p>
-              {max != null && (
+              )}
+              {!buy && max != null && (
                 <p className="flex justify-between">
                   <span className="text-zinc-600 dark:text-zinc-400">{offer <= max ? 'Room under your max' : 'Over your max by'}</span>
                   <strong className={offer <= max ? up : down}>{money(Math.abs(max - offer))}</strong>
