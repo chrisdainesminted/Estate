@@ -25,6 +25,7 @@ const COLUMNS = [
       ['About', '/about/'],
       ['How we calculate', '/methods/'],
       ['Contact', '/contact/'],
+      ['Partner with us', '/partners/'],
       ['Questions', '/#faq'],
       ['Terms of use', '/terms/'],
       ['Privacy', '/privacy/'],
