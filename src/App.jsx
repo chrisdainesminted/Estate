@@ -1025,7 +1025,7 @@ export default function App() {
                     role="radio"
                     aria-checked={mode === m.value}
                     onClick={() => switchMode(m.value)}
-                    className={`h-8 rounded-full px-2.5 text-[13px] font-medium whitespace-nowrap transition focus-visible:outline-2 focus-visible:outline-emerald-500 sm:px-3 ${mode === m.value ? 'bg-(--panel) text-zinc-950 shadow-sm dark:text-white' : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'}`}
+                    className={`h-8 rounded-full px-2.5 max-[380px]:px-2 text-[13px] font-medium whitespace-nowrap transition focus-visible:outline-2 focus-visible:outline-emerald-500 sm:px-3 ${mode === m.value ? 'bg-(--panel) text-zinc-950 shadow-sm dark:text-white' : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'}`}
                   >
                     {m.label}
                   </button>
