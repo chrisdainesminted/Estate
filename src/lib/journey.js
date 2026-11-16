@@ -159,7 +159,7 @@ export const stepsFor = (profile) => BUY_STEPS.filter((s) => !s.firstTimeOnly ||
  */
 export function nextStep({ profile, ready = {}, plan }) {
   const p = normalizeProfile(profile);
-  if (!p.entered) return { id: 'start', title: 'Answer six quick questions', text: 'See what you could buy today, and what it would cost you each month.', view: 'home', action: 'Start' };
+  if (!p.entered) return { id: 'start', title: 'Answer a few quick questions', text: 'See what you could buy today, and what it would cost you each month.', view: 'home', action: 'Start' };
   const steps = stepsFor(p);
   const saved = plan ? plan.goal.short === 0 : false;
   const done = (s) => (s.id === 'save' ? saved : ready[s.id] === true);

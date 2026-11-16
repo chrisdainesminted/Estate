@@ -37,6 +37,7 @@ import {
   Gem,
   UserRound,
   ChevronDown,
+  X,
 } from 'lucide-react';
 import { useDeals } from './hooks/useDeals.js';
 import { accountCall, signOut } from './lib/account.js';
@@ -388,6 +389,22 @@ export default function App() {
   const { deals, active, activeId, compare, slotOf } = lib;
   const { dark, toggle } = useTheme();
   const toast = useToast();
+  // The "save it free" line, once hidden, stays hidden for this visit.
+  const [saveHintClosed, setSaveHintClosed] = useState(() => {
+    try {
+      return sessionStorage.getItem('squarely-save-hint') === 'closed';
+    } catch {
+      return false;
+    }
+  });
+  const closeSaveHint = () => {
+    setSaveHintClosed(true);
+    try {
+      sessionStorage.setItem('squarely-save-hint', 'closed');
+    } catch {
+      // Private browsing: it's hidden for now anyway.
+    }
+  };
   const [view, setView] = useStoredView();
   const [adj, setAdj] = useState(NO_ADJ);
   const [scope, setScope] = useState('active');
@@ -973,7 +990,7 @@ export default function App() {
                 title="Squarely home page"
                 className="block rounded-sm transition hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-500"
               >
-                <Logo />
+                <Logo compact />
               </a>
             </h1>
 
@@ -1031,12 +1048,18 @@ export default function App() {
 
         <main id="main" tabIndex={-1} className="gutter mx-auto max-w-[1500px] space-y-6 pt-6 pb-24 outline-none sm:pt-8">
           {/* Signed out, everything works and stays in this browser; one line offers to keep it. */}
-          {!lib.account && !HOSTED && (
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg bg-emerald-500/[0.07] px-4 py-3 text-sm ring-1 ring-emerald-600/20 ring-inset">
-              <span className="text-zinc-700 dark:text-zinc-300">You’re trying Squarely without an account: your numbers stay in this browser.</span>
-              <Button variant="primary" className="px-3 py-1.5 text-sm" onClick={() => goSignIn(view)}>
+          {!lib.account && !HOSTED && !saveHintClosed && (
+            <div className="flex items-center gap-3 rounded-lg bg-emerald-500/[0.07] py-2 pr-2 pl-4 text-sm ring-1 ring-emerald-600/20 ring-inset">
+              <span className="min-w-0 flex-1 text-zinc-700 dark:text-zinc-300">
+                <span className="sm:hidden">Saved in this browser only.</span>
+                <span className="max-sm:hidden">You’re trying Squarely without an account: your numbers stay in this browser.</span>
+              </span>
+              <Button variant="primary" className="shrink-0 px-3 py-1.5 text-sm" onClick={() => goSignIn(view)}>
                 Save it free
               </Button>
+              <button type="button" aria-label="Hide this" onClick={closeSaveHint} className="grid size-8 shrink-0 place-items-center rounded-md text-zinc-500 hover:bg-well">
+                <X className="size-4" aria-hidden />
+              </button>
             </div>
           )}
           {/* Portal target for glossary tips; display: contents keeps it out of the layout. */}

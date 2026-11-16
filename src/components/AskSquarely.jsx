@@ -16,6 +16,19 @@ const HIDE = new Set(['not_granted', 'sampling_disabled', 'not_declared', 'capab
 export default function AskSquarely({ context, mode, account }) {
   const plus = usePlus();
   const [open, setOpen] = useState(false);
+  // On a phone the button steps aside while you type, so it never covers the field you're in.
+  const [typing, setTyping] = useState(false);
+  useEffect(() => {
+    const field = (el) => el instanceof HTMLElement && el.matches('input, select, textarea') && !el.closest('[data-ask]');
+    const on = (e) => setTyping(field(e.target));
+    const off = () => setTimeout(() => setTyping(field(document.activeElement)), 0);
+    document.addEventListener('focusin', on);
+    document.addEventListener('focusout', off);
+    return () => {
+      document.removeEventListener('focusin', on);
+      document.removeEventListener('focusout', off);
+    };
+  }, []);
   const [sample, setSample] = useState(undefined);
   const [history, setHistory] = useState([]);
   const [draft, setDraft] = useState('');
@@ -83,7 +96,7 @@ export default function AskSquarely({ context, mode, account }) {
           type="button"
           onClick={() => setOpen(true)}
           aria-label="Ask Squarely"
-          className="fixed right-4 z-40 inline-flex items-center gap-2 rounded-full bg-emerald-500 p-3 text-sm sm:px-4 font-semibold text-zinc-950 shadow-lg shadow-emerald-900/30 transition hover:bg-emerald-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 print:hidden"
+          className={`fixed right-4 z-40 inline-flex items-center gap-2 rounded-full bg-emerald-500 p-3 ${typing ? 'max-sm:pointer-events-none max-sm:opacity-0' : ''} text-sm sm:px-4 font-semibold text-zinc-950 shadow-lg shadow-emerald-900/30 transition hover:bg-emerald-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 print:hidden`}
           style={{ bottom: 'calc(var(--dock, 0px) + 1rem)' }}
         >
           <MessageCircleQuestion className="size-5 sm:size-4" aria-hidden /> <span className="max-sm:sr-only">Ask Squarely</span>

@@ -366,59 +366,107 @@ function SuiteGuide({ s, onSuite, city }) {
 }
 
 /**
- * First visit: where, and four numbers, before any result, so the first
- * number a person sees is about them.
+ * First visit: three short steps before any result, so the first number a
+ * person sees is about them. Steps one and two are the four answers the
+ * result needs (where, income, savings, rent); step three is optional
+ * extras that sharpen it, and can be skipped.
  */
+const STEPS = [
+  { title: 'Where, and what you earn', need: ['income'] },
+  { title: 'What you’ve saved, and pay now', need: ['savings', 'rentNow'] },
+  { title: 'A sharper answer (optional)', need: [] },
+];
+
 function Start({ onHome }) {
   const [v, setV] = useState({ income: null, savings: null, debts: null, rentNow: null, monthlySave: null });
   const [lender, setLender] = useState({ credit: null, selfEmployed: false });
   const [city, setCity] = useState(guessCity);
   const [missing, setMissing] = useState([]);
+  const [step, setStep] = useState(0);
   const set = (key) => (n) => {
     setV((x) => ({ ...x, [key]: n }));
     setMissing((m) => m.filter((k) => k !== key));
   };
+  const finish = () =>
+    onHome({ city, rentOther: null, taxPct: null, targetPrice: cityByKey(city).price, income: v.income, savings: v.savings, debts: Number.isFinite(v.debts) ? v.debts : 0, rentNow: v.rentNow, ...(Number.isFinite(v.monthlySave) ? { monthlySave: v.monthlySave } : {}), ...lender, entered: true });
   const submit = (e) => {
     e.preventDefault();
-    const gaps = ['income', 'savings', 'rentNow'].filter((k) => !Number.isFinite(v[k]));
+    const gaps = STEPS[step].need.filter((k) => !Number.isFinite(v[k]));
     if (gaps.length) {
       setMissing(gaps);
       document.getElementById(`start-${gaps[0]}`)?.focus();
       return;
     }
-    onHome({ city, rentOther: null, taxPct: null, targetPrice: cityByKey(city).price, income: v.income, savings: v.savings, debts: Number.isFinite(v.debts) ? v.debts : 0, rentNow: v.rentNow, ...(Number.isFinite(v.monthlySave) ? { monthlySave: v.monthlySave } : {}), ...lender, entered: true });
+    if (step < STEPS.length - 1) {
+      setStep(step + 1);
+      // The next step's first field, once it's on screen.
+      setTimeout(() => document.querySelector('#start-form input, #start-form select')?.focus(), 0);
+      return;
+    }
+    finish();
   };
   const label = { income: 'your income', savings: 'what you’ve saved', rentNow: 'the rent you pay' };
+  const last = step === STEPS.length - 1;
   return (
     <Card>
-      <form onSubmit={submit} noValidate aria-labelledby="start-title">
+      <form id="start-form" onSubmit={submit} noValidate aria-labelledby="start-title">
         <div className="border-b border-hairline px-5 py-5 sm:px-6">
-          <h2 id="start-title" className="text-xl font-semibold tracking-tight text-zinc-950 sm:text-2xl dark:text-white">
-            Six quick questions, then your answer
-          </h2>
-          <p className="mt-1.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-            About two minutes. You’ll see what a bank would lend you, alone and with a tenant, the cash you’d need, and when you’d be ready. {accountLink() ? 'Your answers are saved to your account.' : 'Your answers stay in this browser unless you make an account.'}
+          <p className="text-xs font-semibold tracking-wide text-emerald-700 uppercase dark:text-emerald-400">
+            Step {step + 1} of {STEPS.length}
           </p>
+          <h2 id="start-title" className="mt-1 text-xl font-semibold tracking-tight text-zinc-950 sm:text-2xl dark:text-white">
+            {STEPS[step].title}
+          </h2>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-(--track)" aria-hidden>
+            <div className="h-full rounded-full bg-emerald-600 transition-[width] duration-500" style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
+          </div>
+          {step === 0 && (
+            <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+              Under a minute. You’ll see what a bank would lend you, alone and with a tenant, and the cash you’d need. {accountLink() ? 'Your answers are saved to your account.' : 'Your answers stay in this browser.'}
+            </p>
+          )}
         </div>
         <div className="grid gap-4 px-5 py-5 sm:grid-cols-2 sm:px-6">
-          <div className="sm:col-span-2">
-            <CitySelect id="start-city" label="Where are you buying?" value={city} onChange={setCity} />
-            <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">Land transfer tax, provincial programs, rent and property tax all depend on it.</p>
-          </div>
-          <NumberField id="start-income" label="Household income, before tax" prefix="$" suffix="/yr" step={1000} decimals={0} value={v.income} onChange={set('income')} hint="Everyone who’ll be on the mortgage" />
-          <NumberField id="start-savings" label="Saved for buying" prefix="$" step={1000} decimals={0} value={v.savings} onChange={set('savings')} hint="Bank, TFSA, FHSA, RRSP: anything for the down payment" />
-          <NumberField id="start-rentNow" label="Rent you pay now" prefix="$" suffix="/mo" step={50} decimals={0} value={v.rentNow} onChange={set('rentNow')} hint="Your share, if you split it" />
-          <NumberField id="start-debts" label="Monthly debt payments" prefix="$" suffix="/mo" step={25} decimals={0} value={v.debts} onChange={set('debts')} hint="Car, loans, lines of credit; cards count as 3% of the balance. Blank if none" />
-          <NumberField id="start-monthlySave" label="You could save each month" prefix="$" suffix="/mo" step={50} decimals={0} value={v.monthlySave} onChange={set('monthlySave')} hint="A guess is fine. Blank uses $800" />
-          <CreditFields idPrefix="start" credit={lender.credit} selfEmployed={lender.selfEmployed} onChange={(patch) => setLender((x) => ({ ...x, ...patch }))} />
+          {step === 0 && (
+            <>
+              <div className="sm:col-span-2">
+                <CitySelect id="start-city" label="Where are you buying?" value={city} onChange={setCity} />
+                <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">Land transfer tax, provincial programs, rent and property tax all depend on it.</p>
+              </div>
+              <NumberField id="start-income" label="Household income, before tax" prefix="$" suffix="/yr" step={1000} decimals={0} value={v.income} onChange={set('income')} hint="Everyone who’ll be on the mortgage" />
+            </>
+          )}
+          {step === 1 && (
+            <>
+              <NumberField id="start-savings" label="Saved for buying" prefix="$" step={1000} decimals={0} value={v.savings} onChange={set('savings')} hint="Bank, TFSA, FHSA, RRSP: anything for the down payment" />
+              <NumberField id="start-rentNow" label="Rent you pay now" prefix="$" suffix="/mo" step={50} decimals={0} value={v.rentNow} onChange={set('rentNow')} hint="Your share, if you split it" />
+            </>
+          )}
+          {step === 2 && (
+            <>
+              <NumberField id="start-debts" label="Monthly debt payments" prefix="$" suffix="/mo" step={25} decimals={0} value={v.debts} onChange={set('debts')} hint="Car, loans, lines of credit; cards count as 3% of the balance. Blank if none" />
+              <NumberField id="start-monthlySave" label="You could save each month" prefix="$" suffix="/mo" step={50} decimals={0} value={v.monthlySave} onChange={set('monthlySave')} hint="A guess is fine. Blank uses $800" />
+              <CreditFields idPrefix="start" credit={lender.credit} selfEmployed={lender.selfEmployed} onChange={(patch) => setLender((x) => ({ ...x, ...patch }))} />
+            </>
+          )}
         </div>
         <div className="flex flex-col gap-3 border-t border-hairline px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <p role="alert" className="text-sm text-red-700 dark:text-red-400">
-            {missing.length > 0 && `Add ${missing.map((k) => label[k]).join(', ').replace(/, ([^,]*)$/, ' and $1')} to see your answer.`}
+            {missing.length > 0 && `Add ${missing.map((k) => label[k]).join(', ').replace(/, ([^,]*)$/, ' and $1')} to go on.`}
           </p>
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
+            {step > 0 && (
+              <Button type="button" variant="ghost" onClick={() => (setMissing([]), setStep(step - 1))}>
+                Back
+              </Button>
+            )}
+            {last && (
+              <Button type="button" onClick={finish}>
+                Skip these
+              </Button>
+            )}
             <Button type="submit" variant="primary">
-              See what I can buy <ArrowRight className="size-4" aria-hidden />
+              {last ? 'See what I can buy' : 'Next'} <ArrowRight className="size-4" aria-hidden />
             </Button>
           </div>
         </div>
@@ -599,7 +647,7 @@ export default function HomeView({ profile: raw, suite, rvb = {}, market, items,
 
       {/* The answer on its own; how it's worked out and the savings plan fold away below. */}
       <Card id="home-summary" className="px-5 py-5 sm:px-6">
-            {meter && <ReadyMeter meter={meter} onView={onView} />}
+            {meter && <ReadyMeter meter={meter} onView={onView} goalPrice={plan.goal.price} />}
             <h2 className="text-xl font-semibold tracking-tight text-zinc-950 sm:text-2xl dark:text-white">
               {plan.best.price > 0 ? `You could buy up to ${money(plan.best.price)} today` : 'Let’s get you ready to buy'}
             </h2>
@@ -715,11 +763,13 @@ export default function HomeView({ profile: raw, suite, rvb = {}, market, items,
 }
 
 /** How ready you are to buy, as a bar: the cash toward your home and the steps you've ticked. */
-function ReadyMeter({ meter, onView }) {
+function ReadyMeter({ meter, onView, goalPrice = 0 }) {
   // Months while it's under two years; beyond that, years, and the plan below has the shortcuts.
   const years = Math.round(meter.months / 12);
-  const span = meter.months <= 24 ? `about ${meter.months} month${meter.months === 1 ? '' : 's'} to go` : `about ${years} years to go at this pace`;
-  const left = meter.months > 0 ? (meter.readyBy ? `${span}${meter.months <= 24 ? `, ready by ${monthName(meter.readyBy)}` : ': see the shortcuts below'}` : 'keep saving to set a date') : 'you have the cash';
+  const span = meter.months <= 24 ? `about ${meter.months} month${meter.months === 1 ? '' : 's'} to go` : `about ${years} years away at this pace`;
+  // Say which home it's counting toward: the one they're aiming at, not what they can buy today.
+  const toward = goalPrice ? ` for a ${money(goalPrice)} home` : '';
+  const left = meter.months > 0 ? (meter.readyBy ? `${span}${toward}${meter.months <= 24 ? `, ready by ${monthName(meter.readyBy)}` : ': the shortcuts below bring it closer'}` : 'keep saving to set a date') : 'you have the cash';
   return (
     <div className="mb-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm">
